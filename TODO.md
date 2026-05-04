@@ -6,9 +6,9 @@
 - [x] Draft the 10 initial assessment questions.
 
 ## Backend (AI & API)
-- [ ] Research best Vector DB for fact-checking (ChromaDB, Pinecone, or FAISS).
-- [ ] Write system prompts for all 4 agents.
-- [ ] Implement basic LangGraph flow for the agent orchestration.
+- [x] Research best Vector DB for fact-checking (ChromaDB, Pinecone, or FAISS).
+- [x] Write system prompts for all 4 agents.
+- [x] Implement basic LangGraph flow for the agent orchestration.
 
 ## Frontend (UI/UX)
 - [ ] Choose a styling library (Vanilla CSS or Tailwind).
