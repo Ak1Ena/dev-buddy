@@ -1,10 +1,20 @@
 import json
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from models.user import AssessmentResponse
 from agents.assessment_agent import AssessmentAgent
 import os
 
 app = FastAPI(title="devBuddy API")
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Ensure the data path is correct relative to main.py
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
