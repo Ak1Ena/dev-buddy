@@ -1,9 +1,9 @@
 # devBuddy Project Plan 🚀
 
 ## Phase 1: Foundation & Assessment
-- [ ] Define the 10-question logic to baseline user knowledge.
-- [ ] Implement the Assessment Agent to process user answers.
-- [ ] Create the data schema for User Profiles and Learning Paths.
+- [x] Define the 10-question logic to baseline user knowledge.
+- [x] Implement the Assessment Agent to process user answers.
+- [x] Create the data schema for User Profiles and Learning Paths.
 
 ## Phase 2: AI Orchestration (The "Brain")
 - [ ] Implement the **Planner Agent**: Generate a personalized curriculum.
