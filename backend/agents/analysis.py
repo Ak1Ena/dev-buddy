@@ -1,23 +1,28 @@
 from typing import List, Tuple
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
 
 class AnalysisAgent:
     """
     Agent responsible for validating if the generated plan is appropriate for the user level.
     """
     def __init__(self, model_name: str = "gpt-4o"):
-        self.model_name = model_name
+        self.llm = ChatOpenAI(model=model_name, temperature=0)
+        self.prompt = ChatPromptTemplate.from_messages([
+            ("system", "You are a Quality Assurance Expert for educational content. "
+                       "Evaluate the provided curriculum for a specific level. "
+                       "Check if the topics are too easy, too hard, or logically sequenced. "
+                       "Respond with 'APPROVED' if it's good, or 'REJECTED: [reason]' if it needs changes."),
+            ("user", "Subject: {subject}\nLevel: {level}\nPlan: {plan}")
+        ])
+        self.chain = self.prompt | self.llm
 
     def validate_plan(self, subject: str, level: str, plan: List[str]) -> Tuple[bool, str]:
-        """
-        Validates the curriculum.
-        Returns (is_approved, reason).
-        """
-        # Logic simulation: a plan must have at least 3 topics to be approved
-        if len(plan) < 3:
-            return False, "Plan is too shallow. Please provide more comprehensive topics."
-        
-        # Simulation of level check
-        if level == "Beginner" and any("Advanced" in topic for topic in plan):
-            return False, "Plan contains advanced topics unsuitable for a beginner."
-            
-        return True, "Plan is well-structured and matches the user's level."
+        try:
+            response = self.chain.invoke({"subject": subject, "level": level, "plan": plan}).content
+            if "APPROVED" in response.upper():
+                return True, "Plan approved."
+            return False, response
+        except Exception as e:
+            print(f"Analysis Error: {e}")
+            return True, "Proceeding due to analysis error."
