@@ -1,0 +1,112 @@
+[
+  {
+    "id": 1,
+    "question": "Which of the following best describes your experience with programming?",
+    "options": [
+      "Absolute beginner (Never written code)",
+      "Beginner (Know basic syntax, loops, variables)",
+      "Intermediate (Built a few projects, understand APIs)",
+      "Advanced (Professional experience, system design knowledge)"
+    ],
+    "category": "experience"
+  },
+  {
+    "id": 2,
+    "question": "What is the purpose of Version Control Systems like Git?",
+    "options": [
+      "To run code faster",
+      "To track changes in source code and collaborate",
+      "To host websites",
+      "To compile code into machine language"
+    ],
+    "category": "tools"
+  },
+  {
+    "id": 3,
+    "question": "In Object-Oriented Programming, what is 'Inheritance'?",
+    "options": [
+      "A mechanism to hide data",
+      "A way for a class to derive properties and behaviors from another class",
+      "A method to loop through arrays",
+      "A type of database relationship"
+    ],
+    "category": "concepts"
+  },
+  {
+    "id": 4,
+    "question": "Which HTTP method is typically used to create a new resource?",
+    "options": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+    "category": "web"
+  },
+  {
+    "id": 5,
+    "question": "What is the time complexity of searching for an element in a balanced Binary Search Tree?",
+    "options": [
+      "O(1)",
+      "O(n)",
+      "O(log n)",
+      "O(n^2)"
+    ],
+    "category": "algorithms"
+  },
+  {
+    "id": 6,
+    "question": "What does 'DRY' stand for in software development?",
+    "options": [
+      "Do Repeat Yourself",
+      "Don't Repeat Yourself",
+      "Data Recovery Yield",
+      "Distributed Root Yield"
+    ],
+    "category": "best_practices"
+  },
+  {
+    "id": 7,
+    "question": "Which of the following is NOT a primary role of an Operating System?",
+    "options": [
+      "Memory management",
+      "Process scheduling",
+      "Designing UI layouts",
+      "File system management"
+    ],
+    "category": "systems"
+  },
+  {
+    "id": 8,
+    "question": "What is a 'Race Condition'?",
+    "options": [
+      "When code runs too fast",
+      "When multiple processes/threads access shared data concurrently and the outcome depends on the timing",
+      "A bug in a loop that never terminates",
+      "A competition between developers to finish a task"
+    ],
+    "category": "concurrency"
+  },
+  {
+    "id": 9,
+    "question": "What is the purpose of a Database Index?",
+    "options": [
+      "To encrypt data",
+      "To improve the speed of data retrieval operations",
+      "To backup the database",
+      "To delete duplicate records"
+    ],
+    "category": "databases"
+  },
+  {
+    "id": 10,
+    "question": "What is the main difference between a Compiler and an Interpreter?",
+    "options": [
+      "Compilers are used for Python, Interpreters for C++",
+      "Compilers translate the whole program before execution, Interpreters translate line-by-line during execution",
+      "Compilers are only for web development",
+      "There is no difference"
+    ],
+    "category": "languages"
+  }
+]

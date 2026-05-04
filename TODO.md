@@ -1,9 +1,9 @@
 # devBuddy TODO List ✅
 
 ## Immediate Tasks
-- [ ] Initialize project folder structure (`backend/`, `frontend/`, etc.).
-- [ ] Setup Python environment and `requirements.txt`.
-- [ ] Draft the 10 initial assessment questions.
+- [x] Initialize project folder structure (`backend/`, `frontend/`, etc.).
+- [x] Setup Python environment and `requirements.txt`.
+- [x] Draft the 10 initial assessment questions.
 
 ## Backend (AI & API)
 - [ ] Research best Vector DB for fact-checking (ChromaDB, Pinecone, or FAISS).
