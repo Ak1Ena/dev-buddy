@@ -18,9 +18,9 @@
 
 ## Phase 4: Frontend Development
 - [x] Setup React/TypeScript boilerplate.
-- [ ] Build the Assessment UI.
-- [ ] Create the Lesson Player (Content, Code Examples, Animations).
-- [ ] Implement the Chat interface for asking the "Teacher" questions.
+- [x] Build the Assessment UI.
+- [x] Create the Lesson Player (Content, Code Examples, Animations).
+- [x] Implement the Chat interface for asking the "Teacher" questions.
 
 ## Phase 5: Polish & Refinement
 - [ ] Add interactive animations for complex concepts.
