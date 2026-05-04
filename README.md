@@ -12,7 +12,8 @@ devBuddy creates a custom study schedule and content for each user. Unlike stati
 - **Lack of Real-time Feedback:** Static tutorials don't allow users to ask follow-up questions or get personalized clarifications.
 
 ## Design Goals
-1. **Initial Assessment:** A 10-question evaluation to understand the user's baseline knowledge.
+1. **Subject Selection:** Users choose the topic or language they want to learn.
+2. **Initial Assessment:** A 10-question evaluation, dynamically generated based on the chosen subject, to understand the user's baseline knowledge.
 2. **Dynamic Scheduling:** Lessons are scheduled and generated specifically for the user's profile.
 3. **Rich Learning Content:**
    - Step-by-step code examples.

@@ -1,8 +1,9 @@
 # devBuddy Project Plan 🚀
 
 ## Phase 1: Foundation & Assessment
-- [ ] Define the 10-question logic to baseline user knowledge.
-- [ ] Implement the Assessment Agent to process user answers.
+- [ ] Implement subject selection logic (User chooses what to learn).
+- [ ] Define the 10-question logic to baseline user knowledge based on the selected subject.
+- [ ] Implement the Assessment Agent to generate and process user answers.
 - [ ] Create the data schema for User Profiles and Learning Paths.
 
 ## Phase 2: AI Orchestration (The "Brain")
@@ -24,5 +25,6 @@
 
 ## Phase 5: Polish & Refinement
 - [ ] Add interactive animations for complex concepts.
+- [ ] Implement the **Curiosity Loop**: Logic to detect deep-dive interests and trigger real-time learning path modifications.
 - [ ] Implement real-time schedule updates when users struggle or excel.
 - [ ] End-to-end testing and deployment.
