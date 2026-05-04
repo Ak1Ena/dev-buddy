@@ -17,7 +17,7 @@
 - [ ] Implement state management for the learning journey (LangGraph).
 
 ## Phase 4: Frontend Development
-- [ ] Setup React/TypeScript boilerplate.
+- [x] Setup React/TypeScript boilerplate.
 - [ ] Build the Assessment UI.
 - [ ] Create the Lesson Player (Content, Code Examples, Animations).
 - [ ] Implement the Chat interface for asking the "Teacher" questions.

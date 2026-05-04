@@ -11,8 +11,8 @@
 - [x] Implement basic LangGraph flow for the agent orchestration.
 
 ## Frontend (UI/UX)
-- [ ] Choose a styling library (Vanilla CSS or Tailwind).
-- [ ] Design the lesson layout components.
+- [x] Choose a styling library (Vanilla CSS or Tailwind).
+- [x] Design the lesson layout components.
 - [ ] Build a prototype of an "interactive animation" component.
 
 ## Documentation & Testing
