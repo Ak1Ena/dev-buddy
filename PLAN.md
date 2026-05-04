@@ -12,9 +12,9 @@
 - [ ] Implement the **Checker Agent**: Integrate RAG for fact-checking and referencing.
 
 ## Phase 3: Backend API
-- [ ] Setup FastAPI/Flask server.
+- [x] Setup FastAPI/Flask server.
 - [ ] Create endpoints for assessment, lesson retrieval, and user questions.
-- [ ] Implement state management for the learning journey (LangGraph).
+- [x] Implement state management for the learning journey (LangGraph).
 
 ## Phase 4: Frontend Development
 - [x] Setup React/TypeScript boilerplate.

@@ -38,3 +38,29 @@ async def submit_assessment(response: AssessmentResponse):
         "user_id": response.user_id,
         "evaluation": result
     }
+
+@app.get("/learning-path/{user_id}")
+async def get_learning_path(user_id: str):
+    # This will eventually call the Planner Agent
+    return {
+        "user_id": user_id,
+        "title": "Your Custom Roadmap",
+        "modules": []
+    }
+
+@app.get("/lessons/{lesson_id}")
+async def get_lesson(lesson_id: str):
+    # This will eventually call the Design Agent
+    return {
+        "id": lesson_id,
+        "title": "Example Lesson",
+        "content": "This is sample lesson content.",
+        "interactive_elements": []
+    }
+
+@app.post("/chat")
+async def chat(user_id: str, message: str):
+    # This will eventually call the teacher chat agent
+    return {
+        "response": "I'm your devBuddy mentor! How can I help you today?"
+    }
