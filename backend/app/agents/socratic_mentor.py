@@ -48,9 +48,10 @@ class SocraticMentorAgent:
         skill_level: str,
         weak_areas: list[str] | None,
     ) -> str:
-        parts = [SYSTEM, "\n\n## Current Context"]
+        parts = [SYSTEM, "\n\n## Current Lesson Context"]
         if lesson_context:
-            parts.append(f"Current lesson topic: {lesson_context}")
+            parts.append(lesson_context)
+            parts.append("Use this lesson context to give specific, relevant guidance. Reference the student's actual code and concepts from the lesson.")
         parts.append(f"Current hint_level: {hint_level}")
         if skill_level:
             parts.append(f"Student skill level: {skill_level}")

@@ -1,7 +1,28 @@
+import json
 from typing import AsyncGenerator
 from openai import AsyncOpenAI
 
 from app.services.llm.base import LLMProvider
+
+
+def _unwrap_text(content: str) -> str:
+    """Some models return {"type":"text","text":"..."} instead of plain text."""
+    if not content or not content.strip().startswith("{"):
+        return content
+    try:
+        obj = json.loads(content)
+        if isinstance(obj, dict) and obj.get("type") == "text" and "text" in obj:
+            return obj["text"]
+        if isinstance(obj, list):
+            parts = [
+                item.get("text", "") for item in obj
+                if isinstance(item, dict) and item.get("type") == "text"
+            ]
+            if parts:
+                return "\n".join(parts)
+    except (json.JSONDecodeError, AttributeError):
+        pass
+    return content
 
 
 class OpenAIProvider(LLMProvider):
@@ -36,12 +57,10 @@ class OpenAIProvider(LLMProvider):
             extra_headers=self.extra_headers,
         )
         msg = response.choices[0].message
-        # Reasoning models (e.g. OpenRouter) may put the answer in .reasoning
-        # when .content is empty
         content = msg.content
         if not content:
             content = getattr(msg, "reasoning", None) or ""
-        return content
+        return _unwrap_text(content)
 
     async def stream(
         self,

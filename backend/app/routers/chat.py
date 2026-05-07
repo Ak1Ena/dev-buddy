@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.models.user import User
 from app.models.chat import ChatSession, ChatMessage
-from app.models.learning import Lesson
+from app.models.learning import Lesson, LearningPath
 from app.schemas.chat import ChatRequest, ChatResponse, ChatSessionResponse, ChatMessageResponse
 from app.agents.socratic_mentor import SocraticMentorAgent
 from app.utils.auth import get_current_user
@@ -43,13 +43,30 @@ async def send_message(
         await db.flush()
         history = []
 
-    # Get lesson topic for context
+    # Build rich lesson context so the mentor knows exactly what this lesson covers
     lesson_context = None
     if data.lesson_id:
         lesson_result = await db.execute(select(Lesson).where(Lesson.id == data.lesson_id))
         lesson = lesson_result.scalar_one_or_none()
         if lesson:
-            lesson_context = f"{lesson.title} ({lesson.topic})"
+            parts = [f"Lesson: {lesson.title}", f"Topic: {lesson.topic}", f"Difficulty: {lesson.difficulty}"]
+            if lesson.description:
+                parts.append(f"Description: {lesson.description}")
+            if lesson.content:
+                expl = lesson.content.get("explanation", "")
+                if expl:
+                    parts.append(f"Explanation (first 600 chars): {expl[:600]}")
+                concepts = lesson.content.get("key_concepts", [])
+                if concepts:
+                    parts.append(f"Key concepts: {', '.join(concepts)}")
+            # Include the source code the lesson is based on
+            path_result = await db.execute(
+                select(LearningPath).where(LearningPath.id == lesson.learning_path_id)
+            )
+            path = path_result.scalar_one_or_none()
+            if path and path.source_code:
+                parts.append(f"Student's original code:\n```\n{path.source_code[:800]}\n```")
+            lesson_context = "\n".join(parts)
 
     # Get AI response
     mentor = SocraticMentorAgent()
