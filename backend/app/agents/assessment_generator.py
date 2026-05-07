@@ -67,6 +67,9 @@ and function names from the actual code."""
         if not raw or not raw.strip():
             raise ValueError("LLM returned an empty response for question generation")
         data = extract_json(raw)
+        # Model may return a bare list of question objects or {"questions": [...]}
+        if isinstance(data, list):
+            return data
         return data["questions"]
 
 

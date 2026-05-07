@@ -125,7 +125,14 @@ Generate 10 lessons that will teach them to fully understand their code."""
         )
         if not raw or not raw.strip():
             raise ValueError("LLM returned empty response for learning path")
-        return extract_json(raw)
+        result = extract_json(raw)
+        # Model may return bare list of lesson objects instead of the full wrapper
+        if isinstance(result, list):
+            result = {"title": "Your Personalized Learning Path", "description": "", "lessons": result}
+        elif "lessons" not in result and isinstance(result.get("order_index"), int):
+            # Single lesson object returned accidentally at top level
+            result = {"title": "Your Personalized Learning Path", "description": "", "lessons": [result]}
+        return result
 
     async def generate_lesson_content(
         self,
