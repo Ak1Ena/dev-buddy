@@ -1,8 +1,6 @@
 "use client";
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import {
   CheckCircle2, XCircle, Loader2, TrendingUp, TrendingDown,
   Sparkles, Code2, ArrowRight,
@@ -23,6 +21,10 @@ interface AnswerFeedback {
   correct_answer: string;
   explanation?: string;
 }
+
+/** Replace literal \n and \t escape sequences the LLM sometimes emits */
+const unescape = (s: string) =>
+  s.replace(/\\n/g, "\n").replace(/\\t/g, "    ");
 
 const PLACEHOLDER_CODE = `# Paste any code you want to understand
 # For example:
@@ -307,15 +309,8 @@ export default function Assessment() {
       {/* Question */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-lg font-normal leading-relaxed text-slate-100">
-            <div className="prose prose-invert prose-sm max-w-none
-              prose-p:text-slate-100 prose-p:my-0
-              prose-code:text-sky-300 prose-code:bg-slate-800 prose-code:rounded prose-code:px-1 prose-code:text-sm
-              prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-700 prose-pre:rounded-lg prose-pre:my-2">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {question?.question?.replace(/\\n/g, "\n") ?? ""}
-              </ReactMarkdown>
-            </div>
+          <CardTitle className="text-lg font-normal leading-relaxed text-slate-100 whitespace-pre-wrap">
+            {unescape(question?.question ?? "")}
           </CardTitle>
           {question?.code_reference && (
             <p className="text-xs text-slate-500">Reference: {question.code_reference}</p>
@@ -333,7 +328,7 @@ export default function Assessment() {
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-current text-xs font-bold mt-0.5">
                   {opt.key}
                 </span>
-                <span>{opt.text}</span>
+                <span className="whitespace-pre-wrap">{unescape(opt.text)}</span>
                 {feedback && opt.key === feedback.correct_answer && (
                   <CheckCircle2 className="ml-auto h-4 w-4 shrink-0 text-emerald-400 mt-0.5" />
                 )}
