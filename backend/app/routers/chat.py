@@ -22,7 +22,7 @@ async def send_message(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Get or create session
+    # Get or create session; build history without lazy-loading the relationship
     if data.session_id:
         result = await db.execute(
             select(ChatSession)
@@ -32,6 +32,7 @@ async def send_message(
         session = result.scalar_one_or_none()
         if not session:
             raise HTTPException(status_code=404, detail="Chat session not found")
+        history = [{"role": m.role, "content": m.content} for m in session.messages]
     else:
         session = ChatSession(
             user_id=current_user.id,
@@ -40,7 +41,7 @@ async def send_message(
         )
         db.add(session)
         await db.flush()
-        session.messages = []
+        history = []
 
     # Get lesson topic for context
     lesson_context = None
@@ -49,9 +50,6 @@ async def send_message(
         lesson = lesson_result.scalar_one_or_none()
         if lesson:
             lesson_context = f"{lesson.title} ({lesson.topic})"
-
-    # Build conversation history
-    history = [{"role": m.role, "content": m.content} for m in session.messages]
 
     # Get AI response
     mentor = SocraticMentorAgent()
