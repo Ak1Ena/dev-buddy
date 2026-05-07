@@ -12,7 +12,6 @@ from app.agents.planner import PlannerAgent
 from app.utils.auth import get_current_user
 
 router = APIRouter(prefix="/learning", tags=["learning"])
-planner = PlannerAgent()
 
 
 @router.post("/generate-path", response_model=LearningPathResponse)
@@ -36,6 +35,7 @@ async def generate_learning_path(
     if not assessment:
         raise HTTPException(status_code=400, detail="No completed assessment found")
 
+    planner = PlannerAgent()
     plan_data = await planner.generate_learning_path(
         code_snippet=assessment.code_snippet,
         language=assessment.detected_language,
@@ -123,6 +123,7 @@ async def get_lesson(
         )
         path = path_result.scalar_one()
 
+        planner = PlannerAgent()
         content = await planner.generate_lesson_content(
             topic=lesson.topic,
             title=lesson.title,

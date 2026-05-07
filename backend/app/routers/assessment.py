@@ -20,8 +20,12 @@ from app.agents.assessment_generator import AssessmentGeneratorAgent, check_answ
 from app.utils.auth import get_current_user
 
 router = APIRouter(prefix="/assessment", tags=["assessment"])
-code_analyzer = CodeAnalyzerAgent()
-assessment_generator = AssessmentGeneratorAgent()
+
+def get_code_analyzer() -> CodeAnalyzerAgent:
+    return CodeAnalyzerAgent()
+
+def get_assessment_generator() -> AssessmentGeneratorAgent:
+    return AssessmentGeneratorAgent()
 
 
 @router.post("/start", response_model=AssessmentStartResponse)
@@ -30,6 +34,9 @@ async def start_assessment(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    code_analyzer = get_code_analyzer()
+    assessment_generator = get_assessment_generator()
+
     # Step 1: Analyze the code
     analysis = await code_analyzer.analyze(data.code_snippet)
 

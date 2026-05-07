@@ -14,7 +14,6 @@ from app.agents.socratic_mentor import SocraticMentorAgent
 from app.utils.auth import get_current_user
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-mentor = SocraticMentorAgent()
 
 
 @router.post("/send", response_model=ChatResponse)
@@ -55,6 +54,7 @@ async def send_message(
     history = [{"role": m.role, "content": m.content} for m in session.messages]
 
     # Get AI response
+    mentor = SocraticMentorAgent()
     response_text = await mentor.chat(
         user_message=data.message,
         conversation_history=history,
@@ -121,6 +121,7 @@ async def stream_message(
 
     async def event_stream():
         full_response = ""
+        mentor = SocraticMentorAgent()
         async for chunk in mentor.stream_chat(
             user_message=message,
             conversation_history=history,
