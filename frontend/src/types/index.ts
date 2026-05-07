@@ -105,11 +105,21 @@ export interface CanvasSceneData {
   edges?: CanvasEdge[];
 }
 
+export interface AnimationEffect {
+  effect: "pulse" | "flow" | "spawn" | "highlight" | "burst" | "fade";
+  target?: string;
+  from?: string;
+  to?: string;
+  label?: string;
+  color?: "sky" | "amber" | "emerald" | "fuchsia" | "red" | "slate";
+}
+
 export interface AnimationFrame {
   frame: number;
   title: string;
   code_state: string;
   canvas_scene?: CanvasSceneData;
+  effects?: AnimationEffect[];
   visual?: string;
   narration: string;
 }

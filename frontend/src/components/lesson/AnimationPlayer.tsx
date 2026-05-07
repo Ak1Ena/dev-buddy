@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Play, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AnimationFrame } from "@/types";
 import CanvasScene from "./CanvasScene";
+import EffectLayer from "./EffectLayer";
 
 interface Props {
   frames: AnimationFrame[];
@@ -120,6 +121,17 @@ export default function AnimationPlayer({ frames }: Props) {
                 </p>
               </motion.div>
             ) : null}
+
+            {/* Effect layer — AI-designed particle/animation effects */}
+            {frame.effects && frame.effects.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.14, duration: 0.25 }}
+              >
+                <EffectLayer effects={frame.effects} />
+              </motion.div>
+            )}
 
             {/* Narration */}
             <motion.div

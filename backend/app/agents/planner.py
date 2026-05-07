@@ -119,6 +119,14 @@ Return ONLY valid JSON — no markdown, no extra text:
         ],
         "edges": []
       },
+      "effects": [
+        {
+          "effect": "spawn",
+          "target": "energy_budget",
+          "label": "= 10.0",
+          "color": "sky"
+        }
+      ],
       "narration": "One sentence in present tense, active voice. What is happening RIGHT NOW and why it matters. No jargon."
     }
   ],
@@ -150,6 +158,15 @@ Rules for animation_frames:
 - code_state = only the 1-3 lines most relevant to THIS frame
 - narration is ONE sentence, present tense, active voice — like a narrator in a documentary
 - Show: variable creation, value changes, comparisons, loop iterations, function calls, returns
+- Always include an "effects" array (1-3 effects per frame) that visually dramatize what's happening:
+  - "spawn" — a variable/value is created for the first time (use when something new appears)
+  - "pulse" — a variable's value just changed (the most common effect)
+  - "flow" — data moves from one variable to another (requires "from" and "to")
+  - "highlight" — a condition evaluated to True (use for if/while checks)
+  - "burst" — a function is called or a loop fires an event
+  - "fade" — a variable goes out of scope or a loop ends
+  - color matches the canvas_scene node color for the same variable
+  - "target" = variable name, "label" = short description like "= 10.0" or "+= 1" or "→ result"
 
 Rules for canvas_scene (drawn on screen as boxes + arrows):
 - Use 1-6 nodes per frame — only what is relevant to THIS moment
