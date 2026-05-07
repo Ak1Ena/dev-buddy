@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import CodeVisualizer from "@/components/visualization/CodeVisualizer";
 import WorkshopExercise from "@/components/lesson/WorkshopExercise";
 import AnimationPlayer from "@/components/lesson/AnimationPlayer";
+import CodeWalkthrough from "@/components/lesson/CodeWalkthrough";
 import { topicLabel, cn } from "@/lib/utils";
 
 /* ── animation presets ───────────────────────────────────────────────────── */
@@ -400,45 +401,7 @@ export default function Learn() {
                   {c.code_walkthrough && c.code_walkthrough.length > 0 && (
                     <Section id="sec-walkthrough">
                       <SectionHeading icon={<List />} label="Line by line" iconClass="text-sky-400" />
-                      <div className="space-y-4">
-                        {c.code_walkthrough.map(
-                          (item: { code: string; plain_english: string; why: string }, i: number) => (
-                            <motion.div
-                              key={i}
-                              variants={fadeUp}
-                              initial="hidden"
-                              whileInView="show"
-                              viewport={{ once: true, margin: "-30px" }}
-                              transition={{ delay: i * 0.06 }}
-                              className="rounded-2xl border border-slate-700/60 overflow-hidden"
-                            >
-                              {/* code */}
-                              <pre className="overflow-x-auto bg-slate-950 px-5 py-3.5 font-mono text-sm leading-6 text-sky-300">
-                                {item.code}
-                              </pre>
-                              <div className="border-t border-slate-700/50 bg-slate-900/40 divide-y divide-slate-700/40">
-                                <div className="px-4 py-3">
-                                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                                    What it does
-                                  </p>
-                                  <p className="text-sm leading-relaxed text-slate-300">{item.plain_english}</p>
-                                </div>
-                                {item.why && (
-                                  <div className="flex gap-2.5 px-4 py-3">
-                                    <Zap className="h-3.5 w-3.5 shrink-0 text-amber-400 mt-0.5" />
-                                    <div>
-                                      <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 mb-1">
-                                        Why
-                                      </p>
-                                      <p className="text-sm leading-relaxed text-slate-400">{item.why}</p>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </motion.div>
-                          )
-                        )}
-                      </div>
+                      <CodeWalkthrough items={c.code_walkthrough} />
                     </Section>
                   )}
                 </>
