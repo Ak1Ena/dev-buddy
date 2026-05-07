@@ -38,14 +38,20 @@ async def start_assessment(
     assessment_generator = get_assessment_generator()
 
     # Step 1: Analyze the code
-    analysis = await code_analyzer.analyze(data.code_snippet)
+    try:
+        analysis = await code_analyzer.analyze(data.code_snippet)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Code analysis failed: {exc}")
 
     # Step 2: Generate 10 questions from the code
-    questions_with_answers = await assessment_generator.generate_questions(
-        code_snippet=data.code_snippet,
-        concepts=analysis["concepts"],
-        language=analysis["language"],
-    )
+    try:
+        questions_with_answers = await assessment_generator.generate_questions(
+            code_snippet=data.code_snippet,
+            concepts=analysis["concepts"],
+            language=analysis["language"],
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Question generation failed: {exc}")
 
     # Step 3: Save session (questions stored server-side with answers)
     session = AssessmentSession(

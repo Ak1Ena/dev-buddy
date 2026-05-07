@@ -33,6 +33,30 @@ Rules:
 - Include only concepts actually present in the code"""
 
 
+def _extract_json(text: str) -> dict:
+    """Pull the first {...} block out of a possibly-noisy LLM response."""
+    text = text.strip()
+    # strip ```json ... ``` fences
+    if "```" in text:
+        parts = text.split("```")
+        for part in parts:
+            part = part.strip()
+            if part.startswith("json"):
+                part = part[4:].strip()
+            if part.startswith("{"):
+                text = part
+                break
+    # find outermost { ... }
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        text = text[start : end + 1]
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Could not parse JSON from LLM response: {exc}\nRaw: {text[:300]}") from exc
+
+
 class CodeAnalyzerAgent:
     def __init__(self):
         self.llm = get_llm_provider()
@@ -43,9 +67,6 @@ class CodeAnalyzerAgent:
             system=SYSTEM,
             max_tokens=800,
         )
-        raw = raw.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        return json.loads(raw)
+        if not raw or not raw.strip():
+            raise ValueError("LLM returned an empty response for code analysis")
+        return _extract_json(raw)

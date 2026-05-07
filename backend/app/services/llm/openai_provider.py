@@ -35,7 +35,13 @@ class OpenAIProvider(LLMProvider):
             messages=self._build_messages(messages, system),
             extra_headers=self.extra_headers,
         )
-        return response.choices[0].message.content or ""
+        msg = response.choices[0].message
+        # Reasoning models (e.g. OpenRouter) may put the answer in .reasoning
+        # when .content is empty
+        content = msg.content
+        if not content:
+            content = getattr(msg, "reasoning", None) or ""
+        return content
 
     async def stream(
         self,
