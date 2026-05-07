@@ -33,16 +33,15 @@ _CONCEPT_TITLES = {
 
 
 def _build_fallback_path(concepts: list[str], weak_areas: list[str], language: str) -> dict:
-    """Build a deterministic learning path when the LLM fails."""
-    # Weak areas first, then remaining concepts, padded/trimmed to 10
+    """Build a deterministic learning path when the LLM fails.
+    Only covers what the student actually needs — weak areas first, then
+    any code concepts not already mastered.
+    """
+    # Weak areas drive the path; add code concepts not yet covered, skip padding
     ordered = list(dict.fromkeys(weak_areas + concepts))
-    while len(ordered) < 10:
-        for c in _CONCEPT_TITLES:
-            if c not in ordered:
-                ordered.append(c)
-            if len(ordered) == 10:
-                break
-    ordered = ordered[:10]
+    ordered = ordered[:8]  # hard cap, but no artificial minimum
+    if not ordered:
+        ordered = list(_CONCEPT_TITLES.keys())[:3]
 
     lessons = [
         {
@@ -58,14 +57,14 @@ def _build_fallback_path(concepts: list[str], weak_areas: list[str], language: s
     return {
         "title": f"Understanding Your {language.title()} Code",
         "description": (
-            "A personalized path built from the concepts in your submitted code. "
-            "Each lesson focuses on one concept found in your snippet."
+            "A personalized path targeting only the gaps in your understanding. "
+            "Each lesson focuses on one concept found in your submitted code."
         ),
         "lessons": lessons,
     }
 
 PLANNER_SYSTEM = """You are a curriculum design expert for beginner programming education.
-Create a personalized learning path where every lesson is grounded in the student's actual code.
+Create a personalized learning path targeting only the student's actual gaps.
 
 Return ONLY valid JSON — no markdown, no extra text:
 {
@@ -88,10 +87,13 @@ lists, dictionaries, strings, input_output, error_handling, recursion, oop_basic
 modules, closures, higher_order_functions, list_comprehension, classes
 
 Rules:
-- Generate exactly 10 lessons
-- Start with the concepts the student got wrong (weak_areas)
-- Each lesson title should reference something from their actual code
-- Build from foundational gaps to advanced concepts in their code
+- Generate ONLY the lessons the student actually needs — no padding
+- Each weak_area gets its own lesson (these are concepts the student got wrong on the assessment)
+- Add a lesson for a prerequisite concept only if it is essential to understand a weak area
+- Skip strong_areas entirely — the student already understands those
+- Minimum 1 lesson, maximum 8 lessons; let the gap analysis dictate the count
+- Order: foundational gaps first, then build toward the advanced concepts in their code
+- Each lesson title should reference something specific from their actual code
 - estimated_minutes between 15-30"""
 
 CONTENT_SYSTEM = """You are a programming mentor writing lesson content for absolute beginners.
@@ -142,6 +144,7 @@ class PlannerAgent:
         strong_areas: list[str],
         score: int,
     ) -> dict:
+        gap_count = len(weak_areas)
         prompt = f"""Create a personalized learning path for this student.
 
 Their submitted code:
@@ -149,15 +152,18 @@ Their submitted code:
 {code_snippet}
 ```
 
-Concepts in their code: {', '.join(concepts)}
+Concepts detected in their code: {', '.join(concepts) if concepts else 'general'}
 Assessment score: {score}/100
-Weak areas (needs focus): {', '.join(weak_areas) if weak_areas else 'general fundamentals'}
-Strong areas (can go faster): {', '.join(strong_areas) if strong_areas else 'none identified'}
+Weak areas — concepts they got WRONG (each needs a lesson): {', '.join(weak_areas) if weak_areas else 'none'}
+Strong areas — concepts they got RIGHT (skip these): {', '.join(strong_areas) if strong_areas else 'none'}
 Skill level: {skill_level}
+Number of weak areas: {gap_count}
 
-Generate 10 lessons that will teach them to fully understand their code."""
+The student has {gap_count} gap{'s' if gap_count != 1 else ''} to fill.
+Generate exactly as many lessons as needed — one per weak area, plus any essential prerequisites.
+Do NOT add lessons for concepts the student already understands."""
 
-        for attempt, max_tok in enumerate([16000, 8000], start=1):
+        for attempt, max_tok in enumerate([4000, 2000], start=1):
             try:
                 raw = await self.llm.complete(
                     messages=[{"role": "user", "content": prompt}],
@@ -171,9 +177,9 @@ Generate 10 lessons that will teach them to fully understand their code."""
                     result = {"title": "Your Personalized Learning Path", "description": "", "lessons": result}
                 elif "lessons" not in result and isinstance(result.get("order_index"), int):
                     result = {"title": "Your Personalized Learning Path", "description": "", "lessons": [result]}
-                if len(result.get("lessons", [])) >= 5:
+                if len(result.get("lessons", [])) >= 1:
                     return result
-                raise ValueError(f"only {len(result.get('lessons', []))} lessons returned")
+                raise ValueError("no lessons returned")
             except Exception as exc:
                 logger.warning("Learning path LLM attempt %d failed: %s", attempt, exc)
 
