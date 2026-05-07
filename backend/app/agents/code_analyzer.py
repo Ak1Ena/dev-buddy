@@ -1,14 +1,11 @@
 """
 Code Analyzer Agent — detects language, extracts concepts, estimates difficulty
-from a user-submitted code snippet. This is the entry point of the learning flow.
+from a user-submitted code snippet.
 """
 import json
-import anthropic
-from app.config import get_settings
+from app.services.llm import get_llm_provider
 
-settings = get_settings()
-
-ANALYZER_PROMPT = """You are a code analysis expert for programming education.
+SYSTEM = """You are a code analysis expert for programming education.
 Analyze the given code snippet and return ONLY valid JSON — no markdown, no extra text.
 
 Return this exact structure:
@@ -38,16 +35,15 @@ Rules:
 
 class CodeAnalyzerAgent:
     def __init__(self):
-        self.client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        self.llm = get_llm_provider()
 
     async def analyze(self, code_snippet: str) -> dict:
-        response = await self.client.messages.create(
-            model=settings.claude_model,
-            max_tokens=800,
-            system=ANALYZER_PROMPT,
+        raw = await self.llm.complete(
             messages=[{"role": "user", "content": f"Analyze this code:\n```\n{code_snippet}\n```"}],
+            system=SYSTEM,
+            max_tokens=800,
         )
-        raw = response.content[0].text.strip()
+        raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1]
             if raw.startswith("json"):

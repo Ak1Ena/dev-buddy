@@ -1,18 +1,14 @@
 """
-Planner Agent — generates a personalized learning path based on the user's
-submitted code + assessment results. All lessons are grounded in the user's code.
+Planner Agent — generates a personalized learning path and lesson content
+grounded in the user's submitted code.
 """
 import json
-import anthropic
-from app.config import get_settings
+from app.services.llm import get_llm_provider
 
-settings = get_settings()
+PLANNER_SYSTEM = """You are a curriculum design expert for beginner programming education.
+Create a personalized learning path where every lesson is grounded in the student's actual code.
 
-PLANNER_PROMPT = """You are a curriculum design expert for beginner programming education.
-Given a student's code snippet and assessment results, create a personalized learning path
-where every lesson is grounded in their actual code.
-
-Return ONLY valid JSON — no markdown, no explanation outside the JSON:
+Return ONLY valid JSON — no markdown, no extra text:
 {
   "title": "Understanding Your Code: [short description]",
   "description": "2-sentence description mentioning the student's code",
@@ -34,13 +30,12 @@ modules, closures, higher_order_functions, list_comprehension, classes
 
 Rules:
 - Generate exactly 10 lessons
-- Start with the concepts the student got wrong in the assessment (weak_areas)
+- Start with the concepts the student got wrong (weak_areas)
 - Each lesson title should reference something from their actual code
-- Build from foundational gaps to the more advanced concepts in their code
+- Build from foundational gaps to advanced concepts in their code
 - estimated_minutes between 15-30"""
 
-
-CONTENT_PROMPT = """You are a programming education content designer.
+CONTENT_SYSTEM = """You are a programming education content designer.
 Generate lesson content that always refers back to the student's original code.
 Return ONLY valid JSON — no markdown, no extra text:
 {
@@ -96,7 +91,7 @@ Return ONLY valid JSON — no markdown, no extra text:
 
 class PlannerAgent:
     def __init__(self):
-        self.client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        self.llm = get_llm_provider()
 
     async def generate_learning_path(
         self,
@@ -121,16 +116,14 @@ Weak areas (needs focus): {', '.join(weak_areas) if weak_areas else 'general fun
 Strong areas (can go faster): {', '.join(strong_areas) if strong_areas else 'none identified'}
 Skill level: {skill_level}
 
-Generate 10 lessons that will teach them to fully understand their code above.
-Lessons should reference specific parts of their code."""
+Generate 10 lessons that will teach them to fully understand their code."""
 
-        response = await self.client.messages.create(
-            model=settings.claude_model,
-            max_tokens=2000,
-            system=PLANNER_PROMPT,
+        raw = await self.llm.complete(
             messages=[{"role": "user", "content": prompt}],
+            system=PLANNER_SYSTEM,
+            max_tokens=2000,
         )
-        raw = response.content[0].text.strip()
+        raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1]
             if raw.startswith("json"):
@@ -157,16 +150,15 @@ The student's original code that motivated this lesson:
 {code_snippet}
 ```
 
-Focus specifically on the {topic} concept as it appears in their code above.
-Reference their actual variable names, function names, and line numbers where relevant."""
+Focus on the {topic} concept as it appears in their code. Reference their actual variable
+names, function names, and line numbers."""
 
-        response = await self.client.messages.create(
-            model=settings.claude_model,
-            max_tokens=4000,
-            system=CONTENT_PROMPT,
+        raw = await self.llm.complete(
             messages=[{"role": "user", "content": prompt}],
+            system=CONTENT_SYSTEM,
+            max_tokens=4000,
         )
-        raw = response.content[0].text.strip()
+        raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1]
             if raw.startswith("json"):

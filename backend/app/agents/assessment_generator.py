@@ -1,20 +1,15 @@
 """
-Assessment Generator Agent — creates 10 targeted multiple-choice questions
-from the user's actual code snippet. Questions reference specific lines and
-patterns in their code so answers are grounded in something they care about.
+Assessment Generator Agent — creates 10 targeted questions from the user's code.
 """
 import json
-import anthropic
-from app.config import get_settings
+from app.services.llm import get_llm_provider
 
-settings = get_settings()
-
-GENERATOR_PROMPT = """You are a programming assessment designer for beginners.
+SYSTEM = """You are a programming assessment designer for beginners.
 Given a code snippet and its extracted concepts, generate exactly 10 multiple-choice questions.
 
 Questions must:
 1. Reference specific parts of the provided code (e.g., "In line 3 of your code, what does `range(len(arr))` do?")
-2. Test understanding of the concepts in that code — not memorization
+2. Test understanding — not memorization
 3. Have exactly 4 options (A/B/C/D) with one correct answer
 4. Progress from simpler to more complex
 
@@ -43,12 +38,12 @@ topic must be one of: variables, data_types, operators, conditionals, loops, fun
 lists, dictionaries, strings, input_output, error_handling, recursion, oop_basics,
 modules, closures, higher_order_functions, list_comprehension, classes
 
-Generate exactly 10 questions covering all the concepts found in the code."""
+Generate exactly 10 questions covering the concepts in the code."""
 
 
 class AssessmentGeneratorAgent:
     def __init__(self):
-        self.client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        self.llm = get_llm_provider()
 
     async def generate_questions(self, code_snippet: str, concepts: list[str], language: str) -> list[dict]:
         prompt = f"""Generate 10 assessment questions for this {language} code snippet.
@@ -58,24 +53,22 @@ The code:
 {code_snippet}
 ```
 
-Concepts present in this code: {', '.join(concepts)}
+Concepts present: {', '.join(concepts)}
 
 Make questions that specifically reference this code — use line numbers, variable names,
-and function names from the actual code. Test if the student understands what each part does."""
+and function names from the actual code."""
 
-        response = await self.client.messages.create(
-            model=settings.claude_model,
-            max_tokens=3000,
-            system=GENERATOR_PROMPT,
+        raw = await self.llm.complete(
             messages=[{"role": "user", "content": prompt}],
+            system=SYSTEM,
+            max_tokens=3000,
         )
-        raw = response.content[0].text.strip()
+        raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1]
             if raw.startswith("json"):
                 raw = raw[4:]
-        data = json.loads(raw)
-        return data["questions"]
+        return json.loads(raw)["questions"]
 
 
 def check_answer(questions: list[dict], question_id: str, answer_key: str) -> dict:
@@ -114,13 +107,13 @@ def calculate_score(answers: list[dict]) -> dict:
 
     if score >= 80:
         skill_level = "intermediate"
-        recommendation = "Strong grasp of most concepts! Your lessons will focus on the few gaps and go deeper."
+        recommendation = "Strong grasp of most concepts! Lessons will focus on the few gaps and go deeper."
     elif score >= 50:
         skill_level = "beginner"
-        recommendation = "Good foundation! Your lessons will reinforce the weak spots in your code understanding."
+        recommendation = "Good foundation! Lessons will reinforce the weak spots in your code understanding."
     else:
         skill_level = "beginner"
-        recommendation = "Great starting point — your lessons will explain this code from the ground up, step by step."
+        recommendation = "Great starting point — lessons will explain this code from the ground up, step by step."
 
     return {
         "score": score,
