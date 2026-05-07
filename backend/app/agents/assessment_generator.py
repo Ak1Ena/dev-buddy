@@ -82,7 +82,7 @@ and function names from the actual code."""
         raw = await self.llm.complete(
             messages=[{"role": "user", "content": prompt}],
             system=SYSTEM,
-            max_tokens=3000,
+            max_tokens=16000,
         )
         if not raw or not raw.strip():
             raise ValueError("LLM returned an empty response for question generation")

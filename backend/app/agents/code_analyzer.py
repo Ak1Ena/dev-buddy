@@ -68,7 +68,7 @@ class CodeAnalyzerAgent:
         raw = await self.llm.complete(
             messages=[{"role": "user", "content": f"Analyze this code:\n```\n{code_snippet}\n```"}],
             system=SYSTEM,
-            max_tokens=800,
+            max_tokens=8000,
         )
         logger.debug("CodeAnalyzer raw LLM response: %r", raw[:500] if raw else "<empty>")
         if not raw or not raw.strip():
