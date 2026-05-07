@@ -39,19 +39,15 @@ async def generate_learning_path(
         raise HTTPException(status_code=400, detail="No completed assessment found")
 
     planner = PlannerAgent()
-    try:
-        plan_data = await planner.generate_learning_path(
-            code_snippet=assessment.code_snippet,
-            language=assessment.detected_language,
-            concepts=assessment.extracted_concepts or [],
-            skill_level=current_user.skill_level,
-            weak_areas=current_user.weak_areas or [],
-            strong_areas=current_user.strong_areas or [],
-            score=current_user.assessment_score or 0,
-        )
-    except Exception as exc:
-        logger.error("Learning path generation failed: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Learning path generation failed: {exc}")
+    plan_data = await planner.generate_learning_path(
+        code_snippet=assessment.code_snippet,
+        language=assessment.detected_language,
+        concepts=assessment.extracted_concepts or [],
+        skill_level=current_user.skill_level,
+        weak_areas=current_user.weak_areas or [],
+        strong_areas=current_user.strong_areas or [],
+        score=current_user.assessment_score or 0,
+    )
 
     # Deactivate any existing active paths
     existing = await db.execute(

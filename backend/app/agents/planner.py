@@ -2,8 +2,67 @@
 Planner Agent — generates a personalized learning path and lesson content
 grounded in the user's submitted code.
 """
+import logging
 from app.services.llm import get_llm_provider
 from app.agents.utils import extract_json
+
+logger = logging.getLogger(__name__)
+
+_CONCEPT_TITLES = {
+    "variables": "Variables & Assignment",
+    "data_types": "Data Types",
+    "operators": "Operators & Expressions",
+    "conditionals": "Conditionals & Branching",
+    "loops": "Loops & Iteration",
+    "functions": "Functions & Parameters",
+    "lists": "Lists & Sequences",
+    "dictionaries": "Dictionaries & Mappings",
+    "strings": "String Manipulation",
+    "input_output": "Input & Output",
+    "error_handling": "Error Handling",
+    "recursion": "Recursion",
+    "oop_basics": "Object-Oriented Basics",
+    "modules": "Modules & Imports",
+    "closures": "Closures",
+    "higher_order_functions": "Higher-Order Functions",
+    "list_comprehension": "List Comprehensions",
+    "classes": "Classes",
+    "async_await": "Async / Await",
+    "file_io": "File I/O",
+}
+
+
+def _build_fallback_path(concepts: list[str], weak_areas: list[str], language: str) -> dict:
+    """Build a deterministic learning path when the LLM fails."""
+    # Weak areas first, then remaining concepts, padded/trimmed to 10
+    ordered = list(dict.fromkeys(weak_areas + concepts))
+    while len(ordered) < 10:
+        for c in _CONCEPT_TITLES:
+            if c not in ordered:
+                ordered.append(c)
+            if len(ordered) == 10:
+                break
+    ordered = ordered[:10]
+
+    lessons = [
+        {
+            "order_index": i + 1,
+            "title": _CONCEPT_TITLES.get(c, c.replace("_", " ").title()),
+            "topic": c,
+            "description": f"Learn about {c.replace('_', ' ')} as used in your {language} code.",
+            "estimated_minutes": 20,
+            "difficulty": "beginner",
+        }
+        for i, c in enumerate(ordered)
+    ]
+    return {
+        "title": f"Understanding Your {language.title()} Code",
+        "description": (
+            "A personalized path built from the concepts in your submitted code. "
+            "Each lesson focuses on one concept found in your snippet."
+        ),
+        "lessons": lessons,
+    }
 
 PLANNER_SYSTEM = """You are a curriculum design expert for beginner programming education.
 Create a personalized learning path where every lesson is grounded in the student's actual code.
@@ -118,21 +177,28 @@ Skill level: {skill_level}
 
 Generate 10 lessons that will teach them to fully understand their code."""
 
-        raw = await self.llm.complete(
-            messages=[{"role": "user", "content": prompt}],
-            system=PLANNER_SYSTEM,
-            max_tokens=16000,
-        )
-        if not raw or not raw.strip():
-            raise ValueError("LLM returned empty response for learning path")
-        result = extract_json(raw)
-        # Model may return bare list of lesson objects instead of the full wrapper
-        if isinstance(result, list):
-            result = {"title": "Your Personalized Learning Path", "description": "", "lessons": result}
-        elif "lessons" not in result and isinstance(result.get("order_index"), int):
-            # Single lesson object returned accidentally at top level
-            result = {"title": "Your Personalized Learning Path", "description": "", "lessons": [result]}
-        return result
+        for attempt, max_tok in enumerate([16000, 8000], start=1):
+            try:
+                raw = await self.llm.complete(
+                    messages=[{"role": "user", "content": prompt}],
+                    system=PLANNER_SYSTEM,
+                    max_tokens=max_tok,
+                )
+                if not raw or not raw.strip():
+                    raise ValueError("empty response")
+                result = extract_json(raw)
+                if isinstance(result, list):
+                    result = {"title": "Your Personalized Learning Path", "description": "", "lessons": result}
+                elif "lessons" not in result and isinstance(result.get("order_index"), int):
+                    result = {"title": "Your Personalized Learning Path", "description": "", "lessons": [result]}
+                if result.get("lessons"):
+                    return result
+                raise ValueError("no lessons in response")
+            except Exception as exc:
+                logger.warning("Learning path LLM attempt %d failed: %s", attempt, exc)
+
+        logger.warning("All LLM attempts failed — using deterministic fallback path")
+        return _build_fallback_path(concepts, weak_areas, language)
 
     async def generate_lesson_content(
         self,
