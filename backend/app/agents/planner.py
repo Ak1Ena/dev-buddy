@@ -94,52 +94,56 @@ Rules:
 - Build from foundational gaps to advanced concepts in their code
 - estimated_minutes between 15-30"""
 
-CONTENT_SYSTEM = """You are a friendly programming tutor teaching absolute beginners.
-Explain things simply — like explaining to a curious 14-year-old with no CS background.
-Always refer back to the student's actual code. Never assume prior knowledge.
-Avoid jargon; when you use a technical word, explain it in plain language immediately.
+CONTENT_SYSTEM = """You are a visual programming mentor teaching absolute beginners through cinematic, step-by-step walkthroughs.
+Never write walls of text. Every explanation must feel like watching something happen, not reading a textbook.
+Always reference the student's actual code, variable names, and line numbers.
 
 Return ONLY valid JSON — no markdown, no extra text:
 {
-  "explanation": "4-6 paragraph plain-English explanation. Start with what the concept IS in everyday terms. Then show how it appears in the student's code specifically. Use short sentences. Never say 'as mentioned' or use filler phrases.",
-  "key_concepts": ["3-5 short concept names (plain English, not jargon)"],
-  "code_examples": [
+  "concept_hook": "One sentence using a vivid real-world metaphor. E.g. 'Think of energy_budget like a cash limit on a prepaid card — once it runs out, no more spending.'",
+  "animation_frames": [
     {
-      "title": "In your code",
-      "code": "The relevant 3-8 line snippet copied exactly from their code",
-      "explanation": "Walk through each line in plain English. What does it DO, not what it IS.",
-      "language": "python"
-    },
-    {
-      "title": "Simpler version",
-      "code": "A stripped-down 4-6 line example of the same concept",
-      "explanation": "How this simpler version relates to their code. Point out what changed.",
-      "language": "python"
+      "frame": 1,
+      "title": "Short cinematic title for this moment",
+      "code_state": "The 1-3 most relevant lines of their code at this exact moment",
+      "visual": "emoji + one sentence describing what the learner should PICTURE happening. Use arrows, containers, movement. E.g. '🔋 A glowing box labeled energy_budget appears and fills with the number 10.0'",
+      "narration": "One sentence in present tense, active voice. What is happening RIGHT NOW and why it matters. No jargon."
     }
   ],
-  "visualizations": [
+  "code_walkthrough": [
     {
-      "type": "variable_trace",
-      "title": "Step-by-step: what happens when the code runs",
-      "code": "3-5 line snippet from their code",
-      "steps": [
-        {"step": 1, "description": "plain English: what happens on this step", "state": {"variable_name": "its value"}}
-      ]
+      "code": "One line or short block from their code",
+      "plain_english": "What this line DOES in plain English — no technical terms",
+      "why": "Why the programmer wrote it this way — the intention behind it"
     }
   ],
+  "key_concepts": ["3-5 short concept names, plain English"],
   "workshops": [
     {
       "type": "predict_output",
       "title": "What does this print?",
-      "description": "Read the code below. What do you think it prints? Don't run it — just think it through.",
-      "code": "Short 4-8 line modified version of their code",
-      "answer": "the exact output",
-      "hints": ["Think about line X first", "hint 2", "hint 3"],
-      "explanation": "Plain English: why that is the answer, step by step"
+      "description": "Short challenge description — don't run it, just think it through",
+      "code": "Short 4-8 line version of their code",
+      "answer": "exact output",
+      "hints": ["hint 1 pointing to a specific line", "hint 2", "hint 3"],
+      "explanation": "Why that is the answer, step by step in plain English"
     }
   ],
-  "summary": "One friendly sentence: what this concept does and why it matters in their code"
-}"""
+  "summary": "One friendly sentence: what this concept does and why it matters in their specific code"
+}
+
+Rules for animation_frames:
+- Generate 4-7 frames covering the key moments in the code
+- Each frame = one atomic action (one assignment, one comparison, one iteration)
+- code_state = only the 1-3 lines most relevant to THIS frame
+- visual starts with a relevant emoji, then describes movement or change a beginner can picture
+- narration is ONE sentence, present tense, active voice — like a narrator in a documentary
+- Show: variable creation, value changes, comparisons, loop iterations, function calls, returns
+
+Rules for code_walkthrough:
+- One entry per meaningful line or block
+- plain_english: describe the action, not the syntax
+- why: explain the programmer's intention — WHY they wrote this line"""
 
 
 class PlannerAgent:
@@ -224,4 +228,13 @@ names, function names, and line numbers."""
         )
         if not raw or not raw.strip():
             raise ValueError("LLM returned empty response for lesson content")
-        return extract_json(raw)
+        result = extract_json(raw)
+        if isinstance(result, list):
+            # Sibling objects — pick the one that looks like lesson content
+            for item in result:
+                if isinstance(item, dict) and ("explanation" in item or "key_concepts" in item):
+                    return item
+            if result and isinstance(result[0], dict):
+                return result[0]
+            raise ValueError("LLM returned a list with no valid lesson content object")
+        return result

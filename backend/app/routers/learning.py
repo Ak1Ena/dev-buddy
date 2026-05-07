@@ -275,6 +275,13 @@ def _format_lesson(lesson: Lesson) -> LessonResponse:
             "workshop_score": p.workshop_score,
             "time_spent_seconds": p.time_spent_seconds,
         }
+    content = lesson.content
+    if isinstance(content, list):
+        # Recover from a list stored by an older bug: pick first dict that looks like content
+        content = next(
+            (item for item in content if isinstance(item, dict) and ("explanation" in item or "key_concepts" in item)),
+            content[0] if content and isinstance(content[0], dict) else None,
+        )
     return LessonResponse(
         id=lesson.id,
         title=lesson.title,
@@ -283,6 +290,6 @@ def _format_lesson(lesson: Lesson) -> LessonResponse:
         order_index=lesson.order_index,
         estimated_minutes=lesson.estimated_minutes,
         difficulty=lesson.difficulty,
-        content=lesson.content,
+        content=content,
         progress=progress_data,
     )
