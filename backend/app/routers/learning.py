@@ -89,7 +89,7 @@ async def generate_learning_path(
 
     result2 = await db.execute(
         select(LearningPath)
-        .options(selectinload(LearningPath.lessons))
+        .options(selectinload(LearningPath.lessons).selectinload(Lesson.progress))
         .where(LearningPath.id == path.id)
     )
     return _format_path(result2.scalar_one())
