@@ -36,9 +36,10 @@ export default function Login() {
       toast.success("Welcome back!");
       navigate("/dashboard");
     } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-        "Invalid email or password.";
+      const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((e: { msg?: string }) => e.msg).join(", ")
+        : (detail as string) ?? "Invalid email or password.";
       toast.error(message);
     } finally {
       setLoading(false);

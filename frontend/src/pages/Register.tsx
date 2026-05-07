@@ -31,8 +31,8 @@ export default function Register() {
       toast.error("Email, username, and password are required.");
       return;
     }
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters.");
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters.");
       return;
     }
     setLoading(true);
@@ -48,9 +48,10 @@ export default function Register() {
       toast.success("Account created! Let's assess your skills.");
       navigate("/assessment");
     } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-        "Registration failed. Please try again.";
+      const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((e: { msg?: string }) => e.msg).join(", ")
+        : (detail as string) ?? "Registration failed. Please try again.";
       toast.error(message);
     } finally {
       setLoading(false);
