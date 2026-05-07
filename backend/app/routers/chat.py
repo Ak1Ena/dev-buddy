@@ -70,13 +70,13 @@ async def send_message(
         session_id=session.id,
         role="user",
         content=data.message,
-        metadata={"code_context": bool(data.code_context)},
+        extra={"code_context": bool(data.code_context)},
     )
     ai_msg = ChatMessage(
         session_id=session.id,
         role="assistant",
         content=response_text,
-        metadata={"hint_level": data.hint_level},
+        extra={"hint_level": data.hint_level},
     )
     db.add(user_msg)
     db.add(ai_msg)
@@ -140,7 +140,7 @@ async def stream_message(
                 session_id=session_id,
                 role="assistant",
                 content=full_response,
-                metadata={"hint_level": hint_level},
+                extra={"hint_level": hint_level},
             )
             db.add(user_msg)
             db.add(ai_msg)

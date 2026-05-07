@@ -25,7 +25,7 @@ class ChatMessage(Base):
     session_id: Mapped[str] = mapped_column(String(36), ForeignKey("chat_sessions.id"), nullable=False)
     role: Mapped[str] = mapped_column(String(10), nullable=False)  # user / assistant
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    metadata: Mapped[dict | None] = mapped_column(JSON)  # hint_level, topic, etc.
+    extra: Mapped[dict | None] = mapped_column(JSON)  # hint_level, topic, etc.
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     session = relationship("ChatSession", back_populates="messages")

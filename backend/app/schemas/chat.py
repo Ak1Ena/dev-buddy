@@ -14,7 +14,7 @@ class ChatMessageResponse(BaseModel):
     id: str
     role: str
     content: str
-    metadata: dict | None
+    extra: dict | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
