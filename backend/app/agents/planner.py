@@ -2,8 +2,8 @@
 Planner Agent — generates a personalized learning path and lesson content
 grounded in the user's submitted code.
 """
-import json
 from app.services.llm import get_llm_provider
+from app.agents.utils import extract_json
 
 PLANNER_SYSTEM = """You are a curriculum design expert for beginner programming education.
 Create a personalized learning path where every lesson is grounded in the student's actual code.
@@ -121,14 +121,11 @@ Generate 10 lessons that will teach them to fully understand their code."""
         raw = await self.llm.complete(
             messages=[{"role": "user", "content": prompt}],
             system=PLANNER_SYSTEM,
-            max_tokens=2000,
+            max_tokens=16000,
         )
-        raw = raw.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        return json.loads(raw)
+        if not raw or not raw.strip():
+            raise ValueError("LLM returned empty response for learning path")
+        return extract_json(raw)
 
     async def generate_lesson_content(
         self,
@@ -156,11 +153,8 @@ names, function names, and line numbers."""
         raw = await self.llm.complete(
             messages=[{"role": "user", "content": prompt}],
             system=CONTENT_SYSTEM,
-            max_tokens=4000,
+            max_tokens=16000,
         )
-        raw = raw.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        return json.loads(raw)
+        if not raw or not raw.strip():
+            raise ValueError("LLM returned empty response for lesson content")
+        return extract_json(raw)

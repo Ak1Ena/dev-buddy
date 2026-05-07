@@ -1,8 +1,8 @@
 """
 Assessment Generator Agent — creates 10 targeted questions from the user's code.
 """
-import json
 from app.services.llm import get_llm_provider
+from app.agents.utils import extract_json
 
 SYSTEM = """You are a programming assessment designer for beginners.
 Given a code snippet and its extracted concepts, generate exactly 10 multiple-choice questions.
@@ -41,26 +41,6 @@ modules, closures, higher_order_functions, list_comprehension, classes
 Generate exactly 10 questions covering the concepts in the code."""
 
 
-def _extract_json(text: str) -> dict:
-    text = text.strip()
-    if "```" in text:
-        parts = text.split("```")
-        for part in parts:
-            part = part.strip()
-            if part.startswith("json"):
-                part = part[4:].strip()
-            if part.startswith("{"):
-                text = part
-                break
-    start = text.find("{")
-    end = text.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        text = text[start : end + 1]
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"Could not parse JSON from LLM response: {exc}\nRaw: {text[:300]}") from exc
-
 
 class AssessmentGeneratorAgent:
     def __init__(self):
@@ -86,7 +66,7 @@ and function names from the actual code."""
         )
         if not raw or not raw.strip():
             raise ValueError("LLM returned an empty response for question generation")
-        data = _extract_json(raw)
+        data = extract_json(raw)
         return data["questions"]
 
 

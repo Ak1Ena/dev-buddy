@@ -1,4 +1,7 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException
+
+logger = logging.getLogger(__name__)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -36,15 +39,19 @@ async def generate_learning_path(
         raise HTTPException(status_code=400, detail="No completed assessment found")
 
     planner = PlannerAgent()
-    plan_data = await planner.generate_learning_path(
-        code_snippet=assessment.code_snippet,
-        language=assessment.detected_language,
-        concepts=assessment.extracted_concepts or [],
-        skill_level=current_user.skill_level,
-        weak_areas=current_user.weak_areas or [],
-        strong_areas=current_user.strong_areas or [],
-        score=current_user.assessment_score or 0,
-    )
+    try:
+        plan_data = await planner.generate_learning_path(
+            code_snippet=assessment.code_snippet,
+            language=assessment.detected_language,
+            concepts=assessment.extracted_concepts or [],
+            skill_level=current_user.skill_level,
+            weak_areas=current_user.weak_areas or [],
+            strong_areas=current_user.strong_areas or [],
+            score=current_user.assessment_score or 0,
+        )
+    except Exception as exc:
+        logger.error("Learning path generation failed: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Learning path generation failed: {exc}")
 
     # Deactivate any existing active paths
     existing = await db.execute(
@@ -124,14 +131,18 @@ async def get_lesson(
         path = path_result.scalar_one()
 
         planner = PlannerAgent()
-        content = await planner.generate_lesson_content(
-            topic=lesson.topic,
-            title=lesson.title,
-            language=path.language,
-            skill_level=path.skill_level,
-            code_snippet=path.source_code or "",
-            weak_areas=current_user.weak_areas or [],
-        )
+        try:
+            content = await planner.generate_lesson_content(
+                topic=lesson.topic,
+                title=lesson.title,
+                language=path.language,
+                skill_level=path.skill_level,
+                code_snippet=path.source_code or "",
+                weak_areas=current_user.weak_areas or [],
+            )
+        except Exception as exc:
+            logger.error("Lesson content generation failed: %s", exc, exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Lesson content generation failed: {exc}")
         lesson.content = content
         await db.commit()
 
