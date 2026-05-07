@@ -1,315 +1,266 @@
-import { useEffect, useRef } from "react";
+import { useState, useRef, useLayoutEffect } from "react";
+import { motion } from "framer-motion";
 import type { CanvasSceneData, CanvasNode, CanvasEdge } from "@/types";
 
-// ── Palette ───────────────────────────────────────────────────────────────────
-const PAL: Record<string, { bg: string; border: string; val: string; lbl: string }> = {
-  sky:     { bg: "rgba(14,165,233,.12)",  border: "#0ea5e9", val: "#38bdf8", lbl: "#7dd3fc" },
-  emerald: { bg: "rgba(16,185,129,.12)",  border: "#10b981", val: "#34d399", lbl: "#6ee7b7" },
-  fuchsia: { bg: "rgba(168,85,247,.12)",  border: "#a855f7", val: "#c084fc", lbl: "#d8b4fe" },
-  amber:   { bg: "rgba(245,158,11,.12)",  border: "#f59e0b", val: "#fbbf24", lbl: "#fde68a" },
-  red:     { bg: "rgba(239,68,68,.12)",   border: "#ef4444", val: "#f87171", lbl: "#fca5a5" },
-  slate:   { bg: "rgba(71,85,105,.15)",   border: "#475569", val: "#94a3b8", lbl: "#cbd5e1" },
+// ── Palette (inline styles only — avoids dynamic Tailwind class purging) ──────
+const PAL: Record<string, { bg: string; border: string; lbl: string; val: string; glow: string }> = {
+  sky:     { bg: "rgba(14,165,233,0.1)",  border: "#0ea5e9", lbl: "#7dd3fc", val: "#38bdf8", glow: "rgba(14,165,233,0.28)"  },
+  emerald: { bg: "rgba(16,185,129,0.1)",  border: "#10b981", lbl: "#6ee7b7", val: "#34d399", glow: "rgba(16,185,129,0.28)"  },
+  fuchsia: { bg: "rgba(168,85,247,0.1)",  border: "#a855f7", lbl: "#d8b4fe", val: "#c084fc", glow: "rgba(168,85,247,0.28)"  },
+  amber:   { bg: "rgba(245,158,11,0.1)",  border: "#f59e0b", lbl: "#fde68a", val: "#fbbf24", glow: "rgba(245,158,11,0.28)"  },
+  red:     { bg: "rgba(239,68,68,0.1)",   border: "#ef4444", lbl: "#fca5a5", val: "#f87171", glow: "rgba(239,68,68,0.28)"   },
+  slate:   { bg: "rgba(71,85,105,0.15)",  border: "#475569", lbl: "#cbd5e1", val: "#94a3b8", glow: "rgba(71,85,105,0.35)"   },
 };
 
-// ── Layout constants ──────────────────────────────────────────────────────────
-const H_GAP   = 44;   // gap between siblings / horizontal nodes
-const V_GAP   = 52;   // gap between tree levels
-const PAD     = 32;   // canvas outer padding
-const MIN_W   = 90;   // minimum node width
-const IPAD    = 16;   // inner horizontal padding per side
-const H_VAL   = 66;   // node height when value row present
-const H_NOVAL = 36;   // node height when no value
+const H_GAP = 44;
+const V_GAP = 56;
+const PAD   = 28;
 
-const LBL_FONT = "600 9px ui-monospace, SFMono-Regular, monospace";
-const VAL_FONT = "bold 17px ui-monospace, SFMono-Regular, monospace";
+// ── Internal geometry types ───────────────────────────────────────────────────
+interface Sz     { w: number; h: number }
+interface Pos    { x: number; y: number }
+interface Layout { positions: Map<string, Pos>; sizes: Map<string, Sz>; cw: number; ch: number }
 
-// ── Internal types ────────────────────────────────────────────────────────────
-interface Sz  { w: number; h: number }
-interface Pos { x: number; y: number }
-
-// ── Rounded rect path ─────────────────────────────────────────────────────────
-function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.arcTo(x + w, y,     x + w, y + r,     r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-  ctx.lineTo(x + r, y + h);
-  ctx.arcTo(x,     y + h, x,     y + h - r, r);
-  ctx.lineTo(x,     y + r);
-  ctx.arcTo(x,     y,     x + r, y,         r);
-  ctx.closePath();
-}
-
-// ── Measure each node's natural size based on its text ────────────────────────
-function measureNodes(nodes: CanvasNode[]): Map<string, Sz> {
-  const mc = document.createElement("canvas").getContext("2d")!;
-  return new Map(nodes.map(node => {
-    mc.font = LBL_FONT;
-    const lw = mc.measureText(node.label).width;
-    mc.font = VAL_FONT;
-    const vw = node.value ? mc.measureText(String(node.value)).width : 0;
-    return [
-      node.id,
-      {
-        w: Math.max(MIN_W, Math.ceil(Math.max(lw, vw) + IPAD * 2)),
-        h: node.value ? H_VAL : H_NOVAL,
-      },
-    ];
-  }));
-}
-
-// ── Build parent → [children] map ─────────────────────────────────────────────
-function buildChildren(nodes: CanvasNode[]): Map<string, string[]> {
+// ── Layout: tree (when any node has parent) or flat (horizontal) ──────────────
+function buildChildren(nodes: CanvasNode[]) {
   const m = new Map(nodes.map(n => [n.id, [] as string[]]));
   nodes.forEach(n => { if (n.parent) m.get(n.parent)?.push(n.id); });
   return m;
 }
 
-// ── Width of the subtree rooted at id ────────────────────────────────────────
-function subtreeW(
-  id: string,
-  ch: Map<string, string[]>,
-  sz: Map<string, Sz>,
-): number {
+function subtreeW(id: string, ch: Map<string, string[]>, sz: Map<string, Sz>): number {
   const kids = ch.get(id) ?? [];
-  const self = sz.get(id)?.w ?? MIN_W;
+  const self = sz.get(id)?.w ?? 90;
   if (!kids.length) return self;
-  const kidsTotal = kids.reduce((s, k) => s + subtreeW(k, ch, sz), 0)
-    + H_GAP * (kids.length - 1);
-  return Math.max(self, kidsTotal);
+  return Math.max(self, kids.reduce((s, k) => s + subtreeW(k, ch, sz), 0) + H_GAP * (kids.length - 1));
 }
 
-// ── Tree layout (DFS, Reingold-Tilford-style allocation) ──────────────────────
-function treeLayout(nodes: CanvasNode[], sz: Map<string, Sz>): Map<string, Pos> {
-  const pos = new Map<string, Pos>();
-  const ch  = buildChildren(nodes);
-  const sw  = new Map(nodes.map(n => [n.id, subtreeW(n.id, ch, sz)]));
+function computeLayout(nodes: CanvasNode[], sz: Map<string, Sz>): Layout {
+  const pos    = new Map<string, Pos>();
+  const isTree = nodes.some(n => !!n.parent);
 
-  function place(id: string, ox: number, y: number) {
-    const { w, h } = sz.get(id)!;
-    pos.set(id, { x: ox + (sw.get(id)! - w) / 2, y });
-    let cx = ox;
-    for (const kid of (ch.get(id) ?? [])) {
-      place(kid, cx, y + h + V_GAP);
-      cx += sw.get(kid)! + H_GAP;
+  if (isTree) {
+    const ch = buildChildren(nodes);
+    const sw = new Map(nodes.map(n => [n.id, subtreeW(n.id, ch, sz)]));
+
+    function place(id: string, ox: number, y: number) {
+      const { w, h } = sz.get(id)!;
+      pos.set(id, { x: ox + (sw.get(id)! - w) / 2, y });
+      let cx = ox;
+      for (const kid of (ch.get(id) ?? [])) {
+        place(kid, cx, y + h + V_GAP);
+        cx += sw.get(kid)! + H_GAP;
+      }
     }
-  }
-
-  let ox = PAD;
-  for (const root of nodes.filter(n => !n.parent)) {
-    place(root.id, ox, PAD);
-    ox += sw.get(root.id)! + H_GAP * 2;
-  }
-  return pos;
-}
-
-// ── Horizontal layout (original flat layout) ──────────────────────────────────
-function hLayout(nodes: CanvasNode[], sz: Map<string, Sz>): Map<string, Pos> {
-  const pos = new Map<string, Pos>();
-  let x = PAD;
-  for (const n of nodes) {
-    pos.set(n.id, { x, y: PAD });
-    x += sz.get(n.id)!.w + H_GAP;
-  }
-  return pos;
-}
-
-// ── Arrow (for edges[]) ───────────────────────────────────────────────────────
-function drawArrow(
-  ctx: CanvasRenderingContext2D,
-  x1: number, y1: number,
-  x2: number, y2: number,
-  col: string,
-  dashed: boolean,
-) {
-  const angle = Math.atan2(y2 - y1, x2 - x1);
-  const TIP = 8;
-  ctx.globalAlpha = 0.65;
-  ctx.strokeStyle = col;
-  ctx.lineWidth   = 1.5;
-  ctx.setLineDash(dashed ? [5, 4] : []);
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2 - TIP * Math.cos(angle), y2 - TIP * Math.sin(angle));
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = col;
-  ctx.beginPath();
-  ctx.moveTo(x2, y2);
-  ctx.lineTo(x2 - TIP * Math.cos(angle - Math.PI / 6), y2 - TIP * Math.sin(angle - Math.PI / 6));
-  ctx.lineTo(x2 - TIP * Math.cos(angle + Math.PI / 6), y2 - TIP * Math.sin(angle + Math.PI / 6));
-  ctx.closePath();
-  ctx.fill();
-}
-
-// ── Cubic bezier (for parent→child) ──────────────────────────────────────────
-function drawCurve(
-  ctx: CanvasRenderingContext2D,
-  x1: number, y1: number,
-  x2: number, y2: number,
-  col: string,
-) {
-  const mid = (y1 + y2) / 2;
-  ctx.globalAlpha = 0.45;
-  ctx.strokeStyle = col;
-  ctx.lineWidth   = 1.5;
-  ctx.setLineDash([]);
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.bezierCurveTo(x1, mid, x2, mid, x2, y2);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-  // dot at child end
-  ctx.fillStyle = col;
-  ctx.beginPath();
-  ctx.arc(x2, y2, 3, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-// ── Component ─────────────────────────────────────────────────────────────────
-export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const { nodes, edges = [] } = scene;
-    if (!nodes.length) return;
-
-    // 1. Measure each node's natural size
-    const sz = measureNodes(nodes);
-
-    // 2. Choose layout: tree when any node declares a parent
-    const isTree = nodes.some(n => !!n.parent);
-    const pos = isTree ? treeLayout(nodes, sz) : hLayout(nodes, sz);
-
-    // 3. Canvas size = bounding box of all nodes + padding
-    let maxX = 0, maxY = 0;
+    let ox = PAD;
+    for (const root of nodes.filter(n => !n.parent)) {
+      place(root.id, ox, PAD);
+      ox += sw.get(root.id)! + H_GAP * 2;
+    }
+  } else {
+    let x = PAD;
     for (const n of nodes) {
-      const { x, y } = pos.get(n.id)!;
-      const { w, h } = sz.get(n.id)!;
-      maxX = Math.max(maxX, x + w);
-      maxY = Math.max(maxY, y + h);
+      pos.set(n.id, { x, y: PAD });
+      x += sz.get(n.id)!.w + H_GAP;
     }
-    const CW = maxX + PAD;
-    const CH = maxY + PAD;
+  }
 
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width  = CW * dpr;
-    canvas.height = CH * dpr;
-    canvas.style.width  = `${CW}px`;
-    canvas.style.height = `${CH}px`;
-    ctx.scale(dpr, dpr);
+  let maxX = 0, maxY = 0;
+  for (const n of nodes) {
+    const p = pos.get(n.id) ?? { x: 0, y: 0 };
+    const s = sz.get(n.id) ?? { w: 0, h: 0 };
+    maxX = Math.max(maxX, p.x + s.w);
+    maxY = Math.max(maxY, p.y + s.h);
+  }
+  return { positions: pos, sizes: sz, cw: maxX + PAD, ch: maxY + PAD };
+}
 
-    // 4. Background
-    ctx.fillStyle = "#020617";
-    ctx.fillRect(0, 0, CW, CH);
+// ── SVG bezier path for parent→child connectors ───────────────────────────────
+function bezier(x1: number, y1: number, x2: number, y2: number) {
+  const m = (y1 + y2) / 2;
+  return `M ${x1} ${y1} C ${x1} ${m}, ${x2} ${m}, ${x2} ${y2}`;
+}
 
-    // 5. Parent→child bezier curves (drawn beneath nodes)
-    for (const node of nodes) {
-      if (!node.parent) continue;
-      const pp = pos.get(node.parent);
-      const np = pos.get(node.id);
-      const ps = sz.get(node.parent);
-      const ns = sz.get(node.id);
-      if (!pp || !np || !ps || !ns) continue;
-      const parentNode = nodes.find(n => n.id === node.parent);
-      const col = (PAL[parentNode?.color ?? "slate"] ?? PAL.slate).border;
-      drawCurve(
-        ctx,
-        pp.x + ps.w / 2, pp.y + ps.h,   // parent bottom-center
-        np.x + ns.w / 2, np.y,           // child top-center
-        col,
-      );
+// ── Individual node box (HTML) ────────────────────────────────────────────────
+function NodeBox({ node }: { node: CanvasNode }) {
+  const p = PAL[node.color ?? "sky"] ?? PAL.sky;
+  const hasValue = node.value !== undefined && node.value !== "";
+  return (
+    <div
+      data-nid={node.id}
+      className="rounded-[10px] font-mono whitespace-nowrap"
+      style={{
+        minWidth: 90,
+        background: p.bg,
+        border: `${node.highlight ? 2 : 1}px solid ${p.border}`,
+        boxShadow: node.highlight
+          ? `0 0 0 1px ${p.border}33, 0 0 20px 3px ${p.glow}`
+          : undefined,
+      }}
+    >
+      <p
+        className="text-[9px] font-semibold tracking-wider text-center px-3.5 pt-2"
+        style={{ color: p.lbl, paddingBottom: hasValue ? "4px" : "8px" }}
+      >
+        {node.label}
+      </p>
+      {hasValue && (
+        <>
+          <div className="mx-2.5" style={{ borderTop: `0.75px solid ${p.border}28` }} />
+          <p
+            className="text-[17px] font-bold text-center px-3.5 pb-2 pt-1.5"
+            style={{ color: p.val }}
+          >
+            {node.value}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
+  const { nodes, edges = [] } = scene;
+  const [layout, setLayout] = useState<Layout | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Phase 1 — nodes render hidden at (0,0); measure their natural DOM size.
+  // Phase 2 — compute positions; framer-motion animates nodes into place.
+  // CanvasScene remounts per frame (parent AnimationPlayer uses key={idx}),
+  // so layout always starts fresh.
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el || !nodes.length) return;
+    const sz = new Map<string, Sz>();
+    for (const n of nodes) {
+      const node = el.querySelector<HTMLDivElement>(`[data-nid="${n.id}"]`);
+      if (!node) return; // not all nodes mounted yet — skip
+      sz.set(n.id, { w: node.offsetWidth, h: node.offsetHeight });
     }
+    setLayout(computeLayout(nodes, sz));
+  }, [nodes, scene]);
 
-    // 6. Regular edges (arrows, from edges[])
-    for (const edge of (edges as CanvasEdge[])) {
-      const fp = pos.get(edge.from);
-      const tp = pos.get(edge.to);
-      const fs = sz.get(edge.from);
-      const ts = sz.get(edge.to);
-      if (!fp || !tp || !fs || !ts) continue;
-      const srcNode = nodes.find(n => n.id === edge.from);
-      const col = (PAL[srcNode?.color ?? "sky"] ?? PAL.sky).border;
-      drawArrow(
-        ctx,
-        fp.x + fs.w, fp.y + fs.h / 2,
-        tp.x,        tp.y + ts.h / 2,
-        col,
-        edge.style === "dashed",
-      );
-      if (edge.label) {
-        ctx.fillStyle  = "#64748b";
-        ctx.font       = "600 10px ui-monospace, SFMono-Regular, monospace";
-        ctx.textAlign  = "center";
-        ctx.fillText(edge.label, (fp.x + fs.w + tp.x) / 2, Math.min(fp.y, tp.y) - 6);
-      }
-    }
-
-    // 7. Draw nodes
-    for (const node of nodes) {
-      const { x, y } = pos.get(node.id)!;
-      const { w, h } = sz.get(node.id)!;
-      const p = PAL[node.color ?? "sky"] ?? PAL.sky;
-
-      // Glow behind highlighted node
-      if (node.highlight) {
-        ctx.save();
-        ctx.shadowColor = p.border;
-        ctx.shadowBlur  = 22;
-        ctx.strokeStyle = p.border;
-        ctx.lineWidth   = 2;
-        rr(ctx, x - 3, y - 3, w + 6, h + 6, 13);
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      // Fill
-      ctx.fillStyle = p.bg;
-      rr(ctx, x, y, w, h, 10);
-      ctx.fill();
-
-      // Border
-      ctx.strokeStyle = p.border;
-      ctx.lineWidth   = node.highlight ? 2 : 1;
-      rr(ctx, x, y, w, h, 10);
-      ctx.stroke();
-
-      // Label
-      ctx.fillStyle  = p.lbl;
-      ctx.font       = LBL_FONT;
-      ctx.textAlign  = "center";
-      ctx.fillText(node.label, x + w / 2, y + (node.value ? 14 : h / 2 + 4));
-
-      // Divider + value (only when value present)
-      if (node.value) {
-        ctx.globalAlpha = 0.18;
-        ctx.strokeStyle = p.border;
-        ctx.lineWidth   = 0.75;
-        ctx.beginPath();
-        ctx.moveTo(x + 10, y + 24);
-        ctx.lineTo(x + w - 10, y + 24);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-
-        ctx.fillStyle  = p.val;
-        ctx.font       = VAL_FONT;
-        ctx.textAlign  = "center";
-        ctx.fillText(String(node.value), x + w / 2, y + h / 2 + 13);
-      }
-    }
-  }, [scene]);
+  const ready = layout !== null;
 
   return (
-    <div className="rounded-xl overflow-x-auto border border-slate-700/60">
-      <canvas ref={ref} className="block" />
+    <div
+      ref={containerRef}
+      className="relative bg-slate-950 rounded-xl border border-slate-700/60 overflow-x-auto"
+      style={ready ? { width: layout.cw, height: layout.ch } : { minHeight: 88 }}
+    >
+      {/* ── SVG lines (rendered behind nodes) ──────────────────────────────── */}
+      {ready && (
+        <svg
+          width={layout.cw}
+          height={layout.ch}
+          className="absolute inset-0 pointer-events-none"
+          style={{ overflow: "visible" }}
+        >
+          <defs>
+            {Object.entries(PAL).map(([key, p]) => (
+              <marker
+                key={key}
+                id={`arw-${key}`}
+                markerUnits="userSpaceOnUse"
+                markerWidth="10" markerHeight="8"
+                refX="9" refY="4"
+                orient="auto"
+              >
+                <path d="M 0 0.5 L 9 4 L 0 7.5 Z" fill={p.border} />
+              </marker>
+            ))}
+          </defs>
+
+          {/* Parent → child: animated bezier curves */}
+          {nodes.map(node => {
+            if (!node.parent) return null;
+            const pp = layout.positions.get(node.parent);
+            const np = layout.positions.get(node.id);
+            const ps = layout.sizes.get(node.parent);
+            const ns = layout.sizes.get(node.id);
+            if (!pp || !np || !ps || !ns) return null;
+            const parentColor = nodes.find(n => n.id === node.parent)?.color ?? "slate";
+            const col = (PAL[parentColor] ?? PAL.slate).border;
+            return (
+              <motion.path
+                key={`crv-${node.id}`}
+                d={bezier(pp.x + ps.w / 2, pp.y + ps.h, np.x + ns.w / 2, np.y)}
+                fill="none"
+                stroke={col}
+                strokeWidth={1.5}
+                strokeOpacity={0.5}
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 1 }}
+                transition={{ duration: 0.45, delay: 0.12, ease: "easeOut" }}
+              />
+            );
+          })}
+
+          {/* Edges: directional arrows */}
+          {(edges as CanvasEdge[]).map((edge, i) => {
+            const fp = layout.positions.get(edge.from);
+            const tp = layout.positions.get(edge.to);
+            const fs = layout.sizes.get(edge.from);
+            const ts = layout.sizes.get(edge.to);
+            if (!fp || !tp || !fs || !ts) return null;
+            const colorKey = nodes.find(n => n.id === edge.from)?.color ?? "sky";
+            const p = PAL[colorKey] ?? PAL.sky;
+            const x1 = fp.x + fs.w + 2;
+            const y1 = fp.y + fs.h / 2;
+            const x2 = tp.x - 2;
+            const y2 = tp.y + ts.h / 2;
+            return (
+              <g key={i}>
+                <motion.line
+                  x1={x1} y1={y1} x2={x2} y2={y2}
+                  stroke={p.border}
+                  strokeWidth={1.5}
+                  strokeOpacity={0.7}
+                  strokeDasharray={edge.style === "dashed" ? "5 4" : undefined}
+                  markerEnd={`url(#arw-${colorKey})`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3, delay: 0.1 }}
+                />
+                {edge.label && (
+                  <text
+                    x={(x1 + x2) / 2}
+                    y={Math.min(fp.y, tp.y) - 7}
+                    fill="#64748b"
+                    fontSize="10"
+                    fontFamily="ui-monospace, SFMono-Regular, monospace"
+                    fontWeight="600"
+                    textAnchor="middle"
+                  >
+                    {edge.label}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+      )}
+
+      {/* ── Node boxes ─────────────────────────────────────────────────────── */}
+      {nodes.map((node, i) => {
+        const pos = layout?.positions.get(node.id);
+        return (
+          <motion.div
+            key={node.id}
+            initial={{ opacity: 0, scale: 0.88 }}
+            animate={{ opacity: ready ? 1 : 0, scale: ready ? 1 : 0.88 }}
+            transition={{ duration: 0.22, delay: ready ? i * 0.05 : 0, ease: "easeOut" }}
+            style={
+              ready && pos
+                ? { position: "absolute", left: pos.x, top: pos.y }
+                : { position: "absolute", left: 0, top: 0, pointerEvents: "none" }
+            }
+          >
+            <NodeBox node={node} />
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
