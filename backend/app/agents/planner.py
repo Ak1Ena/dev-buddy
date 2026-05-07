@@ -244,7 +244,7 @@ names, function names, and line numbers."""
         raw = await self.llm.complete(
             messages=[{"role": "user", "content": prompt}],
             system=CONTENT_SYSTEM,
-            max_tokens=16000,
+            max_tokens=6000,
         )
         if not raw or not raw.strip():
             raise ValueError("LLM returned empty response for lesson content")

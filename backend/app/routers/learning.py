@@ -25,8 +25,9 @@ async def _prefill_lesson_content(
     source_code: str,
     weak_areas: list[str],
 ):
-    """Background task: generate content for every lesson in a path."""
+    """Background task: generate content for every lesson in a path, 3 at a time."""
     from app.agents.planner import PlannerAgent
+    from sqlalchemy import update
 
     async with AsyncSessionLocal() as db:
         result = await db.execute(
@@ -36,23 +37,36 @@ async def _prefill_lesson_content(
         )
         lessons = result.scalars().all()
 
-        planner = PlannerAgent()
-        for lesson in lessons:
+    if not lessons:
+        return
+
+    planner = PlannerAgent()
+    sem = asyncio.Semaphore(3)  # max 3 concurrent LLM calls
+
+    async def generate_one(lesson_id: str, topic: str, title: str, order: int):
+        async with sem:
             try:
                 content = await planner.generate_lesson_content(
-                    topic=lesson.topic,
-                    title=lesson.title,
+                    topic=topic,
+                    title=title,
                     language=language,
                     skill_level=skill_level,
                     code_snippet=source_code,
                     weak_areas=weak_areas,
                 )
-                lesson.content = content
-                await db.commit()
-                logger.info("Pre-generated content for lesson %s (%s)", lesson.order_index, lesson.title)
+                async with AsyncSessionLocal() as session:
+                    await session.execute(
+                        update(Lesson).where(Lesson.id == lesson_id).values(content=content)
+                    )
+                    await session.commit()
+                logger.info("Pre-generated lesson %s (%s)", order, title)
             except Exception as exc:
-                logger.warning("Failed to pre-generate lesson %s: %s", lesson.id, exc)
-                await asyncio.sleep(1)
+                logger.warning("Failed to pre-generate lesson %s: %s", lesson_id, exc)
+
+    await asyncio.gather(*[
+        generate_one(str(l.id), l.topic, l.title, l.order_index)
+        for l in lessons
+    ])
 
 
 @router.post("/generate-path", response_model=LearningPathResponse)
