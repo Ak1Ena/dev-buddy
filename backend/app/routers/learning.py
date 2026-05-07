@@ -142,10 +142,15 @@ async def get_lesson(
         lesson.content = content
         await db.commit()
 
-    # Ensure progress record exists
-    if not lesson.progress:
-        progress = LessonProgress(lesson_id=lesson.id, user_id=current_user.id)
-        db.add(progress)
+    # Ensure progress record exists (query DB directly to avoid stale relationship cache)
+    existing_progress = await db.execute(
+        select(LessonProgress).where(
+            LessonProgress.lesson_id == lesson.id,
+            LessonProgress.user_id == current_user.id,
+        )
+    )
+    if not existing_progress.scalar_one_or_none():
+        db.add(LessonProgress(lesson_id=lesson.id, user_id=current_user.id))
         await db.commit()
         await db.refresh(lesson)
 
