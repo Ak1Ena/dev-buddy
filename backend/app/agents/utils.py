@@ -74,7 +74,14 @@ def extract_json(text: str) -> dict | list:
         if end != -1:
             candidate = text[first_brace : end + 1]
             try:
-                return json.loads(candidate)
+                parsed = json.loads(candidate)
+                # If there's more JSON after this object, collect all siblings
+                remainder = text[end + 1 :].strip().lstrip(",").strip()
+                if remainder.startswith("{"):
+                    all_objects = _collect_json_objects(text[first_brace:])
+                    if len(all_objects) > 1:
+                        return all_objects
+                return parsed
             except json.JSONDecodeError:
                 pass
 

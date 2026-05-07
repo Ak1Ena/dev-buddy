@@ -94,57 +94,51 @@ Rules:
 - Build from foundational gaps to advanced concepts in their code
 - estimated_minutes between 15-30"""
 
-CONTENT_SYSTEM = """You are a programming education content designer.
-Generate lesson content that always refers back to the student's original code.
+CONTENT_SYSTEM = """You are a friendly programming tutor teaching absolute beginners.
+Explain things simply — like explaining to a curious 14-year-old with no CS background.
+Always refer back to the student's actual code. Never assume prior knowledge.
+Avoid jargon; when you use a technical word, explain it in plain language immediately.
+
 Return ONLY valid JSON — no markdown, no extra text:
 {
-  "explanation": "Clear explanation referencing the student's code (2-3 paragraphs)",
-  "key_concepts": ["concept 1", "concept 2", "concept 3"],
+  "explanation": "4-6 paragraph plain-English explanation. Start with what the concept IS in everyday terms. Then show how it appears in the student's code specifically. Use short sentences. Never say 'as mentioned' or use filler phrases.",
+  "key_concepts": ["3-5 short concept names (plain English, not jargon)"],
   "code_examples": [
     {
-      "title": "From your code",
-      "code": "the relevant snippet from their code",
-      "explanation": "Line-by-line explanation of what this does",
+      "title": "In your code",
+      "code": "The relevant 3-8 line snippet copied exactly from their code",
+      "explanation": "Walk through each line in plain English. What does it DO, not what it IS.",
       "language": "python"
     },
     {
-      "title": "Similar example",
-      "code": "a variation to reinforce understanding",
-      "explanation": "How this compares to their code",
+      "title": "Simpler version",
+      "code": "A stripped-down 4-6 line example of the same concept",
+      "explanation": "How this simpler version relates to their code. Point out what changed.",
       "language": "python"
     }
   ],
   "visualizations": [
     {
       "type": "variable_trace",
-      "title": "Visualization title",
-      "code": "code to visualize (from their snippet if applicable)",
+      "title": "Step-by-step: what happens when the code runs",
+      "code": "3-5 line snippet from their code",
       "steps": [
-        {"step": 1, "description": "what happens", "state": {"var_name": "value"}}
+        {"step": 1, "description": "plain English: what happens on this step", "state": {"variable_name": "its value"}}
       ]
     }
   ],
   "workshops": [
     {
       "type": "predict_output",
-      "title": "Workshop title",
-      "description": "What to do — reference their code where possible",
-      "code": "code for the exercise (modified version of their code)",
-      "answer": "correct answer",
-      "hints": ["hint 1", "hint 2", "hint 3"],
-      "explanation": "Why this is the answer"
-    },
-    {
-      "type": "fill_in_blank",
-      "title": "Workshop title",
-      "description": "Complete the missing part",
-      "code": "code with ___ for blank",
-      "answer": "the missing code",
-      "hints": ["hint 1", "hint 2", "hint 3"],
-      "explanation": "Why this fills the blank"
+      "title": "What does this print?",
+      "description": "Read the code below. What do you think it prints? Don't run it — just think it through.",
+      "code": "Short 4-8 line modified version of their code",
+      "answer": "the exact output",
+      "hints": ["Think about line X first", "hint 2", "hint 3"],
+      "explanation": "Plain English: why that is the answer, step by step"
     }
   ],
-  "summary": "One-sentence summary tying back to their original code"
+  "summary": "One friendly sentence: what this concept does and why it matters in their code"
 }"""
 
 
@@ -191,9 +185,9 @@ Generate 10 lessons that will teach them to fully understand their code."""
                     result = {"title": "Your Personalized Learning Path", "description": "", "lessons": result}
                 elif "lessons" not in result and isinstance(result.get("order_index"), int):
                     result = {"title": "Your Personalized Learning Path", "description": "", "lessons": [result]}
-                if result.get("lessons"):
+                if len(result.get("lessons", [])) >= 5:
                     return result
-                raise ValueError("no lessons in response")
+                raise ValueError(f"only {len(result.get('lessons', []))} lessons returned")
             except Exception as exc:
                 logger.warning("Learning path LLM attempt %d failed: %s", attempt, exc)
 
