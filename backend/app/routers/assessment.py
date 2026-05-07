@@ -1,5 +1,8 @@
+import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
+
+logger = logging.getLogger(__name__)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -41,6 +44,7 @@ async def start_assessment(
     try:
         analysis = await code_analyzer.analyze(data.code_snippet)
     except Exception as exc:
+        logger.error("Code analysis failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Code analysis failed: {exc}")
 
     # Step 2: Generate 10 questions from the code
@@ -51,6 +55,7 @@ async def start_assessment(
             language=analysis["language"],
         )
     except Exception as exc:
+        logger.error("Question generation failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Question generation failed: {exc}")
 
     # Step 3: Save session (questions stored server-side with answers)

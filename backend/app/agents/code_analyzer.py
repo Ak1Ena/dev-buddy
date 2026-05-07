@@ -3,7 +3,10 @@ Code Analyzer Agent — detects language, extracts concepts, estimates difficult
 from a user-submitted code snippet.
 """
 import json
+import logging
 from app.services.llm import get_llm_provider
+
+logger = logging.getLogger(__name__)
 
 SYSTEM = """You are a code analysis expert for programming education.
 Analyze the given code snippet and return ONLY valid JSON — no markdown, no extra text.
@@ -67,6 +70,7 @@ class CodeAnalyzerAgent:
             system=SYSTEM,
             max_tokens=800,
         )
+        logger.debug("CodeAnalyzer raw LLM response: %r", raw[:500] if raw else "<empty>")
         if not raw or not raw.strip():
             raise ValueError("LLM returned an empty response for code analysis")
         return _extract_json(raw)
