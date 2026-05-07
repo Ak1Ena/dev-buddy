@@ -2,19 +2,12 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Play, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-export interface AnimationFrame {
-  frame: number;
-  title: string;
-  code_state: string;
-  visual: string;
-  narration: string;
-}
+import type { AnimationFrame } from "@/types";
+import CanvasScene from "./CanvasScene";
 
 interface Props {
   frames: AnimationFrame[];
 }
-
 
 export default function AnimationPlayer({ frames }: Props) {
   const [idx, setIdx] = useState(0);
@@ -31,7 +24,6 @@ export default function AnimationPlayer({ frames }: Props) {
   const prev = () => { if (idx > 0) go(idx - 1); };
   const next = () => { if (idx < total - 1) go(idx + 1); };
 
-  // Auto-play ticker
   useEffect(() => {
     if (!autoPlay) return;
     const t = setInterval(() => {
@@ -104,18 +96,30 @@ export default function AnimationPlayer({ frames }: Props) {
               </pre>
             </div>
 
-            {/* Visual */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1, duration: 0.3 }}
-              className="flex gap-3 rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/5 px-4 py-3.5"
-            >
-              <span className="text-2xl shrink-0 leading-none">{frame.visual.match(/^\S+/)?.[0] ?? "✨"}</span>
-              <p className="text-sm leading-relaxed text-fuchsia-200">
-                {frame.visual.replace(/^\S+\s*/, "")}
-              </p>
-            </motion.div>
+            {/* Canvas scene (new) or text visual fallback (legacy) */}
+            {frame.canvas_scene ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.08, duration: 0.3 }}
+              >
+                <CanvasScene scene={frame.canvas_scene} />
+              </motion.div>
+            ) : frame.visual ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1, duration: 0.3 }}
+                className="flex gap-3 rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/5 px-4 py-3.5"
+              >
+                <span className="text-2xl shrink-0 leading-none">
+                  {frame.visual.match(/^\S+/)?.[0] ?? "✨"}
+                </span>
+                <p className="text-sm leading-relaxed text-fuchsia-200">
+                  {frame.visual.replace(/^\S+\s*/, "")}
+                </p>
+              </motion.div>
+            ) : null}
 
             {/* Narration */}
             <motion.div
@@ -141,7 +145,6 @@ export default function AnimationPlayer({ frames }: Props) {
           Prev
         </button>
 
-        {/* Dot nav */}
         <div className="flex items-center gap-1.5">
           {frames.map((_, i) => (
             <button

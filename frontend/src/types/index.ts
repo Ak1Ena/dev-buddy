@@ -83,11 +83,33 @@ export interface LessonContent {
   summary?: string;
 }
 
+export interface CanvasNode {
+  id: string;
+  type: "variable" | "literal" | "container";
+  label: string;
+  value?: string;
+  color?: "sky" | "emerald" | "fuchsia" | "amber" | "red" | "slate";
+  highlight?: boolean;
+}
+
+export interface CanvasEdge {
+  from: string;
+  to: string;
+  label?: string;
+  style?: "arrow" | "dashed";
+}
+
+export interface CanvasSceneData {
+  nodes: CanvasNode[];
+  edges?: CanvasEdge[];
+}
+
 export interface AnimationFrame {
   frame: number;
   title: string;
   code_state: string;
-  visual: string;
+  canvas_scene?: CanvasSceneData;
+  visual?: string;
   narration: string;
 }
 

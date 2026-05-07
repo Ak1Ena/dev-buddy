@@ -106,7 +106,19 @@ Return ONLY valid JSON — no markdown, no extra text:
       "frame": 1,
       "title": "Short cinematic title for this moment",
       "code_state": "The 1-3 most relevant lines of their code at this exact moment",
-      "visual": "emoji + one sentence describing what the learner should PICTURE happening. Use arrows, containers, movement. E.g. '🔋 A glowing box labeled energy_budget appears and fills with the number 10.0'",
+      "canvas_scene": {
+        "nodes": [
+          {
+            "id": "a",
+            "type": "variable",
+            "label": "energy_budget",
+            "value": "10.0",
+            "color": "sky",
+            "highlight": true
+          }
+        ],
+        "edges": []
+      },
       "narration": "One sentence in present tense, active voice. What is happening RIGHT NOW and why it matters. No jargon."
     }
   ],
@@ -136,9 +148,16 @@ Rules for animation_frames:
 - Generate 4-7 frames covering the key moments in the code
 - Each frame = one atomic action (one assignment, one comparison, one iteration)
 - code_state = only the 1-3 lines most relevant to THIS frame
-- visual starts with a relevant emoji, then describes movement or change a beginner can picture
 - narration is ONE sentence, present tense, active voice — like a narrator in a documentary
 - Show: variable creation, value changes, comparisons, loop iterations, function calls, returns
+
+Rules for canvas_scene (drawn on screen as boxes + arrows):
+- Use 1-4 nodes per frame — only what is relevant to THIS moment
+- node "type": "variable" for named variables, "literal" for raw values being assigned, "container" for lists/dicts (put [...] or {...} as value)
+- node "color": "sky"=default variable, "emerald"=result/output value, "fuchsia"=boolean or condition, "amber"=the value changing right now, "red"=pruned/failed path, "slate"=unchanged context node
+- Set "highlight": true on the node being created or modified in this frame
+- "edges": show data flow with style "arrow" (assignment/return) or "dashed" (comparison); add a short "label" like "=", "+", "<", "→"
+- Omit edges or use empty array when no connection is needed
 
 Rules for code_walkthrough:
 - One entry per meaningful line or block
