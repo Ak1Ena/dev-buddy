@@ -200,6 +200,21 @@ export default function Learn() {
     })();
   }, [lessonId, navigate]);
 
+  // Poll every 4s while content is still generating, stop once it arrives
+  useEffect(() => {
+    if (!lessonId || lesson?.content) return;
+    const t = setInterval(async () => {
+      try {
+        const res = await learningApi.getLesson(lessonId);
+        if (res.data.content) {
+          setLesson(res.data);
+          clearInterval(t);
+        }
+      } catch { /* silent — keep polling */ }
+    }, 4000);
+    return () => clearInterval(t);
+  }, [lessonId, lesson?.content]);
+
   const handleSendMessage = async () => {
     const trimmed = chatInput.trim();
     if (!trimmed || chatLoading) return;
