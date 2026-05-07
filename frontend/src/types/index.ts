@@ -67,12 +67,27 @@ export interface Workshop {
 }
 
 export interface LessonContent {
+  concept_hook?: string;
+  animation_frames?: AnimationFrame[];
+  code_walkthrough?: {
+    code: string;
+    plain_english: string;
+    why: string;
+  }[];
   explanation: string;
   key_concepts: string[];
   code_examples: CodeExample[];
   visualizations: Visualization[];
   workshops: Workshop[];
   summary: string;
+}
+
+export interface AnimationFrame {
+  frame: number;
+  title: string;
+  code_state: string;
+  visual: string;
+  narration: string;
 }
 
 export interface Lesson {
