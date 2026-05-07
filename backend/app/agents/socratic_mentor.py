@@ -72,7 +72,7 @@ class SocraticMentorAgent:
     ) -> str:
         system = self._build_system(lesson_context, code_context, hint_level, skill_level, weak_areas)
         messages = conversation_history[-20:] + [{"role": "user", "content": user_message}]
-        return await self.llm.complete(messages=messages, system=system, max_tokens=600)
+        return await self.llm.complete(messages=messages, system=system, max_tokens=4000)
 
     async def stream_chat(
         self,
@@ -86,5 +86,5 @@ class SocraticMentorAgent:
     ) -> AsyncGenerator[str, None]:
         system = self._build_system(lesson_context, code_context, hint_level, skill_level, weak_areas)
         messages = conversation_history[-20:] + [{"role": "user", "content": user_message}]
-        async for chunk in self.llm.stream(messages=messages, system=system, max_tokens=600):
+        async for chunk in self.llm.stream(messages=messages, system=system, max_tokens=4000):
             yield chunk

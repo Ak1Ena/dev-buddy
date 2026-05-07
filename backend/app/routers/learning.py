@@ -187,11 +187,11 @@ async def get_lesson(
                 code_snippet=path.source_code or "",
                 weak_areas=current_user.weak_areas or [],
             )
+            lesson.content = content
+            await db.commit()
         except Exception as exc:
-            logger.error("Lesson content generation failed: %s", exc, exc_info=True)
-            raise HTTPException(status_code=500, detail=f"Lesson content generation failed: {exc}")
-        lesson.content = content
-        await db.commit()
+            logger.warning("Lesson content generation failed (will retry later): %s", exc)
+            # Return lesson without content — frontend shows a "still preparing" state
 
     # Ensure progress record exists (query DB directly to avoid stale relationship cache)
     existing_progress = await db.execute(

@@ -143,7 +143,7 @@ export default function Learn() {
         {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: data.response ?? data.message ?? "I'm here to help!",
+          content: data.response ?? data.message?.content ?? "I'm here to help!",
           metadata: null,
           created_at: new Date().toISOString(),
         },
@@ -409,10 +409,24 @@ export default function Learn() {
               <div className="h-8" />
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="flex flex-col items-center gap-3 text-center">
-                <Loader2 className="h-8 w-8 animate-spin text-sky-400" />
-                <p className="text-sm text-slate-400">Loading lesson content…</p>
+            <div className="flex items-center justify-center h-full px-6">
+              <div className="flex flex-col items-center gap-4 text-center max-w-sm">
+                <motion.div
+                  animate={{ rotate: [0, 15, -15, 0] }}
+                  transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                >
+                  <Sparkles className="h-10 w-10 text-sky-400" />
+                </motion.div>
+                <p className="font-medium text-slate-200">Content is being prepared</p>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  Your lesson content is still generating in the background. Try refreshing in a moment, or ask your AI mentor a question on the right.
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-2 rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-400 hover:border-slate-500 hover:text-slate-200 transition-colors"
+                >
+                  Refresh lesson
+                </button>
               </div>
             </div>
           )}
