@@ -94,42 +94,12 @@ Rules:
 - Build from foundational gaps to advanced concepts in their code
 - estimated_minutes between 15-30"""
 
-CONTENT_SYSTEM = """You are a visual programming mentor teaching absolute beginners through cinematic, step-by-step walkthroughs.
-Never write walls of text. Every explanation must feel like watching something happen, not reading a textbook.
+CONTENT_SYSTEM = """You are a programming mentor writing lesson content for absolute beginners.
 Always reference the student's actual code, variable names, and line numbers.
 
 Return ONLY valid JSON — no markdown, no extra text:
 {
   "concept_hook": "One sentence using a vivid real-world metaphor. E.g. 'Think of energy_budget like a cash limit on a prepaid card — once it runs out, no more spending.'",
-  "animation_frames": [
-    {
-      "frame": 1,
-      "title": "Short cinematic title for this moment",
-      "code_state": "The 1-3 most relevant lines of their code at this exact moment",
-      "canvas_scene": {
-        "nodes": [
-          {
-            "id": "a",
-            "type": "variable",
-            "label": "energy_budget",
-            "value": "10.0",
-            "color": "sky",
-            "highlight": true
-          }
-        ],
-        "edges": []
-      },
-      "effects": [
-        {
-          "effect": "spawn",
-          "target": "energy_budget",
-          "label": "= 10.0",
-          "color": "sky"
-        }
-      ],
-      "narration": "One sentence in present tense, active voice. What is happening RIGHT NOW and why it matters. No jargon."
-    }
-  ],
   "code_walkthrough": [
     {
       "code": "One line or short block from their code",
@@ -151,31 +121,6 @@ Return ONLY valid JSON — no markdown, no extra text:
   ],
   "summary": "One friendly sentence: what this concept does and why it matters in their specific code"
 }
-
-Rules for animation_frames:
-- Generate 4-7 frames covering the key moments in the code
-- Each frame = one atomic action (one assignment, one comparison, one iteration)
-- code_state = only the 1-3 lines most relevant to THIS frame
-- narration is ONE sentence, present tense, active voice — like a narrator in a documentary
-- Show: variable creation, value changes, comparisons, loop iterations, function calls, returns
-- Always include an "effects" array (1-3 effects per frame) that visually dramatize what's happening:
-  - "spawn" — a variable/value is created for the first time (use when something new appears)
-  - "pulse" — a variable's value just changed (the most common effect)
-  - "flow" — data moves from one variable to another (requires "from" and "to")
-  - "highlight" — a condition evaluated to True (use for if/while checks)
-  - "burst" — a function is called or a loop fires an event
-  - "fade" — a variable goes out of scope or a loop ends
-  - color matches the canvas_scene node color for the same variable
-  - "target" = variable name, "label" = short description like "= 10.0" or "+= 1" or "→ result"
-
-Rules for canvas_scene (drawn on screen as boxes + arrows):
-- Use 1-6 nodes per frame — only what is relevant to THIS moment
-- node "type": "variable" for named variables, "literal" for raw values being assigned, "container" for lists/dicts (put [...] or {...} as value)
-- node "color": "sky"=default variable, "emerald"=result/output value, "fuchsia"=boolean or condition, "amber"=the value changing right now, "red"=pruned/failed path, "slate"=unchanged context node
-- Set "highlight": true on the node being created or modified in this frame
-- "edges": show data flow with style "arrow" (assignment/return) or "dashed" (comparison); add a short "label" like "=", "+", "<", "→"
-- Omit edges or use empty array when no connection is needed
-- "parent": set this field on a node to make it a child of another node — the renderer draws a bezier curve from parent bottom to child top and uses a TREE layout automatically. Use parent-child for: recursive calls (parent=caller, child=recursive call), nested data structures (parent=list, children=elements), branching conditions (parent=if-node, children=true/false branches), call stacks. For flat data flow (assignment, comparison, loop variable), omit parent and use edges instead.
 
 Rules for code_walkthrough:
 - One entry per meaningful line or block
@@ -261,7 +206,7 @@ names, function names, and line numbers."""
         raw = await self.llm.complete(
             messages=[{"role": "user", "content": prompt}],
             system=CONTENT_SYSTEM,
-            max_tokens=6000,
+            max_tokens=3500,
         )
         if not raw or not raw.strip():
             raise ValueError("LLM returned empty response for lesson content")
@@ -269,7 +214,7 @@ names, function names, and line numbers."""
         if isinstance(result, list):
             # Sibling objects — pick the one that looks like lesson content
             for item in result:
-                if isinstance(item, dict) and ("explanation" in item or "key_concepts" in item):
+                if isinstance(item, dict) and any(k in item for k in ("concept_hook", "key_concepts", "explanation")):
                     return item
             if result and isinstance(result[0], dict):
                 return result[0]

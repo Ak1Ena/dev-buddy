@@ -13,9 +13,44 @@ from app.models.assessment import AssessmentSession
 from app.models.learning import LearningPath, Lesson, LessonProgress
 from app.schemas.learning import LearningPathResponse, LessonResponse, LessonProgressUpdate
 from app.agents.planner import PlannerAgent
+from app.agents.designer import DesignerAgent
 from app.utils.auth import get_current_user
 
 router = APIRouter(prefix="/learning", tags=["learning"])
+
+
+async def _build_lesson_content(
+    topic: str,
+    title: str,
+    language: str,
+    skill_level: str,
+    source_code: str,
+    weak_areas: list[str],
+) -> dict:
+    """Call Planner (narrative) + Designer (animation) in parallel and merge."""
+    planner = PlannerAgent()
+    designer = DesignerAgent()
+
+    content, frames = await asyncio.gather(
+        planner.generate_lesson_content(
+            topic=topic,
+            title=title,
+            language=language,
+            skill_level=skill_level,
+            code_snippet=source_code,
+            weak_areas=weak_areas,
+        ),
+        designer.generate_animation(
+            topic=topic,
+            title=title,
+            language=language,
+            code_snippet=source_code,
+        ),
+    )
+
+    if frames:
+        content["animation_frames"] = frames
+    return content
 
 
 async def _prefill_lesson_content(
@@ -26,7 +61,6 @@ async def _prefill_lesson_content(
     weak_areas: list[str],
 ):
     """Background task: generate content for every lesson in a path, 3 at a time."""
-    from app.agents.planner import PlannerAgent
     from sqlalchemy import update
 
     async with AsyncSessionLocal() as db:
@@ -40,18 +74,17 @@ async def _prefill_lesson_content(
     if not lessons:
         return
 
-    planner = PlannerAgent()
-    sem = asyncio.Semaphore(3)  # max 3 concurrent LLM calls
+    sem = asyncio.Semaphore(3)  # max 3 concurrent lesson pairs
 
     async def generate_one(lesson_id: str, topic: str, title: str, order: int):
         async with sem:
             try:
-                content = await planner.generate_lesson_content(
+                content = await _build_lesson_content(
                     topic=topic,
                     title=title,
                     language=language,
                     skill_level=skill_level,
-                    code_snippet=source_code,
+                    source_code=source_code,
                     weak_areas=weak_areas,
                 )
                 async with AsyncSessionLocal() as session:
@@ -191,14 +224,13 @@ async def get_lesson(
         )
         path = path_result.scalar_one()
 
-        planner = PlannerAgent()
         try:
-            content = await planner.generate_lesson_content(
+            content = await _build_lesson_content(
                 topic=lesson.topic,
                 title=lesson.title,
                 language=path.language,
                 skill_level=path.skill_level,
-                code_snippet=path.source_code or "",
+                source_code=path.source_code or "",
                 weak_areas=current_user.weak_areas or [],
             )
             lesson.content = content
