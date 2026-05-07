@@ -152,12 +152,13 @@ Rules for animation_frames:
 - Show: variable creation, value changes, comparisons, loop iterations, function calls, returns
 
 Rules for canvas_scene (drawn on screen as boxes + arrows):
-- Use 1-4 nodes per frame — only what is relevant to THIS moment
+- Use 1-6 nodes per frame — only what is relevant to THIS moment
 - node "type": "variable" for named variables, "literal" for raw values being assigned, "container" for lists/dicts (put [...] or {...} as value)
 - node "color": "sky"=default variable, "emerald"=result/output value, "fuchsia"=boolean or condition, "amber"=the value changing right now, "red"=pruned/failed path, "slate"=unchanged context node
 - Set "highlight": true on the node being created or modified in this frame
 - "edges": show data flow with style "arrow" (assignment/return) or "dashed" (comparison); add a short "label" like "=", "+", "<", "→"
 - Omit edges or use empty array when no connection is needed
+- "parent": set this field on a node to make it a child of another node — the renderer draws a bezier curve from parent bottom to child top and uses a TREE layout automatically. Use parent-child for: recursive calls (parent=caller, child=recursive call), nested data structures (parent=list, children=elements), branching conditions (parent=if-node, children=true/false branches), call stacks. For flat data flow (assignment, comparison, loop variable), omit parent and use edges instead.
 
 Rules for code_walkthrough:
 - One entry per meaningful line or block

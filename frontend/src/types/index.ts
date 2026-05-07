@@ -90,6 +90,7 @@ export interface CanvasNode {
   value?: string;
   color?: "sky" | "emerald" | "fuchsia" | "amber" | "red" | "slate";
   highlight?: boolean;
+  parent?: string;
 }
 
 export interface CanvasEdge {
