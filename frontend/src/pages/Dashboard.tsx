@@ -9,6 +9,7 @@ import {
   BookOpen,
   Loader2,
   Sparkles,
+  Zap,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { learningApi } from "@/lib/api";
@@ -68,7 +69,7 @@ export default function Dashboard() {
   const handleGeneratePath = async () => {
     setGenerating(true);
     try {
-      await learningApi.generatePath(user?.preferred_language ?? "python");
+      await learningApi.generatePath();
       toast.success("Learning path generated!");
       await fetchPath();
     } catch {
@@ -228,6 +229,12 @@ export default function Dashboard() {
                           <Clock className="h-3 w-3" />
                           {lesson.estimated_minutes} min
                         </span>
+                        {!lesson.content && (
+                          <span className="flex items-center gap-1 text-amber-500/70">
+                            <Zap className="h-3 w-3 animate-pulse" />
+                            Preparing…
+                          </span>
+                        )}
                       </div>
                     </div>
 

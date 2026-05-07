@@ -1,12 +1,13 @@
+import asyncio
 import logging
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 logger = logging.getLogger(__name__)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.database import get_db
+from app.database import get_db, AsyncSessionLocal
 from app.models.user import User
 from app.models.assessment import AssessmentSession
 from app.models.learning import LearningPath, Lesson, LessonProgress
@@ -17,8 +18,46 @@ from app.utils.auth import get_current_user
 router = APIRouter(prefix="/learning", tags=["learning"])
 
 
+async def _prefill_lesson_content(
+    path_id: str,
+    language: str,
+    skill_level: str,
+    source_code: str,
+    weak_areas: list[str],
+):
+    """Background task: generate content for every lesson in a path."""
+    from app.agents.planner import PlannerAgent
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(Lesson)
+            .where(Lesson.learning_path_id == path_id, Lesson.content.is_(None))
+            .order_by(Lesson.order_index)
+        )
+        lessons = result.scalars().all()
+
+        planner = PlannerAgent()
+        for lesson in lessons:
+            try:
+                content = await planner.generate_lesson_content(
+                    topic=lesson.topic,
+                    title=lesson.title,
+                    language=language,
+                    skill_level=skill_level,
+                    code_snippet=source_code,
+                    weak_areas=weak_areas,
+                )
+                lesson.content = content
+                await db.commit()
+                logger.info("Pre-generated content for lesson %s (%s)", lesson.order_index, lesson.title)
+            except Exception as exc:
+                logger.warning("Failed to pre-generate lesson %s: %s", lesson.id, exc)
+                await asyncio.sleep(1)
+
+
 @router.post("/generate-path", response_model=LearningPathResponse)
 async def generate_learning_path(
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -88,7 +127,19 @@ async def generate_learning_path(
         .options(selectinload(LearningPath.lessons).selectinload(Lesson.progress))
         .where(LearningPath.id == path.id)
     )
-    return _format_path(result2.scalar_one())
+    formatted = _format_path(result2.scalar_one())
+
+    # Pre-generate all lesson content in background so lessons open instantly
+    background_tasks.add_task(
+        _prefill_lesson_content,
+        path_id=path.id,
+        language=assessment.detected_language,
+        skill_level=current_user.skill_level,
+        source_code=assessment.code_snippet,
+        weak_areas=current_user.weak_areas or [],
+    )
+
+    return formatted
 
 
 @router.get("/path", response_model=LearningPathResponse | None)

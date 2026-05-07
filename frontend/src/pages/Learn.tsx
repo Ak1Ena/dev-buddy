@@ -72,6 +72,7 @@ export default function Learn() {
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loadingLesson, setLoadingLesson] = useState(true);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -80,6 +81,15 @@ export default function Learn() {
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [codeContext, setCodeContext] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const contentScrollRef = useRef<HTMLDivElement>(null);
+
+  const handleContentScroll = useCallback(() => {
+    const el = contentScrollRef.current;
+    if (!el) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    const total = scrollHeight - clientHeight;
+    setScrollProgress(total > 0 ? Math.min(100, (scrollTop / total) * 100) : 0);
+  }, []);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -188,6 +198,15 @@ export default function Learn() {
       {/* ══ LEFT — lesson content ══════════════════════════════════════════ */}
       <div className="flex w-[60%] flex-col border-r border-slate-700/60 overflow-hidden">
 
+        {/* Scroll progress bar */}
+        <div className="h-0.5 w-full bg-slate-800 shrink-0">
+          <motion.div
+            className="h-full bg-gradient-to-r from-sky-500 to-fuchsia-500 origin-left"
+            style={{ scaleX: scrollProgress / 100 }}
+            transition={{ type: "spring", stiffness: 300, damping: 40 }}
+          />
+        </div>
+
         {/* Lesson header */}
         <div className="border-b border-slate-700/60 bg-slate-900/80 px-6 py-4 shrink-0">
           <button
@@ -212,7 +231,11 @@ export default function Learn() {
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto">
+        <div
+          ref={contentScrollRef}
+          onScroll={handleContentScroll}
+          className="flex-1 overflow-y-auto"
+        >
           {c ? (
             <div className="px-6 py-8 space-y-10">
 

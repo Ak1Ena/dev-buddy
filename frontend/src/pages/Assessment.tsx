@@ -1,6 +1,8 @@
 "use client";
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   CheckCircle2, XCircle, Loader2, TrendingUp, TrendingDown,
   Sparkles, Code2, ArrowRight,
@@ -305,8 +307,15 @@ export default function Assessment() {
       {/* Question */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-xl font-normal leading-relaxed text-slate-100 whitespace-pre-line">
-            {question?.question}
+          <CardTitle className="text-lg font-normal leading-relaxed text-slate-100">
+            <div className="prose prose-invert prose-sm max-w-none
+              prose-p:text-slate-100 prose-p:my-0
+              prose-code:text-sky-300 prose-code:bg-slate-800 prose-code:rounded prose-code:px-1 prose-code:text-sm
+              prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-700 prose-pre:rounded-lg prose-pre:my-2">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {question?.question?.replace(/\\n/g, "\n") ?? ""}
+              </ReactMarkdown>
+            </div>
           </CardTitle>
           {question?.code_reference && (
             <p className="text-xs text-slate-500">Reference: {question.code_reference}</p>
