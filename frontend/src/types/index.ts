@@ -18,6 +18,7 @@ export interface AssessmentQuestion {
   options: AssessmentOption[];
   topic: string;
   difficulty: string;
+  code_reference?: string;
 }
 
 export interface AssessmentResult {
@@ -74,12 +75,12 @@ export interface LessonContent {
     plain_english: string;
     why: string;
   }[];
-  explanation: string;
-  key_concepts: string[];
-  code_examples: CodeExample[];
-  visualizations: Visualization[];
-  workshops: Workshop[];
-  summary: string;
+  explanation?: string;
+  key_concepts?: string[];
+  code_examples?: CodeExample[];
+  visualizations?: Visualization[];
+  workshops?: Workshop[];
+  summary?: string;
 }
 
 export interface AnimationFrame {

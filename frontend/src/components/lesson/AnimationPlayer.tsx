@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Play, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,10 +15,6 @@ interface Props {
   frames: AnimationFrame[];
 }
 
-const SLIDE: Record<string, object> = {
-  enterForward:  { initial: { opacity: 0, x: 40  }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -40  } },
-  enterBackward: { initial: { opacity: 0, x: -40 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x:  40  } },
-};
 
 export default function AnimationPlayer({ frames }: Props) {
   const [idx, setIdx] = useState(0);
@@ -36,7 +32,7 @@ export default function AnimationPlayer({ frames }: Props) {
   const next = () => { if (idx < total - 1) go(idx + 1); };
 
   // Auto-play ticker
-  useState(() => {
+  useEffect(() => {
     if (!autoPlay) return;
     const t = setInterval(() => {
       setIdx((i) => {
@@ -46,11 +42,9 @@ export default function AnimationPlayer({ frames }: Props) {
       });
     }, 2800);
     return () => clearInterval(t);
-  });
+  }, [autoPlay, total]);
 
-  const { initial, animate, exit } = SLIDE[dir === "forward" ? "enterForward" : "enterBackward"] as {
-    initial: object; animate: object; exit: object;
-  };
+  const isForward = dir === "forward";
 
   return (
     <div className="rounded-2xl border border-slate-700/60 bg-slate-950 overflow-hidden select-none">
@@ -83,9 +77,9 @@ export default function AnimationPlayer({ frames }: Props) {
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={idx}
-            initial={initial}
-            animate={animate}
-            exit={exit}
+            initial={{ opacity: 0, x: isForward ? 40 : -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: isForward ? -40 : 40 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             className="p-6 space-y-5"
           >

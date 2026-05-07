@@ -343,7 +343,7 @@ export default function Learn() {
             <div className="px-6 py-8 space-y-10">
 
               {/* ── Key concepts ── */}
-              {c.key_concepts?.length > 0 && (
+              {c.key_concepts && c.key_concepts.length > 0 && (
                 <Section id="sec-concepts">
                   <SectionHeading icon={<Lightbulb />} label="What you'll learn" iconClass="text-amber-400" />
                   <motion.div
@@ -384,7 +384,7 @@ export default function Learn() {
                   )}
 
                   {/* ── Animation player ── */}
-                  {c.animation_frames?.length > 0 && (
+                  {c.animation_frames && c.animation_frames.length > 0 && (
                     <Section id="sec-animation">
                       <SectionHeading icon={<PlayCircle />} label="Watch it happen" iconClass="text-fuchsia-400" />
                       <Callout type="tip" title="How to use">
@@ -397,7 +397,7 @@ export default function Learn() {
                   )}
 
                   {/* ── Code walkthrough ── */}
-                  {c.code_walkthrough?.length > 0 && (
+                  {c.code_walkthrough && c.code_walkthrough.length > 0 && (
                     <Section id="sec-walkthrough">
                       <SectionHeading icon={<List />} label="Line by line" iconClass="text-sky-400" />
                       <div className="space-y-4">
@@ -482,7 +482,7 @@ export default function Learn() {
                   )}
 
                   {/* ── Legacy: code examples ── */}
-                  {c.code_examples?.length > 0 && (
+                  {c.code_examples && c.code_examples.length > 0 && (
                     <Section id="sec-examples">
                       <SectionHeading icon={<Code2 />} label="Code examples" iconClass="text-emerald-400" />
                       <div className="space-y-5">
@@ -531,7 +531,7 @@ export default function Learn() {
                   )}
 
                   {/* ── Legacy: visualizer ── */}
-                  {c.visualizations?.length > 0 && (
+                  {c.visualizations && c.visualizations.length > 0 && (
                     <Section id="sec-visualizer">
                       <SectionHeading icon={<PlayCircle />} label="Step-by-step" iconClass="text-fuchsia-400" />
                       <div className="space-y-4">
@@ -547,7 +547,7 @@ export default function Learn() {
               )}
 
               {/* ── Workshop ── */}
-              {c.workshops?.length > 0 && (
+              {c.workshops && c.workshops.length > 0 && (
                 <Section id="sec-practice">
                   <SectionHeading icon={<Wrench />} label="Practice exercise" iconClass="text-orange-400" />
                   <Callout type="important" title="Challenge">
