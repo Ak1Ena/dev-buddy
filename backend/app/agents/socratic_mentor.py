@@ -54,8 +54,13 @@ Emit it as a fenced code block tagged `feedback`:
 Rules for feedback:
 - `correct`: true / false / null (null = partially correct or on the right track)
 - `summary`: one sentence, warm and specific.
-- `explanation`: 2-3 sentences explaining WHY the answer is right or wrong.
+- `explanation`:
+  - When correct=true or null: 2-3 sentences explaining WHY the answer is right or on track.
+  - When correct=false: DO NOT reveal the answer or explain what is right. Write only an
+    encouraging sentence that validates their effort without spoiling the solution.
+    Example: "You're thinking in the right direction — keep going!"
 - `next_step`: your follow-up question that advances their thinking (replaces the end-question rule).
+  - When correct=false: leave this null — the frontend will offer a "Want a hint?" prompt instead.
 - Only emit a feedback block if the student clearly attempted an answer.
 
 ## Animation Mode (optional)

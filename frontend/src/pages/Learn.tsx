@@ -801,6 +801,7 @@ export default function Learn() {
                                 : "border-amber-500/30 bg-amber-500/8"
                             )}
                           >
+                            {/* Header row */}
                             <div className="flex items-center gap-2">
                               {seg.correct === true ? (
                                 <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
@@ -816,8 +817,42 @@ export default function Learn() {
                                 : "text-amber-300"
                               )}>{seg.summary}</p>
                             </div>
-                            <p className="text-xs leading-relaxed text-slate-300">{seg.explanation}</p>
-                            {seg.next_step && (
+
+                            {/* Explanation — hidden when wrong to avoid spoiling the answer */}
+                            {seg.correct !== false && (
+                              <p className="text-xs leading-relaxed text-slate-300">{seg.explanation}</p>
+                            )}
+
+                            {/* Wrong answer: show encouraging note + hint prompt */}
+                            {seg.correct === false && (
+                              <>
+                                {seg.explanation && (
+                                  <p className="text-xs leading-relaxed text-slate-400 italic">{seg.explanation}</p>
+                                )}
+                                <div className="border-t border-red-500/20 pt-2 flex items-center gap-2 flex-wrap">
+                                  <p className="text-xs text-slate-400 flex-1">Would you like a hint?</p>
+                                  <button
+                                    onClick={() => {
+                                      setHintLevel((h) => Math.min(h + 1, 3));
+                                      setChatInput("Yes, give me a hint please.");
+                                    }}
+                                    className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-300 hover:bg-amber-500/20 transition-colors"
+                                  >
+                                    <Lightbulb className="inline h-3 w-3 mr-1" />
+                                    Yes, hint me
+                                  </button>
+                                  <button
+                                    onClick={() => setChatInput("")}
+                                    className="rounded-lg border border-slate-700/60 px-2.5 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-300 transition-colors"
+                                  >
+                                    I'll try again
+                                  </button>
+                                </div>
+                              </>
+                            )}
+
+                            {/* Next step question for correct / partial */}
+                            {seg.correct !== false && seg.next_step && (
                               <p className="text-xs text-slate-400 border-t border-slate-700/40 pt-2">{seg.next_step}</p>
                             )}
                           </div>
