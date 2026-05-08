@@ -31,8 +31,7 @@ The AI never gives direct answers. It guides through Socratic questions and prog
 | Backend | FastAPI (Python) + SQLAlchemy (async) |
 | Auth | JWT (python-jose + passlib bcrypt) |
 | Database | SQLite (dev) / PostgreSQL (prod) |
-| AI | Anthropic Claude API (`claude-sonnet-4-6`) |
-| Code Editor | Monaco Editor |
+| AI | LLM APIKEY |
 
 ---
 
