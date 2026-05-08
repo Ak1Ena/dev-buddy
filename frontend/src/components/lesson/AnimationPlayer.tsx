@@ -10,14 +10,20 @@ interface Props {
   frames: AnimationFrame[];
 }
 
-const FRAME_DURATION = 2800;
+const BASE_FRAME_DURATION = 2800;
 const TICK_MS = 60;
+
+type SpeedOption = 0.25 | 0.5 | 1 | 2;
+const SPEED_OPTIONS: SpeedOption[] = [0.25, 0.5, 1, 2];
 
 export default function AnimationPlayer({ frames }: Props) {
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState<"forward" | "backward">("forward");
   const [autoPlay, setAutoPlay] = useState(false);
   const [frameProgress, setFrameProgress] = useState(0); // 0–100
+  const [speed, setSpeed] = useState<SpeedOption>(1);
+
+  const frameDuration = BASE_FRAME_DURATION / speed;
 
   const frame = frames[idx];
   const total = frames.length;
@@ -38,16 +44,16 @@ export default function AnimationPlayer({ frames }: Props) {
         setDir("forward");
         return i + 1;
       });
-    }, FRAME_DURATION);
+    }, frameDuration);
     return () => clearInterval(t);
-  }, [autoPlay, total]);
+  }, [autoPlay, total, frameDuration]);
 
   // Progress-within-frame ticker
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedRef = useRef(0);
 
   useEffect(() => {
-    // Reset whenever frame changes or autoPlay turns off
+    // Reset whenever frame changes, autoPlay turns off, or speed changes
     elapsedRef.current = 0;
     setFrameProgress(0);
 
@@ -59,18 +65,18 @@ export default function AnimationPlayer({ frames }: Props) {
 
     tickRef.current = setInterval(() => {
       elapsedRef.current += TICK_MS;
-      const pct = Math.min((elapsedRef.current / FRAME_DURATION) * 100, 100);
+      const pct = Math.min((elapsedRef.current / frameDuration) * 100, 100);
       setFrameProgress(pct);
     }, TICK_MS);
 
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
     };
-  }, [autoPlay, idx]);
+  }, [autoPlay, idx, frameDuration]);
 
   const secondsLeft = Math.max(
     0,
-    Math.ceil((FRAME_DURATION - elapsedRef.current) / 1000)
+    Math.ceil((frameDuration - elapsedRef.current) / 1000)
   );
 
   const isForward = dir === "forward";
@@ -87,18 +93,38 @@ export default function AnimationPlayer({ frames }: Props) {
             Animation
           </span>
         </div>
-        <button
-          onClick={() => setAutoPlay((v) => !v)}
-          className={cn(
-            "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all",
-            autoPlay
-              ? "border-fuchsia-500/40 bg-fuchsia-500/10 text-fuchsia-300"
-              : "border-slate-700/60 text-slate-600 hover:text-slate-400"
-          )}
-        >
-          {autoPlay ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-          {autoPlay ? "Pause" : "Auto-play"}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Speed selector */}
+          <div className="flex items-center gap-0.5 rounded-full border border-slate-700/60 bg-slate-900 p-0.5">
+            {SPEED_OPTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => setSpeed(s)}
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums transition-all",
+                  speed === s
+                    ? "bg-fuchsia-500/20 text-fuchsia-300 ring-1 ring-fuchsia-500/30"
+                    : "text-slate-600 hover:text-slate-400"
+                )}
+              >
+                {s}x
+              </button>
+            ))}
+          </div>
+          {/* Play / Pause */}
+          <button
+            onClick={() => setAutoPlay((v) => !v)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all",
+              autoPlay
+                ? "border-fuchsia-500/40 bg-fuchsia-500/10 text-fuchsia-300"
+                : "border-slate-700/60 text-slate-600 hover:text-slate-400"
+            )}
+          >
+            {autoPlay ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+            {autoPlay ? "Pause" : "Play"}
+          </button>
+        </div>
       </div>
 
       {/* ── Frame content ── */}

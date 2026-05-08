@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Pause, Zap } from "lucide-react";
+import { Play, Pause, Zap, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface WalkthroughItem {
@@ -13,12 +13,19 @@ interface Props {
   items: WalkthroughItem[];
 }
 
+const BASE_DURATION = 2800;
+type SpeedOption = 0.25 | 0.5 | 1 | 2;
+const SPEED_OPTIONS: SpeedOption[] = [0.25, 0.5, 1, 2];
+
 export default function CodeWalkthrough({ items }: Props) {
   const [current, setCurrent] = useState(0);
   const [autoPlay, setAutoPlay] = useState(true);
+  const [speed, setSpeed] = useState<SpeedOption>(1);
   const activeRef = useRef<HTMLDivElement>(null);
 
-  // Auto-play: advance one entry every 2.8s, stop at end
+  const stepDuration = BASE_DURATION / speed;
+
+  // Auto-play: advance one entry per stepDuration, stop at end
   useEffect(() => {
     if (!autoPlay) return;
     const t = setInterval(() => {
@@ -26,9 +33,9 @@ export default function CodeWalkthrough({ items }: Props) {
         if (i >= items.length - 1) { setAutoPlay(false); return i; }
         return i + 1;
       });
-    }, 2800);
+    }, stepDuration);
     return () => clearInterval(t);
-  }, [autoPlay, items.length]);
+  }, [autoPlay, items.length, stepDuration]);
 
   // Keep the active code row scrolled into view
   useEffect(() => {
@@ -49,18 +56,56 @@ export default function CodeWalkthrough({ items }: Props) {
             {current + 1} / {items.length}
           </span>
         </div>
-        <button
-          onClick={() => setAutoPlay(v => !v)}
-          className={cn(
-            "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all",
-            autoPlay
-              ? "border-sky-500/40 bg-sky-500/10 text-sky-300"
-              : "border-slate-700/60 text-slate-600 hover:text-slate-400"
-          )}
-        >
-          {autoPlay ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-          {autoPlay ? "Pause" : "Auto-play"}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Speed selector */}
+          <div className="flex items-center gap-0.5 rounded-full border border-slate-700/60 bg-slate-900 p-0.5">
+            {SPEED_OPTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => setSpeed(s)}
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums transition-all",
+                  speed === s
+                    ? "bg-sky-500/20 text-sky-300 ring-1 ring-sky-500/30"
+                    : "text-slate-600 hover:text-slate-400"
+                )}
+              >
+                {s}x
+              </button>
+            ))}
+          </div>
+          {/* Step backward */}
+          <button
+            onClick={() => { setCurrent(i => Math.max(0, i - 1)); setAutoPlay(false); }}
+            disabled={current === 0}
+            className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-700/60 text-slate-500 disabled:opacity-30 hover:enabled:border-slate-500 hover:enabled:text-slate-300 transition-all"
+            title="Step backward"
+          >
+            <ChevronLeft className="h-3 w-3" />
+          </button>
+          {/* Play / Pause */}
+          <button
+            onClick={() => setAutoPlay(v => !v)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all",
+              autoPlay
+                ? "border-sky-500/40 bg-sky-500/10 text-sky-300"
+                : "border-slate-700/60 text-slate-600 hover:text-slate-400"
+            )}
+          >
+            {autoPlay ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+            {autoPlay ? "Pause" : "Play"}
+          </button>
+          {/* Step forward */}
+          <button
+            onClick={() => { setCurrent(i => Math.min(items.length - 1, i + 1)); setAutoPlay(false); }}
+            disabled={current === items.length - 1}
+            className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-700/60 text-slate-500 disabled:opacity-30 hover:enabled:border-slate-500 hover:enabled:text-slate-300 transition-all"
+            title="Step forward"
+          >
+            <ChevronRight className="h-3 w-3" />
+          </button>
+        </div>
       </div>
 
       {/* ── Split view ── */}
