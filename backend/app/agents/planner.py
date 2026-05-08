@@ -5,6 +5,7 @@ grounded in the user's submitted code.
 import logging
 from app.services.llm import get_llm_provider
 from app.agents.utils import extract_json
+from app.agents.code_analyzer import CodeAnalyzerAgent
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +134,7 @@ Rules for code_walkthrough:
 class PlannerAgent:
     def __init__(self):
         self.llm = get_llm_provider()
+        self.code_analyzer = CodeAnalyzerAgent()
 
     async def generate_learning_path(
         self,
@@ -144,7 +146,30 @@ class PlannerAgent:
         strong_areas: list[str],
         score: int,
     ) -> dict:
+        # Detect code-level misconceptions before building the prompt (AC-GAP-001)
+        try:
+            misconceptions = await self.code_analyzer.detect_misconceptions(code_snippet)
+        except Exception as exc:
+            logger.warning("Misconception detection raised unexpectedly: %s", exc)
+            misconceptions = []
+
         gap_count = len(weak_areas)
+
+        if misconceptions:
+            misconception_lines = "\n".join(
+                f"  - {m['misconception_type']} ({m['error_category']}, "
+                f"{m.get('confidence_score', 0):.0%} confidence): "
+                f"{m.get('description', '')} [{m.get('location', 'unknown')}]"
+                for m in misconceptions
+            )
+            misconception_block = (
+                f"\nMisconceptions detected directly in their code:\n{misconception_lines}\n"
+                "Each lesson that covers a topic related to a listed misconception must "
+                "explicitly address that specific error pattern."
+            )
+        else:
+            misconception_block = ""
+
         prompt = f"""Create a personalized learning path for this student.
 
 Their submitted code:
@@ -157,7 +182,7 @@ Assessment score: {score}/100
 Weak areas — concepts they got WRONG (each needs a lesson): {', '.join(weak_areas) if weak_areas else 'none'}
 Strong areas — concepts they got RIGHT (skip these): {', '.join(strong_areas) if strong_areas else 'none'}
 Skill level: {skill_level}
-Number of weak areas: {gap_count}
+Number of weak areas: {gap_count}{misconception_block}
 
 The student has {gap_count} gap{'s' if gap_count != 1 else ''} to fill.
 Generate exactly as many lessons as needed — one per weak area, plus any essential prerequisites.
