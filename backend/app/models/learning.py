@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, DateTime, ForeignKey, Integer, JSON, Boolean, Text, Float
+from sqlalchemy import String, DateTime, ForeignKey, Integer, JSON, Boolean, Text, Float, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -41,10 +41,15 @@ class Lesson(Base):
     estimated_minutes: Mapped[int] = mapped_column(Integer, default=15)
     difficulty: Mapped[str] = mapped_column(String(20), default="beginner")
     content: Mapped[dict | None] = mapped_column(JSON)
+    is_remedial: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     learning_path = relationship("LearningPath", back_populates="lessons")
     progress = relationship("LessonProgress", back_populates="lesson", uselist=False)
+
+    __table_args__ = (
+        Index("ix_lessons_learning_path_id", "learning_path_id"),
+    )
 
 
 class LessonProgress(Base):

@@ -54,3 +54,7 @@ class TokenResponse(BaseModel):
 class TokenPayload(BaseModel):
     sub: str  # user id
     exp: int
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str

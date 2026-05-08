@@ -120,6 +120,76 @@ async def send_message(
         topic=hint_topic,
     )
     db.add(hint_event)
+    await db.flush()  # make the event visible to the COUNT query below
+
+    # ── AC-GAP-003: auto-remedial workshop after 3 high-level hints on same topic ──
+    if (data.hint_level or 0) >= 2 and hint_topic and data.lesson_id:
+        try:
+            count_result = await db.execute(
+                select(func.count(HintUsageEvent.id)).where(
+                    HintUsageEvent.user_id == current_user.id,
+                    HintUsageEvent.topic == hint_topic,
+                    HintUsageEvent.hint_level >= 2,
+                )
+            )
+            high_hint_count = count_result.scalar() or 0
+            if high_hint_count >= 3:
+                existing_r = await db.execute(
+                    select(Lesson)
+                    .join(LearningPath, Lesson.learning_path_id == LearningPath.id)
+                    .where(
+                        LearningPath.user_id == current_user.id,
+                        Lesson.topic == hint_topic,
+                        Lesson.is_remedial == True,
+                    )
+                )
+                if not existing_r.scalar_one_or_none():
+                    gap_lesson_r = await db.execute(select(Lesson).where(Lesson.id == data.lesson_id))
+                    gap_lesson = gap_lesson_r.scalar_one_or_none()
+                    if gap_lesson:
+                        gap_path_r = await db.execute(
+                            select(LearningPath).where(LearningPath.id == gap_lesson.learning_path_id)
+                        )
+                        gap_path = gap_path_r.scalar_one_or_none()
+                        if gap_path:
+                            max_idx_r = await db.execute(
+                                select(func.max(Lesson.order_index)).where(
+                                    Lesson.learning_path_id == gap_path.id
+                                )
+                            )
+                            max_idx = max_idx_r.scalar() or 0
+                            planner = PlannerAgent()
+                            content = await planner.generate_lesson_content(
+                                topic=hint_topic,
+                                title=f"Mastering {hint_topic.replace('_', ' ').title()}",
+                                language=gap_path.language,
+                                skill_level=current_user.skill_level,
+                                code_snippet=(gap_path.source_code or "")[:1000],
+                                weak_areas=[hint_topic],
+                            )
+                            remedial = Lesson(
+                                learning_path_id=gap_path.id,
+                                title=f"Mastering {hint_topic.replace('_', ' ').title()}",
+                                topic=hint_topic,
+                                description=(
+                                    f"Targeted practice on {hint_topic.replace('_', ' ')} "
+                                    "— automatically created after repeated hints on this topic."
+                                ),
+                                order_index=max_idx + 1,
+                                estimated_minutes=20,
+                                difficulty=current_user.skill_level,
+                                content=content,
+                                is_remedial=True,
+                            )
+                            db.add(remedial)
+                            await db.flush()
+                            gap_path.total_lessons = max_idx + 1
+                            logger.info(
+                                "AC-GAP-003: auto-remedial lesson created for topic '%s' (user %s)",
+                                hint_topic, current_user.id,
+                            )
+        except Exception as exc:
+            logger.warning("AC-GAP-003 auto-remedial lesson failed: %s", exc)
 
     # ── Hint-3 lesson suggestion ─────────────────────────────────────────────
     # When a student needed a full worked example, analyse the gap and create

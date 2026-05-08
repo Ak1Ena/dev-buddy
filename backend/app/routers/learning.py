@@ -274,10 +274,14 @@ async def update_lesson_progress(
         progress = LessonProgress(lesson_id=lesson_id, user_id=current_user.id)
         db.add(progress)
 
+    just_completed = False
+    lesson = None
+
     if data.status:
         if data.status == "in_progress" and not progress.started_at:
             progress.started_at = datetime.utcnow()
         if data.status == "completed" and not progress.completed_at:
+            just_completed = True
             progress.completed_at = datetime.utcnow()
             lesson_result = await db.execute(select(Lesson).where(Lesson.id == lesson_id))
             lesson = lesson_result.scalar_one()
@@ -292,6 +296,45 @@ async def update_lesson_progress(
         progress.workshop_score = data.workshop_score
     if data.time_spent_seconds is not None:
         progress.time_spent_seconds += data.time_spent_seconds
+
+    # FR-03-003: auto-increase difficulty after 3 consecutive hint-free completions
+    if just_completed and progress.hints_used == 0 and lesson is not None:
+        recent_result = await db.execute(
+            select(LessonProgress)
+            .join(Lesson, LessonProgress.lesson_id == Lesson.id)
+            .where(
+                LessonProgress.user_id == current_user.id,
+                Lesson.learning_path_id == lesson.learning_path_id,
+                LessonProgress.status == "completed",
+                LessonProgress.lesson_id != lesson_id,
+            )
+            .order_by(LessonProgress.completed_at.desc())
+            .limit(2)
+        )
+        preceding = recent_result.scalars().all()
+        if len(preceding) >= 2 and all(p.hints_used == 0 for p in preceding):
+            next_result = await db.execute(
+                select(Lesson)
+                .where(
+                    Lesson.learning_path_id == lesson.learning_path_id,
+                    Lesson.order_index > lesson.order_index,
+                )
+                .order_by(Lesson.order_index)
+                .limit(1)
+            )
+            next_lesson = next_result.scalar_one_or_none()
+            if next_lesson:
+                difficulty_order = ["beginner", "intermediate", "advanced"]
+                cur_idx = (
+                    difficulty_order.index(next_lesson.difficulty)
+                    if next_lesson.difficulty in difficulty_order else 0
+                )
+                if cur_idx < len(difficulty_order) - 1:
+                    next_lesson.difficulty = difficulty_order[cur_idx + 1]
+                    logger.info(
+                        "FR-03-003: difficulty bumped to '%s' for lesson '%s' (user %s, 3-streak)",
+                        next_lesson.difficulty, next_lesson.title, current_user.id,
+                    )
 
     await db.commit()
     return {"status": "updated"}
