@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle2, XCircle, Lightbulb, ChevronRight } from "lucide-react";
+import { CheckCircle2, XCircle, Lightbulb, ChevronRight, RefreshCw } from "lucide-react";
 import type { Workshop } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -165,24 +165,48 @@ export default function WorkshopExercise({ workshop, onComplete }: WorkshopExerc
             ) : (
               <>
                 <XCircle className="h-5 w-5 text-red-400" />
-                <span className="font-semibold text-red-300">Not quite right</span>
+                <span className="font-semibold text-red-300">Not quite right — keep going!</span>
               </>
             )}
           </div>
 
-          {!isCorrect && (
-            <div className="mb-3">
-              <span className="text-xs font-medium text-slate-400">Correct answer: </span>
-              <code className="rounded bg-slate-800 px-1.5 py-0.5 text-sm font-mono text-emerald-300">
-                {workshop.answer}
-              </code>
-            </div>
-          )}
-
-          {workshop.explanation && (
+          {/* Correct: show full explanation */}
+          {isCorrect && workshop.explanation && (
             <p className="text-sm leading-relaxed text-slate-300">
               {workshop.explanation}
             </p>
+          )}
+
+          {/* Wrong: never reveal the answer — offer hint or retry */}
+          {!isCorrect && (
+            <div className="mt-3 space-y-3">
+              <p className="text-sm text-slate-400">Would you like a hint, or do you want to try again?</p>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                {hintsUsed < workshop.hints.length && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      handleGetHint();
+                      setSubmitted(false);
+                      setAnswer("");
+                    }}
+                    className="gap-1.5"
+                  >
+                    <Lightbulb className="h-4 w-4" />
+                    Give me a hint
+                    <span className="text-xs opacity-60">({hintsUsed}/{workshop.hints.length})</span>
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => { setSubmitted(false); setAnswer(""); }}
+                  className="gap-1.5"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Try again
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       )}
