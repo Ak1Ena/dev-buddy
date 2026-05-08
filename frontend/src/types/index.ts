@@ -110,6 +110,9 @@ export interface AnimationEffect {
   target?: string;
   from?: string;
   to?: string;
+  from_value?: string;
+  to_value?: string;
+  why?: string;
   label?: string;
   color?: "sky" | "amber" | "emerald" | "fuchsia" | "red" | "slate";
 }

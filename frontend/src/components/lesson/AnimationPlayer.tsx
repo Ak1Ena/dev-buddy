@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Play, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -10,10 +10,14 @@ interface Props {
   frames: AnimationFrame[];
 }
 
+const FRAME_DURATION = 2800;
+const TICK_MS = 60;
+
 export default function AnimationPlayer({ frames }: Props) {
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState<"forward" | "backward">("forward");
   const [autoPlay, setAutoPlay] = useState(false);
+  const [frameProgress, setFrameProgress] = useState(0); // 0–100
 
   const frame = frames[idx];
   const total = frames.length;
@@ -25,6 +29,7 @@ export default function AnimationPlayer({ frames }: Props) {
   const prev = () => { if (idx > 0) go(idx - 1); };
   const next = () => { if (idx < total - 1) go(idx + 1); };
 
+  // Auto-advance interval
   useEffect(() => {
     if (!autoPlay) return;
     const t = setInterval(() => {
@@ -33,9 +38,40 @@ export default function AnimationPlayer({ frames }: Props) {
         setDir("forward");
         return i + 1;
       });
-    }, 2800);
+    }, FRAME_DURATION);
     return () => clearInterval(t);
   }, [autoPlay, total]);
+
+  // Progress-within-frame ticker
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedRef = useRef(0);
+
+  useEffect(() => {
+    // Reset whenever frame changes or autoPlay turns off
+    elapsedRef.current = 0;
+    setFrameProgress(0);
+
+    if (!autoPlay) {
+      if (tickRef.current) clearInterval(tickRef.current);
+      tickRef.current = null;
+      return;
+    }
+
+    tickRef.current = setInterval(() => {
+      elapsedRef.current += TICK_MS;
+      const pct = Math.min((elapsedRef.current / FRAME_DURATION) * 100, 100);
+      setFrameProgress(pct);
+    }, TICK_MS);
+
+    return () => {
+      if (tickRef.current) clearInterval(tickRef.current);
+    };
+  }, [autoPlay, idx]);
+
+  const secondsLeft = Math.max(
+    0,
+    Math.ceil((FRAME_DURATION - elapsedRef.current) / 1000)
+  );
 
   const isForward = dir === "forward";
 
@@ -122,15 +158,62 @@ export default function AnimationPlayer({ frames }: Props) {
               </motion.div>
             ) : null}
 
-            {/* Effect layer — AI-designed particle/animation effects */}
+            {/* Effect layer.
+                When the canvas is showing edges with particles, we don't
+                duplicate the same animation below. Instead, render a compact
+                text list of "why this changed" per pulse effect — keeping the
+                explanations without the visual clutter.
+                When there's no canvas, fall back to the full EffectLayer. */}
             {frame.effects && frame.effects.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.14, duration: 0.25 }}
-              >
-                <EffectLayer effects={frame.effects} />
-              </motion.div>
+              frame.canvas_scene ? (
+                (() => {
+                  const annotated = frame.effects.filter(
+                    (e) => e.why || (e.label && (e.from_value || e.to_value || e.from || e.to))
+                  );
+                  if (annotated.length === 0) return null;
+                  return (
+                    <motion.ul
+                      className="space-y-1.5 pl-0.5"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.14, duration: 0.25 }}
+                    >
+                      {annotated.map((e, i) => {
+                        const fromVal = e.from_value ?? e.from;
+                        const toVal = e.to_value ?? e.to;
+                        return (
+                          <li
+                            key={i}
+                            className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs leading-relaxed"
+                          >
+                            {e.target && (
+                              <span className="font-mono font-semibold text-fuchsia-300">
+                                {e.target}
+                              </span>
+                            )}
+                            {fromVal != null && toVal != null && (
+                              <span className="font-mono text-slate-500">
+                                <span className="line-through decoration-slate-600">{fromVal}</span>
+                                <span className="mx-1.5 text-slate-600">→</span>
+                                <span className="text-slate-300">{toVal}</span>
+                              </span>
+                            )}
+                            <span className="text-slate-400">{e.why ?? e.label}</span>
+                          </li>
+                        );
+                      })}
+                    </motion.ul>
+                  );
+                })()
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.14, duration: 0.25 }}
+                >
+                  <EffectLayer effects={frame.effects} />
+                </motion.div>
+              )
             )}
 
             {/* Narration */}
@@ -142,6 +225,29 @@ export default function AnimationPlayer({ frames }: Props) {
             >
               {frame.narration}
             </motion.div>
+
+            {/* Per-frame countdown progress bar (auto-play only) */}
+            {autoPlay && idx < total - 1 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="pt-1"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-slate-600 tabular-nums">
+                    next in {secondsLeft}s
+                  </span>
+                </div>
+                <div className="h-0.5 w-full rounded-full bg-slate-800 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-sky-500 transition-none"
+                    style={{ width: `${frameProgress}%` }}
+                  />
+                </div>
+              </motion.div>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>

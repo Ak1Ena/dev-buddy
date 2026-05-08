@@ -38,6 +38,16 @@ def get_llm_provider() -> LLMProvider:
         from app.services.llm.openai_provider import OpenAIProvider
         return OpenAIProvider(api_key=settings.openai_api_key, model=settings.llm_model)
 
+    if provider == "gemini":
+        if not settings.gemini_api_key:
+            raise ValueError("GEMINI_API_KEY is not set in .env")
+        from app.services.llm.openai_provider import OpenAIProvider
+        return OpenAIProvider(
+            api_key=settings.gemini_api_key,
+            model=settings.llm_model,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+        )
+
     if provider == "ollama":
         from app.services.llm.openai_provider import OpenAIProvider
         return OpenAIProvider(
@@ -48,5 +58,5 @@ def get_llm_provider() -> LLMProvider:
 
     raise ValueError(
         f"Unknown LLM provider: '{provider}'. "
-        "Choose from: anthropic, openrouter, openai, ollama"
+        "Choose from: anthropic, openrouter, openai, gemini, ollama"
     )

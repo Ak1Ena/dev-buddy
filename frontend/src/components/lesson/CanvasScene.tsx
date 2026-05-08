@@ -39,13 +39,27 @@ function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: n
   ctx.closePath();
 }
 
-function measureNodes(nodes: CanvasNode[]): Map<string, Sz> {
-  const mc = document.createElement("canvas").getContext("2d")!;
+// Conservative char-width estimates used as a safety floor when measureText
+// returns metrics that don't match the actual draw font (e.g. on platforms
+// where ui-monospace/SFMono-Regular are missing and an offline measurement
+// canvas falls back to different metrics than the visible canvas).
+const LBL_CHAR_PX = 5.6;  // ~9px semi-bold monospace
+const VAL_CHAR_PX = 10.4; // ~17px bold monospace
+
+function measureNodes(nodes: CanvasNode[], ctx: CanvasRenderingContext2D): Map<string, Sz> {
   return new Map(nodes.map(node => {
-    mc.font = LBL_FONT;
-    const lw = mc.measureText(node.label).width;
-    mc.font = VAL_FONT;
-    const vw = node.value ? mc.measureText(String(node.value)).width : 0;
+    ctx.font = LBL_FONT;
+    const lwMeasured = ctx.measureText(node.label).width;
+    const lw = Math.max(lwMeasured, node.label.length * LBL_CHAR_PX);
+
+    const valStr = node.value != null ? String(node.value) : "";
+    let vw = 0;
+    if (valStr) {
+      ctx.font = VAL_FONT;
+      const vwMeasured = ctx.measureText(valStr).width;
+      vw = Math.max(vwMeasured, valStr.length * VAL_CHAR_PX);
+    }
+
     return [node.id, {
       w: Math.max(MIN_W, Math.ceil(Math.max(lw, vw) + IPAD * 2)),
       h: node.value ? H_VAL : H_NOVAL,
@@ -138,6 +152,82 @@ function drawCurve(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: nu
   ctx.fill();
 }
 
+// ── Particle settings ────────────────────────────────────────────────────────
+// Speed is constant pixels-per-millisecond, so a long edge takes proportionally
+// longer to traverse than a short one. Particle speed is purely visual flow —
+// it does NOT mean anything semantic (importance, value magnitude, etc.).
+const PARTICLE_VELOCITY = 0.09;   // px/ms ≈ 90 px/sec
+const PARTICLES_PER_EDGE = 3;
+const PARTICLE_RADIUS = 2.6;
+const TIP = 8;
+
+// Compute a per-edge progress value in [0, 1) given elapsed ms and edge length.
+function edgeProgress(elapsedMs: number, length: number, particleIndex: number): number {
+  const period = Math.max(length / PARTICLE_VELOCITY, 600); // avoid silly-fast on tiny edges
+  return ((elapsedMs / period) + particleIndex / PARTICLES_PER_EDGE) % 1;
+}
+
+function drawParticlesOnLine(
+  ctx: CanvasRenderingContext2D,
+  x1: number, y1: number, x2: number, y2: number,
+  col: string, elapsedMs: number
+) {
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const ex = x2 - TIP * Math.cos(angle);
+  const ey = y2 - TIP * Math.sin(angle);
+  const length = Math.hypot(ex - x1, ey - y1);
+  for (let i = 0; i < PARTICLES_PER_EDGE; i++) {
+    const u = edgeProgress(elapsedMs, length, i);
+    const fade = u < 0.1 ? u / 0.1 : u > 0.9 ? (1 - u) / 0.1 : 1;
+    const px = x1 + (ex - x1) * u;
+    const py = y1 + (ey - y1) * u;
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(px, py, PARTICLE_RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawParticlesOnBezier(
+  ctx: CanvasRenderingContext2D,
+  x1: number, y1: number, x2: number, y2: number,
+  col: string, elapsedMs: number
+) {
+  const mid = (y1 + y2) / 2;
+  // Approx bezier arc length using a few sample chords.
+  let length = 0;
+  let prevX = x1, prevY = y1;
+  for (let s = 1; s <= 8; s++) {
+    const u = s / 8;
+    const v = 1 - u;
+    const sx = v*v*v*x1 + 3*v*v*u*x1 + 3*v*u*u*x2 + u*u*u*x2;
+    const sy = v*v*v*y1 + 3*v*v*u*mid + 3*v*u*u*mid + u*u*u*y2;
+    length += Math.hypot(sx - prevX, sy - prevY);
+    prevX = sx; prevY = sy;
+  }
+  for (let i = 0; i < PARTICLES_PER_EDGE; i++) {
+    const u = edgeProgress(elapsedMs, length, i);
+    const fade = u < 0.1 ? u / 0.1 : u > 0.9 ? (1 - u) / 0.1 : 1;
+    const v = 1 - u;
+    const px = v*v*v*x1 + 3*v*v*u*x1 + 3*v*u*u*x2 + u*u*u*x2;
+    const py = v*v*v*y1 + 3*v*v*u*mid + 3*v*u*u*mid + u*u*u*y2;
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(px, py, PARTICLE_RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
 export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
@@ -150,7 +240,7 @@ export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
     const { nodes, edges = [] } = scene;
     if (!nodes.length) return;
 
-    const sz  = measureNodes(nodes);
+    const sz  = measureNodes(nodes, ctx);
     const isTree = nodes.some(n => !!n.parent);
     const pos = isTree ? treeLayout(nodes, sz) : hLayout(nodes, sz);
 
@@ -171,87 +261,136 @@ export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
     canvas.style.height = `${CH}px`;
     ctx.scale(dpr, dpr);
 
-    ctx.fillStyle = "#020617";
-    ctx.fillRect(0, 0, CW, CH);
+    let rafId = 0;
+    let start = 0;
 
-    // Parent→child curves
-    for (const node of nodes) {
-      if (!node.parent) continue;
-      const pp = pos.get(node.parent);
-      const np = pos.get(node.id);
-      const ps = sz.get(node.parent);
-      const ns = sz.get(node.id);
-      if (!pp || !np || !ps || !ns) continue;
-      const parentNode = nodes.find(n => n.id === node.parent);
-      const col = (PAL[parentNode?.color ?? "slate"] ?? PAL.slate).border;
-      drawCurve(ctx, pp.x + ps.w / 2, pp.y + ps.h, np.x + ns.w / 2, np.y, col);
-    }
+    const render = (now: number) => {
+      if (!start) start = now;
+      const elapsed = now - start;
 
-    // Edges
-    for (const edge of (edges as CanvasEdge[])) {
-      const fp = pos.get(edge.from);
-      const tp = pos.get(edge.to);
-      const fs = sz.get(edge.from);
-      const ts = sz.get(edge.to);
-      if (!fp || !tp || !fs || !ts) continue;
-      const srcNode = nodes.find(n => n.id === edge.from);
-      const col = (PAL[srcNode?.color ?? "sky"] ?? PAL.sky).border;
-      drawArrow(ctx, fp.x + fs.w, fp.y + fs.h / 2, tp.x, tp.y + ts.h / 2, col, edge.style === "dashed");
-      if (edge.label) {
-        ctx.fillStyle  = "#64748b";
-        ctx.font       = "600 10px ui-monospace, SFMono-Regular, monospace";
-        ctx.textAlign  = "center";
-        ctx.fillText(edge.label, (fp.x + fs.w + tp.x) / 2, Math.min(fp.y, tp.y) - 6);
+      // background
+      ctx.fillStyle = "#020617";
+      ctx.fillRect(0, 0, CW, CH);
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+
+      // Parent→child curves
+      for (const node of nodes) {
+        if (!node.parent) continue;
+        const pp = pos.get(node.parent);
+        const np = pos.get(node.id);
+        const ps = sz.get(node.parent);
+        const ns = sz.get(node.id);
+        if (!pp || !np || !ps || !ns) continue;
+        const parentNode = nodes.find(n => n.id === node.parent);
+        const col = (PAL[parentNode?.color ?? "slate"] ?? PAL.slate).border;
+        const x1 = pp.x + ps.w / 2;
+        const y1 = pp.y + ps.h;
+        const x2 = np.x + ns.w / 2;
+        const y2 = np.y;
+        drawCurve(ctx, x1, y1, x2, y2, col);
+        drawParticlesOnBezier(ctx, x1, y1, x2, y2, col, elapsed);
       }
-    }
 
-    // Nodes
-    for (const node of nodes) {
-      const { x, y } = pos.get(node.id)!;
-      const { w, h } = sz.get(node.id)!;
-      const p = PAL[node.color ?? "sky"] ?? PAL.sky;
+      // Edges — distribute connection points along the box side so multiple
+      // edges sharing a source or target don't overlap. With N edges meeting a
+      // side, slots sit at heights (i+1)/(N+1) of the box.
+      const edgeList = edges as CanvasEdge[];
+      const outTotal = new Map<string, number>();
+      const inTotal  = new Map<string, number>();
+      for (const e of edgeList) {
+        outTotal.set(e.from, (outTotal.get(e.from) ?? 0) + 1);
+        inTotal.set(e.to,    (inTotal.get(e.to)    ?? 0) + 1);
+      }
+      const outSeen = new Map<string, number>();
+      const inSeen  = new Map<string, number>();
 
-      if (node.highlight) {
-        ctx.save();
-        ctx.shadowColor = p.border;
-        ctx.shadowBlur  = 22;
+      for (const edge of edgeList) {
+        const fp = pos.get(edge.from);
+        const tp = pos.get(edge.to);
+        const fs = sz.get(edge.from);
+        const ts = sz.get(edge.to);
+        if (!fp || !tp || !fs || !ts) continue;
+        const srcNode = nodes.find(n => n.id === edge.from);
+        const col = (PAL[srcNode?.color ?? "sky"] ?? PAL.sky).border;
+
+        const oc = outTotal.get(edge.from) ?? 1;
+        const oi = outSeen.get(edge.from)  ?? 0;
+        outSeen.set(edge.from, oi + 1);
+        const ic = inTotal.get(edge.to) ?? 1;
+        const ii = inSeen.get(edge.to)  ?? 0;
+        inSeen.set(edge.to, ii + 1);
+
+        const x1 = fp.x + fs.w;
+        const y1 = fp.y + fs.h * ((oi + 1) / (oc + 1));
+        const x2 = tp.x;
+        const y2 = tp.y + ts.h * ((ii + 1) / (ic + 1));
+
+        drawArrow(ctx, x1, y1, x2, y2, col, edge.style === "dashed");
+        drawParticlesOnLine(ctx, x1, y1, x2, y2, col, elapsed);
+        if (edge.label) {
+          ctx.fillStyle  = "#64748b";
+          ctx.font       = "600 10px ui-monospace, SFMono-Regular, monospace";
+          ctx.textAlign  = "center";
+          // Label sits just above each line's own midpoint, so labels naturally
+          // separate when lines spread.
+          ctx.fillText(edge.label, (x1 + x2) / 2, (y1 + y2) / 2 - 7);
+        }
+      }
+
+      // Nodes
+      for (const node of nodes) {
+        const { x, y } = pos.get(node.id)!;
+        const { w, h } = sz.get(node.id)!;
+        const p = PAL[node.color ?? "sky"] ?? PAL.sky;
+
+        if (node.highlight) {
+          ctx.save();
+          ctx.shadowColor = p.border;
+          ctx.shadowBlur  = 22;
+          ctx.strokeStyle = p.border;
+          ctx.lineWidth   = 2;
+          rr(ctx, x - 3, y - 3, w + 6, h + 6, 13);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        ctx.fillStyle = p.bg;
+        rr(ctx, x, y, w, h, 10);
+        ctx.fill();
+
         ctx.strokeStyle = p.border;
-        ctx.lineWidth   = 2;
-        rr(ctx, x - 3, y - 3, w + 6, h + 6, 13);
+        ctx.lineWidth   = node.highlight ? 2 : 1;
+        rr(ctx, x, y, w, h, 10);
         ctx.stroke();
-        ctx.restore();
-      }
 
-      ctx.fillStyle = p.bg;
-      rr(ctx, x, y, w, h, 10);
-      ctx.fill();
-
-      ctx.strokeStyle = p.border;
-      ctx.lineWidth   = node.highlight ? 2 : 1;
-      rr(ctx, x, y, w, h, 10);
-      ctx.stroke();
-
-      ctx.fillStyle  = p.lbl;
-      ctx.font       = LBL_FONT;
-      ctx.textAlign  = "center";
-      ctx.fillText(node.label, x + w / 2, y + (node.value ? 14 : h / 2 + 4));
-
-      if (node.value) {
-        ctx.globalAlpha = 0.18;
-        ctx.strokeStyle = p.border;
-        ctx.lineWidth   = 0.75;
-        ctx.beginPath();
-        ctx.moveTo(x + 10, y + 24);
-        ctx.lineTo(x + w - 10, y + 24);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-
-        ctx.fillStyle  = p.val;
-        ctx.font       = VAL_FONT;
+        ctx.fillStyle  = p.lbl;
+        ctx.font       = LBL_FONT;
         ctx.textAlign  = "center";
-        ctx.fillText(String(node.value), x + w / 2, y + h / 2 + 13);
+        ctx.fillText(node.label, x + w / 2, y + (node.value ? 14 : h / 2 + 4));
+
+        if (node.value) {
+          ctx.globalAlpha = 0.18;
+          ctx.strokeStyle = p.border;
+          ctx.lineWidth   = 0.75;
+          ctx.beginPath();
+          ctx.moveTo(x + 10, y + 24);
+          ctx.lineTo(x + w - 10, y + 24);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+
+          ctx.fillStyle  = p.val;
+          ctx.font       = VAL_FONT;
+          ctx.textAlign  = "center";
+          ctx.fillText(String(node.value), x + w / 2, y + h / 2 + 13);
+        }
       }
-    }
+
+      rafId = requestAnimationFrame(render);
+    };
+
+    rafId = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(rafId);
   }, [scene]);
 
   return (

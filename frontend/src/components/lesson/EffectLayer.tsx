@@ -6,6 +6,9 @@ export interface AnimationEffect {
   target?: string;
   from?: string;
   to?: string;
+  from_value?: string;
+  to_value?: string;
+  why?: string;
   label?: string;
   color?: "sky" | "amber" | "emerald" | "fuchsia" | "red" | "slate";
 }
@@ -22,30 +25,110 @@ const C = {
 type ColorKey = keyof typeof C;
 const color = (k?: string): ColorKey => (k && k in C ? (k as ColorKey) : "sky");
 
-// ── Pulse: radial ring + pulsing dot, value just changed ────────────────────
+// ── Pulse: init_value → flowing particles → new_value, with "why" ───────────
 function Pulse({ e, i }: { e: AnimationEffect; i: number }) {
   const c = C[color(e.color)];
+  const fromVal = e.from_value ?? e.from;
+  const toVal = e.to_value ?? e.to;
+  const hasFlow = fromVal != null && toVal != null;
+
+  // Legacy fallback: no values provided → keep old pulsing-dot look.
+  if (!hasFlow) {
+    return (
+      <motion.div
+        className={cn("flex items-center gap-3 rounded-xl border px-4 py-2.5", c.bg, c.border)}
+        initial={{ opacity: 0, scale: 0.88 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: i * 0.11, type: "spring", stiffness: 380, damping: 22 }}
+      >
+        <div className="relative flex h-6 w-6 shrink-0 items-center justify-center">
+          <motion.div
+            className={cn("absolute h-6 w-6 rounded-full", c.dot)}
+            animate={{ scale: [1, 2, 1], opacity: [0.35, 0, 0.35] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <div className={cn("h-2.5 w-2.5 rounded-full", c.dot)} />
+        </div>
+        <div>
+          <p className="text-xs">
+            {e.target && <span className={cn("font-mono font-bold", c.text)}>{e.target}</span>}
+            {e.label && <span className="ml-1.5 text-slate-400">{e.label}</span>}
+          </p>
+          <p className="mt-0.5 text-[10px] uppercase tracking-widest text-slate-600">pulse · value changed</p>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
-      className={cn("flex items-center gap-3 rounded-xl border px-4 py-2.5", c.bg, c.border)}
-      initial={{ opacity: 0, scale: 0.88 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: i * 0.11, type: "spring", stiffness: 380, damping: 22 }}
+      className="px-1 py-2"
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: i * 0.11, duration: 0.3 }}
     >
-      <div className="relative flex h-6 w-6 shrink-0 items-center justify-center">
+      {/* why — sits above the line, no box */}
+      {(e.why || e.label || e.target) && (
         <motion.div
-          className={cn("absolute h-6 w-6 rounded-full", c.dot)}
-          animate={{ scale: [1, 2, 1], opacity: [0.35, 0, 0.35] }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <div className={cn("h-2.5 w-2.5 rounded-full", c.dot)} />
-      </div>
-      <div>
-        <p className="text-xs">
-          {e.target && <span className={cn("font-mono font-bold", c.text)}>{e.target}</span>}
-          {e.label && <span className="ml-1.5 text-slate-400">{e.label}</span>}
-        </p>
-        <p className="mt-0.5 text-[10px] uppercase tracking-widest text-slate-600">pulse · value changed</p>
+          className="mb-1.5 flex items-baseline gap-2 pl-0.5"
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.11 + 0.05, duration: 0.25 }}
+        >
+          {e.target && (
+            <span className={cn("font-mono text-xs font-bold", c.text)}>{e.target}</span>
+          )}
+          {(e.why || e.label) && (
+            <span className="text-[11px] leading-snug text-slate-400">{e.why ?? e.label}</span>
+          )}
+        </motion.div>
+      )}
+
+      {/* the line: from_value ──●──●──●──→ to_value */}
+      <div className="flex items-center gap-3">
+        <span className="shrink-0 font-mono text-xs font-semibold text-slate-500 line-through decoration-slate-600/70">
+          {fromVal}
+        </span>
+
+        {/* track + particles riding on it */}
+        <div className="relative flex h-4 flex-1 items-center">
+          <div
+            className={cn(
+              "absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 border-t border-dashed",
+              c.border
+            )}
+          />
+          {[0, 1, 2, 3, 4].map((d) => (
+            <motion.div
+              key={d}
+              className={cn(
+                "absolute top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-[0_0_6px_currentColor]",
+                c.dot,
+                c.text
+              )}
+              initial={{ left: "0%", opacity: 0 }}
+              animate={{ left: ["0%", "100%"], opacity: [0, 1, 1, 0] }}
+              transition={{
+                duration: 1.3,
+                delay: i * 0.11 + d * 0.22,
+                repeat: Infinity,
+                ease: "linear",
+                times: [0, 0.12, 0.88, 1],
+              }}
+            />
+          ))}
+        </div>
+
+        <span className={cn("shrink-0 font-mono text-xs", c.text)}>→</span>
+
+        <motion.span
+          className={cn("shrink-0 font-mono text-xs font-bold", c.text)}
+          initial={{ scale: 0.85, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: i * 0.11 + 0.45, type: "spring", stiffness: 360, damping: 18 }}
+        >
+          {toVal}
+        </motion.span>
       </div>
     </motion.div>
   );

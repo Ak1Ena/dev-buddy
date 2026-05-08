@@ -1,17 +1,22 @@
 import json
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.models.user import User
 from app.models.chat import ChatSession, ChatMessage
 from app.models.learning import Lesson, LearningPath
-from app.schemas.chat import ChatRequest, ChatResponse, ChatSessionResponse, ChatMessageResponse
+from app.schemas.chat import ChatRequest, ChatResponse, ChatSessionResponse, ChatMessageResponse, SuggestedLesson
 from app.agents.socratic_mentor import SocraticMentorAgent
+from app.agents.lesson_suggester import LessonSuggesterAgent
+from app.agents.planner import PlannerAgent
 from app.utils.auth import get_current_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -95,6 +100,77 @@ async def send_message(
     )
     db.add(user_msg)
     db.add(ai_msg)
+    await db.flush()
+
+    # ── Hint-3 lesson suggestion ─────────────────────────────────────────────
+    # When a student needed a full worked example, analyse the gap and create
+    # a targeted mini-lesson so they can go deeper on that specific concept.
+    suggested_lesson_out: SuggestedLesson | None = None
+    if data.hint_level == 3 and data.lesson_id:
+        try:
+            conv_so_far = history + [
+                {"role": "user", "content": data.message},
+                {"role": "assistant", "content": response_text},
+            ]
+            suggester = LessonSuggesterAgent()
+            spec = await suggester.suggest(conv_so_far, lesson_context)
+            if spec:
+                # Find the learning path to attach the new lesson to
+                lesson_result2 = await db.execute(select(Lesson).where(Lesson.id == data.lesson_id))
+                base_lesson = lesson_result2.scalar_one_or_none()
+                if base_lesson:
+                    path_id = base_lesson.learning_path_id
+                    path_result2 = await db.execute(select(LearningPath).where(LearningPath.id == path_id))
+                    path = path_result2.scalar_one_or_none()
+
+                    # Get next order_index for this path
+                    max_idx_result = await db.execute(
+                        select(func.max(Lesson.order_index)).where(Lesson.learning_path_id == path_id)
+                    )
+                    max_idx = max_idx_result.scalar() or 0
+
+                    # Generate content via Planner
+                    planner = PlannerAgent()
+                    source_code = (path.source_code or "") if path else ""
+                    content = await planner.generate_lesson_content(
+                        topic=spec["topic"],
+                        title=spec["title"],
+                        language=path.language if path else "python",
+                        skill_level=current_user.skill_level,
+                        code_snippet=source_code[:1000],
+                        weak_areas=[spec["topic"]],
+                    )
+
+                    new_lesson = Lesson(
+                        learning_path_id=path_id,
+                        title=spec["title"],
+                        topic=spec["topic"],
+                        description=spec.get("description"),
+                        order_index=max_idx + 1,
+                        estimated_minutes=spec.get("estimated_minutes", 15),
+                        difficulty=spec.get("difficulty", "beginner"),
+                        content=content,
+                    )
+                    db.add(new_lesson)
+                    await db.flush()
+
+                    # Update path total
+                    if path:
+                        path.total_lessons = max_idx + 1
+                    await db.refresh(new_lesson)
+
+                    suggested_lesson_out = SuggestedLesson(
+                        id=new_lesson.id,
+                        title=new_lesson.title,
+                        topic=new_lesson.topic,
+                        description=new_lesson.description,
+                        why=spec.get("why"),
+                        learning_path_id=path_id,
+                    )
+                    logger.info("Created remedial lesson '%s' for user %s", new_lesson.title, current_user.id)
+        except Exception as exc:
+            logger.warning("Hint-3 lesson suggestion failed: %s", exc)
+
     await db.commit()
     await db.refresh(ai_msg)
 
@@ -102,6 +178,7 @@ async def send_message(
         session_id=session.id,
         message=ChatMessageResponse.model_validate(ai_msg),
         hint_level_used=data.hint_level,
+        suggested_lesson=suggested_lesson_out,
     )
 
 

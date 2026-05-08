@@ -63,13 +63,25 @@ Rules for canvas_scene (drawn as boxes + arrows):
 
 Rules for effects (1-3 per frame — choose what fits the action):
 - "spawn"    — a variable is created for the first time
-- "pulse"    — a variable's value just changed
+- "pulse"    — a variable's value just changed. REQUIRED fields:
+     "target":     variable name (e.g. "count")
+     "from_value": the value BEFORE this frame (e.g. "0")
+     "to_value":   the value AFTER this frame (e.g. "1")
+     "why":        ONE short sentence explaining WHY it changed
+                   (e.g. "loop iteration incremented count by 1")
 - "flow"     — data moves from one place to another; requires "from" and "to" (use variable labels)
 - "highlight"— a condition just evaluated to True
 - "burst"    — a function is called or a loop fires
 - "fade"     — a variable goes out of scope or a loop ends
 - color: match the canvas_scene node color for the same variable
-- target: variable label; label: short annotation like "= 10.0", "+= 1", "→ result" """
+- target: variable label; label: short annotation like "= 10.0", "+= 1", "→ result"
+
+Example pulse showing the full value flow:
+  { "effect": "pulse", "target": "count",
+    "from_value": "0", "to_value": "1",
+    "why": "loop iteration 1: count += 1 increments it by one",
+    "color": "amber" }
+"""
 
 
 class DesignerAgent:

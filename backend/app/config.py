@@ -14,13 +14,14 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./devbuddy.db"
 
     # ── LLM Provider selection ────────────────────────────────────────────────
-    # Options: anthropic | openrouter | openai | ollama
+    # Options: anthropic | openrouter | openai | gemini | ollama
     llm_provider: str = "anthropic"
 
     # Model name — format depends on provider:
     #   anthropic:   claude-sonnet-4-6 | claude-opus-4-7 | claude-haiku-4-5-20251001
     #   openrouter:  anthropic/claude-3.5-sonnet | openai/gpt-4o | google/gemini-pro
     #   openai:      gpt-4o | gpt-4o-mini | gpt-4-turbo
+    #   gemini:      gemini-2.0-flash | gemini-2.5-pro | gemini-2.5-flash
     #   ollama:      llama3.2 | mistral | codellama (whatever you have pulled)
     llm_model: str = "claude-sonnet-4-6"
 
@@ -28,6 +29,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openrouter_api_key: str = ""
     openai_api_key: str = ""
+    gemini_api_key: str = ""
 
     # ── OpenRouter optional metadata ─────────────────────────────────────────
     openrouter_site_url: str = "http://localhost:3000"

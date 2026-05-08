@@ -8,11 +8,11 @@ import remarkGfm from "remark-gfm";
 import {
   Send, Code2, Loader2, ChevronLeft, MessageSquare,
   BookOpen, Lightbulb, Wrench, Sparkles, ChevronRight,
-  CheckCircle2, Zap, Info, Star, PlayCircle, List,
+  CheckCircle2, XCircle, Zap, Info, Star, PlayCircle, List, ArrowRight,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { learningApi, chatApi } from "@/lib/api";
-import type { Lesson, ChatMessage } from "@/types";
+import type { Lesson, ChatMessage, AnimationFrame } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import CodeVisualizer from "@/components/visualization/CodeVisualizer";
@@ -20,6 +20,53 @@ import WorkshopExercise from "@/components/lesson/WorkshopExercise";
 import AnimationPlayer from "@/components/lesson/AnimationPlayer";
 import CodeWalkthrough from "@/components/lesson/CodeWalkthrough";
 import { topicLabel, cn } from "@/lib/utils";
+
+/* ── chat-message segmentation: split a message around `animation` blocks ── */
+type ChatSegment =
+  | { kind: "md"; text: string }
+  | { kind: "anim"; frames: AnimationFrame[] }
+  | { kind: "feedback"; correct: boolean | null; summary: string; explanation: string; next_step?: string };
+
+function parseChatMessage(content: string): { segments: ChatSegment[]; hasAnim: boolean } {
+  const segments: ChatSegment[] = [];
+  const re = /```(animation|feedback)\s*\n([\s\S]*?)\n```/gi;
+  let last = 0;
+  let hasAnim = false;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(content)) !== null) {
+    if (m.index > last) segments.push({ kind: "md", text: content.slice(last, m.index) });
+    const tag = m[1].toLowerCase();
+    const body = m[2];
+    try {
+      const parsed = JSON.parse(body);
+      if (tag === "animation") {
+        const frames = Array.isArray(parsed) ? parsed : [parsed];
+        if (frames.length && frames.every((f) => f && typeof f === "object")) {
+          segments.push({ kind: "anim", frames: frames as AnimationFrame[] });
+          hasAnim = true;
+        } else {
+          segments.push({ kind: "md", text: m[0] });
+        }
+      } else if (tag === "feedback" && parsed && typeof parsed === "object") {
+        segments.push({
+          kind: "feedback",
+          correct: parsed.correct ?? null,
+          summary: parsed.summary ?? "",
+          explanation: parsed.explanation ?? "",
+          next_step: parsed.next_step,
+        });
+      } else {
+        segments.push({ kind: "md", text: m[0] });
+      }
+    } catch {
+      segments.push({ kind: "md", text: m[0] });
+    }
+    last = re.lastIndex;
+  }
+  if (last < content.length) segments.push({ kind: "md", text: content.slice(last) });
+  if (segments.length === 0) segments.push({ kind: "md", text: content });
+  return { segments, hasAnim };
+}
 
 /* ── animation presets ───────────────────────────────────────────────────── */
 const fadeUp = {
@@ -166,6 +213,9 @@ export default function Learn() {
   const [hintLevel, setHintLevel] = useState(0);
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [codeContext, setCodeContext] = useState("");
+  const [suggestedLesson, setSuggestedLesson] = useState<{
+    id: string; title: string; topic: string; why?: string; learning_path_id: string;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const contentScrollRef = useRef<HTMLDivElement>(null);
 
@@ -248,6 +298,7 @@ export default function Learn() {
           created_at: new Date().toISOString(),
         },
       ]);
+      if (data.suggested_lesson) setSuggestedLesson(data.suggested_lesson);
     } catch {
       toast.error("Failed to send message.");
       setMessages((p) => p.slice(0, -1));
@@ -645,6 +696,39 @@ export default function Learn() {
           </div>
         </div>
 
+        {/* Suggested lesson banner — shown when hint-3 triggered a new lesson */}
+        <AnimatePresence>
+          {suggestedLesson && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="mx-4 mt-3 rounded-xl border border-fuchsia-500/30 bg-fuchsia-500/8 px-4 py-3"
+            >
+              <div className="flex items-start gap-2.5">
+                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-fuchsia-400" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-fuchsia-300">New lesson created for you</p>
+                  <p className="mt-0.5 text-xs font-medium text-white truncate">{suggestedLesson.title}</p>
+                  {suggestedLesson.why && (
+                    <p className="mt-1 text-[11px] text-slate-400 leading-snug">{suggestedLesson.why}</p>
+                  )}
+                  <button
+                    onClick={() => navigate(`/learn/${suggestedLesson.id}`)}
+                    className="mt-2 flex items-center gap-1 text-[11px] font-medium text-fuchsia-400 hover:text-fuchsia-300 transition-colors"
+                  >
+                    Start lesson <ArrowRight className="h-3 w-3" />
+                  </button>
+                </div>
+                <button
+                  onClick={() => setSuggestedLesson(null)}
+                  className="text-slate-600 hover:text-slate-400 text-xs leading-none"
+                >✕</button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           <AnimatePresence initial={false}>
@@ -678,28 +762,79 @@ export default function Learn() {
               </motion.div>
             )}
 
-            {messages.map((msg) => (
-              <motion.div
-                key={msg.id}
-                initial={{ opacity: 0, y: 10, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.22, ease: "easeOut" }}
-                className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}
-              >
-                <div
-                  className={cn(
-                    "max-w-[86%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
-                    msg.role === "user"
-                      ? "bg-sky-500 text-white rounded-br-sm"
-                      : "bg-slate-800/80 text-slate-200 rounded-bl-sm border border-slate-700/40"
-                  )}
+            {messages.map((msg) => {
+              const { segments, hasAnim } = msg.role === "assistant"
+                ? parseChatMessage(msg.content)
+                : { segments: [{ kind: "md", text: msg.content } as ChatSegment], hasAnim: false };
+              return (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.22, ease: "easeOut" }}
+                  className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}
                 >
-                  <div className="prose prose-sm prose-invert max-w-none prose-p:my-0.5 prose-p:text-inherit prose-code:text-sky-300 prose-code:bg-slate-900/60 prose-code:text-[0.85em] prose-strong:text-white">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                  <div
+                    className={cn(
+                      "rounded-2xl px-4 py-3 text-sm leading-relaxed",
+                      hasAnim ? "max-w-full w-full" : "max-w-[86%]",
+                      msg.role === "user"
+                        ? "bg-sky-500 text-white rounded-br-sm"
+                        : "bg-slate-800/80 text-slate-200 rounded-bl-sm border border-slate-700/40"
+                    )}
+                  >
+                    <div className="space-y-3">
+                      {segments.map((seg, i) =>
+                        seg.kind === "anim" ? (
+                          <div key={i} className="-mx-1">
+                            <AnimationPlayer frames={seg.frames} />
+                          </div>
+                        ) : seg.kind === "feedback" ? (
+                          <div
+                            key={i}
+                            className={cn(
+                              "rounded-xl border px-4 py-3 space-y-2",
+                              seg.correct === true
+                                ? "border-emerald-500/30 bg-emerald-500/8"
+                                : seg.correct === false
+                                ? "border-red-500/30 bg-red-500/8"
+                                : "border-amber-500/30 bg-amber-500/8"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              {seg.correct === true ? (
+                                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                              ) : seg.correct === false ? (
+                                <XCircle className="h-4 w-4 shrink-0 text-red-400" />
+                              ) : (
+                                <Lightbulb className="h-4 w-4 shrink-0 text-amber-400" />
+                              )}
+                              <p className={cn(
+                                "text-xs font-semibold",
+                                seg.correct === true ? "text-emerald-300"
+                                : seg.correct === false ? "text-red-300"
+                                : "text-amber-300"
+                              )}>{seg.summary}</p>
+                            </div>
+                            <p className="text-xs leading-relaxed text-slate-300">{seg.explanation}</p>
+                            {seg.next_step && (
+                              <p className="text-xs text-slate-400 border-t border-slate-700/40 pt-2">{seg.next_step}</p>
+                            )}
+                          </div>
+                        ) : seg.text.trim() ? (
+                          <div
+                            key={i}
+                            className="prose prose-sm prose-invert max-w-none prose-p:my-0.5 prose-p:text-inherit prose-code:text-sky-300 prose-code:bg-slate-900/60 prose-code:text-[0.85em] prose-strong:text-white"
+                          >
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{seg.text}</ReactMarkdown>
+                          </div>
+                        ) : null
+                      )}
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
 
           {chatLoading && (

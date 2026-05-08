@@ -29,7 +29,17 @@ class ChatSessionResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SuggestedLesson(BaseModel):
+    id: str
+    title: str
+    topic: str
+    description: str | None = None
+    why: str | None = None
+    learning_path_id: str
+
+
 class ChatResponse(BaseModel):
     session_id: str
     message: ChatMessageResponse
     hint_level_used: int
+    suggested_lesson: SuggestedLesson | None = None
