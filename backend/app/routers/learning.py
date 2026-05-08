@@ -118,7 +118,7 @@ async def _get_active_space(user_id: str, db: AsyncSession) -> LearningSpace | N
             LearningSpace.is_active == True,
         )
     )
-    return result.scalar_one_or_none()
+    return result.scalars().first()
 
 
 async def _deactivate_all_spaces(user_id: str, db: AsyncSession):
@@ -220,7 +220,7 @@ async def generate_learning_path(
         )
         .order_by(AssessmentSession.completed_at.desc())
     )
-    assessment = result.scalar_one_or_none()
+    assessment = result.scalars().first()
     if not assessment:
         raise HTTPException(status_code=400, detail="No completed assessment found")
 
@@ -329,7 +329,7 @@ async def get_active_path(
         )
         .order_by(LearningPath.created_at.desc())
     )
-    path = result.scalar_one_or_none()
+    path = result.scalars().first()
 
     # Fallback: if space has no path yet, try any active path for this user (legacy data)
     if not path:
@@ -339,7 +339,7 @@ async def get_active_path(
             .where(LearningPath.user_id == current_user.id, LearningPath.is_active == True)
             .order_by(LearningPath.created_at.desc())
         )
-        path = result2.scalar_one_or_none()
+        path = result2.scalars().first()
 
     return _format_path(path) if path else None
 
