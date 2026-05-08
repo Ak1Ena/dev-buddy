@@ -6,6 +6,7 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Assessment from "@/pages/Assessment";
 import Dashboard from "@/pages/Dashboard";
+import SpaceDetail from "@/pages/SpaceDetail";
 import Learn from "@/pages/Learn";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/assessment" element={<RequireAuth><Assessment /></RequireAuth>} />
         <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+        <Route path="/space/:spaceId" element={<RequireAuth><SpaceDetail /></RequireAuth>} />
         <Route path="/learn/:lessonId" element={<RequireAuth><Learn /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

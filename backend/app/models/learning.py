@@ -5,11 +5,26 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 
+class LearningSpace(Base):
+    """Named container (like a project folder) that groups one learning path + its lessons."""
+    __tablename__ = "learning_spaces"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="learning_spaces")
+    learning_paths = relationship("LearningPath", back_populates="space", cascade="all, delete-orphan")
+
+
 class LearningPath(Base):
     __tablename__ = "learning_paths"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    learning_space_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("learning_spaces.id"), nullable=True)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     language: Mapped[str] = mapped_column(String(20), default="python")
@@ -26,6 +41,7 @@ class LearningPath(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="learning_paths")
+    space = relationship("LearningSpace", back_populates="learning_paths")
     lessons = relationship("Lesson", back_populates="learning_path", cascade="all, delete-orphan", order_by="Lesson.order_index")
 
 

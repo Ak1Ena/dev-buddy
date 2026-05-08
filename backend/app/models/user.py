@@ -31,5 +31,6 @@ class User(Base):
 
     # Relationships
     assessment_sessions = relationship("AssessmentSession", back_populates="user", cascade="all, delete-orphan")
+    learning_spaces = relationship("LearningSpace", back_populates="user", cascade="all, delete-orphan")
     learning_paths = relationship("LearningPath", back_populates="user", cascade="all, delete-orphan")
     chat_sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")

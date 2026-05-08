@@ -131,6 +131,37 @@ Rules for code_walkthrough:
 - why: explain the programmer's intention — WHY they wrote this line"""
 
 
+TOPIC_PLANNER_SYSTEM = """You are a curriculum design expert for beginner programming education.
+Create a structured learning path for a specific programming topic or goal.
+
+Return ONLY valid JSON — no markdown, no extra text:
+{
+  "title": "Learning [Topic] in [Language]",
+  "description": "2-sentence description of what will be covered and learned",
+  "lessons": [
+    {
+      "order_index": 1,
+      "title": "Lesson title",
+      "topic": "topic_key",
+      "description": "What this lesson covers and why it matters",
+      "estimated_minutes": 20,
+      "difficulty": "beginner"
+    }
+  ]
+}
+
+topic_key must be one of: variables, data_types, operators, conditionals, loops, functions,
+lists, dictionaries, strings, input_output, error_handling, recursion, oop_basics,
+modules, closures, higher_order_functions, list_comprehension, classes, async_await, file_io
+
+Rules:
+- Generate 3-8 lessons that form a logical progression
+- Start from the student's current level and build incrementally
+- difficulty starts at the student's level then can advance within the path
+- estimated_minutes between 15-30
+- Each lesson title should be concrete, not generic"""
+
+
 class PlannerAgent:
     def __init__(self):
         self.llm = get_llm_provider()
@@ -210,6 +241,55 @@ Do NOT add lessons for concepts the student already understands."""
 
         logger.warning("All LLM attempts failed — using deterministic fallback path")
         return _build_fallback_path(concepts, weak_areas, language)
+
+    async def generate_topic_path(
+        self,
+        topic: str,
+        language: str,
+        skill_level: str,
+    ) -> dict:
+        prompt = f"""Create a learning path for:
+Topic / Goal: {topic}
+Programming Language: {language}
+Student level: {skill_level}
+
+Design a clear progression of lessons that teaches this topic starting from the student's current level."""
+
+        for attempt, max_tok in enumerate([3000, 1500], start=1):
+            try:
+                raw = await self.llm.complete(
+                    messages=[{"role": "user", "content": prompt}],
+                    system=TOPIC_PLANNER_SYSTEM,
+                    max_tokens=max_tok,
+                )
+                if not raw or not raw.strip():
+                    raise ValueError("empty response")
+                result = extract_json(raw)
+                if isinstance(result, list):
+                    result = {"title": f"Learning {topic}", "description": "", "lessons": result}
+                if len(result.get("lessons", [])) >= 1:
+                    return result
+                raise ValueError("no lessons returned")
+            except Exception as exc:
+                logger.warning("Topic path LLM attempt %d failed: %s", attempt, exc)
+
+        # Deterministic fallback
+        fallback_topics = ["variables", "data_types", "conditionals", "loops", "functions"]
+        return {
+            "title": f"Learning {topic} in {language.title()}",
+            "description": f"A structured path to learn {topic} in {language}.",
+            "lessons": [
+                {
+                    "order_index": i + 1,
+                    "title": _CONCEPT_TITLES.get(t, t.replace("_", " ").title()),
+                    "topic": t,
+                    "description": f"Learn about {t.replace('_', ' ')} as part of {topic}.",
+                    "estimated_minutes": 20,
+                    "difficulty": skill_level,
+                }
+                for i, t in enumerate(fallback_topics[:5])
+            ],
+        }
 
     async def generate_lesson_content(
         self,

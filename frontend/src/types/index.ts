@@ -28,6 +28,7 @@ export interface AssessmentResult {
   strong_areas: string[];
   weak_areas: string[];
   recommendation: string;
+  language: string;
 }
 
 export interface LessonProgress {
@@ -147,8 +148,17 @@ export interface LearningPath {
   skill_level: string;
   total_lessons: number;
   completed_lessons: number;
+  is_active?: boolean;
   lessons: Lesson[];
   created_at: string;
+}
+
+export interface SpaceSummary {
+  id: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  path: LearningPath | null;
 }
 
 export interface ChatMessage {

@@ -1,23 +1,34 @@
 import asyncio
 import logging
+from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 logger = logging.getLogger(__name__)
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db, AsyncSessionLocal
 from app.models.user import User
 from app.models.assessment import AssessmentSession
-from app.models.learning import LearningPath, Lesson, LessonProgress
-from app.schemas.learning import LearningPathResponse, LessonResponse, LessonProgressUpdate
+from app.models.learning import LearningSpace, LearningPath, Lesson, LessonProgress
+from app.schemas.learning import (
+    LearningPathResponse,
+    LessonResponse,
+    LessonProgressUpdate,
+    CreateSpaceRequest,
+    SpaceSummary,
+)
 from app.agents.planner import PlannerAgent
 from app.agents.designer import DesignerAgent
 from app.utils.auth import get_current_user
 
 router = APIRouter(prefix="/learning", tags=["learning"])
 
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 async def _build_lesson_content(
     topic: str,
@@ -61,8 +72,6 @@ async def _prefill_lesson_content(
     weak_areas: list[str],
 ):
     """Background task: generate content for every lesson in a path, 3 at a time."""
-    from sqlalchemy import update
-
     async with AsyncSessionLocal() as db:
         result = await db.execute(
             select(Lesson)
@@ -74,7 +83,7 @@ async def _prefill_lesson_content(
     if not lessons:
         return
 
-    sem = asyncio.Semaphore(3)  # max 3 concurrent lesson pairs
+    sem = asyncio.Semaphore(3)
 
     async def generate_one(lesson_id: str, topic: str, title: str, order: int):
         async with sem:
@@ -102,6 +111,97 @@ async def _prefill_lesson_content(
     ])
 
 
+async def _get_active_space(user_id: str, db: AsyncSession) -> LearningSpace | None:
+    result = await db.execute(
+        select(LearningSpace).where(
+            LearningSpace.user_id == user_id,
+            LearningSpace.is_active == True,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def _deactivate_all_spaces(user_id: str, db: AsyncSession):
+    result = await db.execute(
+        select(LearningSpace).where(LearningSpace.user_id == user_id, LearningSpace.is_active == True)
+    )
+    for s in result.scalars().all():
+        s.is_active = False
+
+
+# ---------------------------------------------------------------------------
+# Learning-space CRUD
+# ---------------------------------------------------------------------------
+
+@router.post("/spaces", response_model=SpaceSummary, status_code=201)
+async def create_learning_space(
+    body: CreateSpaceRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new named learning space and make it the active one."""
+    await _deactivate_all_spaces(current_user.id, db)
+
+    space = LearningSpace(
+        user_id=current_user.id,
+        name=body.name.strip(),
+        is_active=True,
+    )
+    db.add(space)
+    await db.commit()
+    await db.refresh(space)
+
+    return SpaceSummary(id=space.id, name=space.name, is_active=True, created_at=space.created_at, path=None)
+
+
+@router.get("/spaces", response_model=list[SpaceSummary])
+async def list_learning_spaces(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(LearningSpace)
+        .options(
+            selectinload(LearningSpace.learning_paths).selectinload(LearningPath.lessons).selectinload(Lesson.progress)
+        )
+        .where(LearningSpace.user_id == current_user.id)
+        .order_by(LearningSpace.created_at.desc())
+    )
+    spaces = result.scalars().all()
+    return [_format_space(s) for s in spaces]
+
+
+@router.patch("/spaces/{space_id}/activate", response_model=SpaceSummary)
+async def activate_learning_space(
+    space_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    target = await db.execute(
+        select(LearningSpace).where(LearningSpace.id == space_id, LearningSpace.user_id == current_user.id)
+    )
+    space = target.scalar_one_or_none()
+    if not space:
+        raise HTTPException(status_code=404, detail="Learning space not found")
+
+    await _deactivate_all_spaces(current_user.id, db)
+    space.is_active = True
+    await db.commit()
+
+    result = await db.execute(
+        select(LearningSpace)
+        .options(
+            selectinload(LearningSpace.learning_paths).selectinload(LearningPath.lessons).selectinload(Lesson.progress)
+        )
+        .where(LearningSpace.id == space_id)
+    )
+    return _format_space(result.scalar_one())
+
+
+# ---------------------------------------------------------------------------
+# Learning-path generation (scoped to active space)
+# ---------------------------------------------------------------------------
+
 @router.post("/generate-path", response_model=LearningPathResponse)
 async def generate_learning_path(
     background_tasks: BackgroundTasks,
@@ -111,7 +211,7 @@ async def generate_learning_path(
     if not current_user.assessment_completed:
         raise HTTPException(status_code=400, detail="Complete the assessment first")
 
-    # Fetch most recent completed assessment to get the source code
+    # Fetch most recent completed assessment
     result = await db.execute(
         select(AssessmentSession)
         .where(
@@ -124,6 +224,27 @@ async def generate_learning_path(
     if not assessment:
         raise HTTPException(status_code=400, detail="No completed assessment found")
 
+    # Ensure an active space exists; auto-create one named after the language
+    active_space = await _get_active_space(current_user.id, db)
+    if not active_space:
+        lang_label = assessment.detected_language.title()
+        # Count how many spaces this user already has for that language
+        count_result = await db.execute(
+            select(LearningSpace).where(
+                LearningSpace.user_id == current_user.id,
+                LearningSpace.name.like(f"{lang_label}%"),
+            )
+        )
+        existing_count = len(count_result.scalars().all())
+        space_name = lang_label if existing_count == 0 else f"{lang_label} {existing_count + 1}"
+        active_space = LearningSpace(
+            user_id=current_user.id,
+            name=space_name,
+            is_active=True,
+        )
+        db.add(active_space)
+        await db.flush()
+
     planner = PlannerAgent()
     plan_data = await planner.generate_learning_path(
         code_snippet=assessment.code_snippet,
@@ -135,7 +256,7 @@ async def generate_learning_path(
         score=current_user.assessment_score or 0,
     )
 
-    # Deactivate any existing active paths
+    # Deactivate any existing active paths across all spaces
     existing = await db.execute(
         select(LearningPath).where(LearningPath.user_id == current_user.id, LearningPath.is_active == True)
     )
@@ -144,6 +265,7 @@ async def generate_learning_path(
 
     path = LearningPath(
         user_id=current_user.id,
+        learning_space_id=active_space.id,
         title=plan_data["title"],
         description=plan_data.get("description", ""),
         language=assessment.detected_language,
@@ -176,7 +298,6 @@ async def generate_learning_path(
     )
     formatted = _format_path(result2.scalar_one())
 
-    # Pre-generate all lesson content in background so lessons open instantly
     background_tasks.add_task(
         _prefill_lesson_content,
         path_id=path.id,
@@ -194,15 +315,38 @@ async def get_active_path(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """Returns the active path inside the user's active space."""
+    active_space = await _get_active_space(current_user.id, db)
+    if not active_space:
+        return None
+
     result = await db.execute(
         select(LearningPath)
         .options(selectinload(LearningPath.lessons).selectinload(Lesson.progress))
-        .where(LearningPath.user_id == current_user.id, LearningPath.is_active == True)
+        .where(
+            LearningPath.learning_space_id == active_space.id,
+            LearningPath.is_active == True,
+        )
         .order_by(LearningPath.created_at.desc())
     )
     path = result.scalar_one_or_none()
+
+    # Fallback: if space has no path yet, try any active path for this user (legacy data)
+    if not path:
+        result2 = await db.execute(
+            select(LearningPath)
+            .options(selectinload(LearningPath.lessons).selectinload(Lesson.progress))
+            .where(LearningPath.user_id == current_user.id, LearningPath.is_active == True)
+            .order_by(LearningPath.created_at.desc())
+        )
+        path = result2.scalar_one_or_none()
+
     return _format_path(path) if path else None
 
+
+# ---------------------------------------------------------------------------
+# Lesson endpoints (unchanged)
+# ---------------------------------------------------------------------------
 
 @router.get("/lesson/{lesson_id}", response_model=LessonResponse)
 async def get_lesson(
@@ -217,7 +361,6 @@ async def get_lesson(
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
 
-    # Generate content on demand if not yet generated
     if not lesson.content:
         path_result = await db.execute(
             select(LearningPath).where(LearningPath.id == lesson.learning_path_id)
@@ -237,9 +380,7 @@ async def get_lesson(
             await db.commit()
         except Exception as exc:
             logger.warning("Lesson content generation failed (will retry later): %s", exc)
-            # Return lesson without content — frontend shows a "still preparing" state
 
-    # Ensure progress record exists (query DB directly to avoid stale relationship cache)
     existing_progress = await db.execute(
         select(LessonProgress).where(
             LessonProgress.lesson_id == lesson.id,
@@ -261,8 +402,6 @@ async def update_lesson_progress(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    from datetime import datetime
-
     result = await db.execute(
         select(LessonProgress).where(
             LessonProgress.lesson_id == lesson_id,
@@ -340,6 +479,29 @@ async def update_lesson_progress(
     return {"status": "updated"}
 
 
+# ---------------------------------------------------------------------------
+# Formatters
+# ---------------------------------------------------------------------------
+
+def _format_space(space: LearningSpace) -> SpaceSummary:
+    # Pick the active (most recent) path in this space
+    active_path = None
+    if space.learning_paths:
+        active = [p for p in space.learning_paths if p.is_active]
+        if active:
+            active_path = _format_path(active[0])
+        elif space.learning_paths:
+            active_path = _format_path(sorted(space.learning_paths, key=lambda p: p.created_at, reverse=True)[0])
+
+    return SpaceSummary(
+        id=space.id,
+        name=space.name,
+        is_active=space.is_active,
+        created_at=space.created_at,
+        path=active_path,
+    )
+
+
 def _format_path(path: LearningPath) -> LearningPathResponse:
     return LearningPathResponse(
         id=path.id,
@@ -349,6 +511,7 @@ def _format_path(path: LearningPath) -> LearningPathResponse:
         skill_level=path.skill_level,
         total_lessons=path.total_lessons,
         completed_lessons=path.completed_lessons,
+        is_active=path.is_active,
         lessons=[_format_lesson(l) for l in path.lessons],
         created_at=path.created_at,
     )
@@ -366,7 +529,6 @@ def _format_lesson(lesson: Lesson) -> LessonResponse:
         }
     content = lesson.content
     if isinstance(content, list):
-        # Recover from a list stored by an older bug: pick first dict that looks like content
         content = next(
             (item for item in content if isinstance(item, dict) and ("explanation" in item or "key_concepts" in item)),
             content[0] if content and isinstance(content[0], dict) else None,

@@ -93,6 +93,9 @@ export const learningApi = {
     lessonId: string,
     data: { status?: string; hints_used?: number; workshop_score?: number; time_spent_seconds?: number }
   ) => api.patch(`/learning/lesson/${lessonId}/progress`, data),
+  createSpace: (name: string) => api.post("/learning/spaces", { name }),
+  listSpaces: () => api.get("/learning/spaces"),
+  activateSpace: (spaceId: string) => api.patch(`/learning/spaces/${spaceId}/activate`),
 };
 
 export const chatApi = {

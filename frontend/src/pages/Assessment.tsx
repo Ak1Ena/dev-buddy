@@ -3,7 +3,7 @@ import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   CheckCircle2, XCircle, Loader2, TrendingUp, TrendingDown,
-  Sparkles, Code2, ArrowRight,
+  Code2, ArrowRight,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { assessmentApi, learningApi } from "@/lib/api";
@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress";
 
-type PageState = "code_input" | "analyzing" | "quiz" | "completing" | "results";
+type PageState = "code_input" | "analyzing" | "quiz" | "completing" | "building_space" | "results";
 
 interface AnswerFeedback {
   is_correct: boolean;
@@ -54,7 +54,6 @@ export default function Assessment() {
   const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
   const [submittingAnswer, setSubmittingAnswer] = useState(false);
   const [result, setResult] = useState<AssessmentResult | null>(null);
-  const [generatingPath, setGeneratingPath] = useState(false);
 
   // ── Step 1: Submit code ──────────────────────────────────────────────────
   const handleSubmitCode = useCallback(async () => {
@@ -112,29 +111,19 @@ export default function Assessment() {
           assessment_completed: true,
           skill_level: res.data.skill_level as "beginner" | "intermediate" | "advanced",
         });
-        setPageState("results");
+        // Auto-generate the learning space + path without requiring an extra button click
+        setPageState("building_space");
+        await learningApi.generatePath();
+        toast.success("Learning space created!");
+        navigate("/dashboard");
       } catch {
-        toast.error("Failed to complete assessment.");
+        toast.error("Something went wrong. Please try again.");
         setPageState("quiz");
       }
     } else {
       setCurrentIndex((i) => i + 1);
       setSelectedKey(null);
       setFeedback(null);
-    }
-  };
-
-  // ── Step 4: Generate learning path ───────────────────────────────────────
-  const handleGeneratePath = async () => {
-    setGeneratingPath(true);
-    try {
-      await learningApi.generatePath();
-      toast.success("Learning path created!");
-      navigate("/dashboard");
-    } catch {
-      toast.error("Failed to generate learning path.");
-    } finally {
-      setGeneratingPath(false);
     }
   };
 
@@ -151,13 +140,25 @@ export default function Assessment() {
     );
   }
 
-  // ── Completing spinner ────────────────────────────────────────────────────
+  // ── Completing / building spinners ────────────────────────────────────────
   if (pageState === "completing") {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-center">
           <Loader2 className="h-10 w-10 animate-spin text-fuchsia-400" />
           <p className="text-lg font-medium text-slate-200">Scoring your results…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (pageState === "building_space") {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-sky-400" />
+          <p className="text-lg font-medium text-slate-200">Building your learning space…</p>
+          <p className="text-sm text-slate-500">Generating a personalized path just for you</p>
         </div>
       </div>
     );
@@ -269,10 +270,6 @@ export default function Assessment() {
           </CardContent>
         </Card>
 
-        <Button size="lg" className="w-full gap-2" loading={generatingPath} onClick={handleGeneratePath}>
-          <Sparkles className="h-4 w-4" />
-          Generate My Learning Path
-        </Button>
       </div>
     );
   }
