@@ -9,20 +9,22 @@ from app.agents.utils import extract_json
 logger = logging.getLogger(__name__)
 
 SYSTEM = """You are a programming assessment designer for beginners.
-Given a code snippet and its extracted concepts, generate exactly 10 multiple-choice questions.
+Given a code snippet and its extracted concepts, generate exactly 10 multiple-choice questions focusing on the LOGIC and BEHAVIOR of the code.
 
-Questions must:
-1. Reference specific parts of the provided code (e.g., "In line 3 of your code, what does `range(len(arr))` do?")
-2. Test understanding — not memorization
-3. Have exactly 4 options (A/B/C/D) with one correct answer
-4. Progress from simpler to more complex
+Questions MUST:
+1. Reference specific parts of the provided code (e.g., "What value does `calculate_sum` return if the input is `[1, 2, 3]`?")
+2. Focus on data flow, variable changes, and function execution logic.
+3. Test understanding of what the code DOES, not just how it is WRITTEN.
+4. Avoid generic language syntax questions (e.g., do NOT ask "How do you define a function?" or "What does 'if' mean?").
+5. Have exactly 4 options (A/B/C/D) with one correct answer.
+6. Progress from simpler to more complex logical paths.
 
 Return ONLY valid JSON — no markdown, no extra text:
 {
   "questions": [
     {
       "id": "q1",
-      "question": "Question text referencing the code",
+      "question": "Question text referencing specific logic in the code",
       "options": [
         {"key": "A", "text": "option text"},
         {"key": "B", "text": "option text"},
@@ -30,10 +32,10 @@ Return ONLY valid JSON — no markdown, no extra text:
         {"key": "D", "text": "option text"}
       ],
       "correct": "A",
-      "topic": "loops",
+      "topic": "functions",
       "difficulty": "beginner",
       "code_reference": "line 3",
-      "explanation": "Why this answer is correct"
+      "explanation": "Why this answer is correct based on the code's logic"
     }
   ]
 }
@@ -42,271 +44,133 @@ topic must be one of: variables, data_types, operators, conditionals, loops, fun
 lists, dictionaries, strings, input_output, error_handling, recursion, oop_basics,
 modules, closures, higher_order_functions, list_comprehension, classes
 
-Generate exactly 10 questions covering the concepts in the code."""
+Generate exactly 10 questions covering the logic of the code."""
 
 
 
 _CONCEPT_QUESTIONS: dict[str, list[dict]] = {
     "loops": [
         {
-            "question": "What does a `for` loop do in your code?",
+            "question": "Looking at the loop in your code, what determines how many times it will run?",
             "options": [
-                {"key": "A", "text": "Repeats a block of code a set number of times"},
-                {"key": "B", "text": "Defines a new function"},
-                {"key": "C", "text": "Stores a value in a variable"},
-                {"key": "D", "text": "Imports a module"},
+                {"key": "A", "text": "The condition or sequence provided in the loop statement"},
+                {"key": "B", "text": "The number of variables in the function"},
+                {"key": "C", "text": "The name of the function"},
+                {"key": "D", "text": "The type of programming language used"},
             ],
             "correct": "A",
             "topic": "loops",
             "difficulty": "beginner",
             "code_reference": "loop statement",
-            "explanation": "A `for` loop iterates over a sequence, executing the body once per item.",
+            "explanation": "The loop's duration is controlled by its condition (in a while loop) or the length of the sequence it iterates over (in a for loop).",
         },
         {
-            "question": "When does a `while` loop stop executing?",
+            "question": "What happens to the data inside the loop during each iteration?",
             "options": [
-                {"key": "A", "text": "When its condition becomes False"},
-                {"key": "B", "text": "After exactly 10 iterations"},
-                {"key": "C", "text": "When a function is called"},
-                {"key": "D", "text": "When a variable is assigned"},
+                {"key": "A", "text": "It is processed or modified according to the instructions inside the loop body"},
+                {"key": "B", "text": "It is automatically deleted after the first pass"},
+                {"key": "C", "text": "It is sent to a different function immediately"},
+                {"key": "D", "text": "It remains exactly the same and cannot be changed"},
             ],
             "correct": "A",
             "topic": "loops",
             "difficulty": "beginner",
-            "code_reference": "while condition",
-            "explanation": "A `while` loop keeps running as long as its condition is True; it stops when the condition evaluates to False.",
+            "code_reference": "loop body",
+            "explanation": "A loop is used to repeat operations on data, typically updating variables or performing calculations in each step.",
         },
     ],
     "functions": [
         {
-            "question": "What keyword is used to define a function in your code?",
+            "question": "Based on the function in your code, what is the purpose of its parameters?",
             "options": [
-                {"key": "A", "text": "`def`"},
-                {"key": "B", "text": "`class`"},
-                {"key": "C", "text": "`for`"},
-                {"key": "D", "text": "`import`"},
+                {"key": "A", "text": "They act as placeholders for the data the function needs to work with"},
+                {"key": "B", "text": "They are used to name the entire file"},
+                {"key": "C", "text": "They determine the speed of the program"},
+                {"key": "D", "text": "They are only for documentation and don't affect logic"},
             ],
             "correct": "A",
             "topic": "functions",
             "difficulty": "beginner",
-            "code_reference": "function definition",
-            "explanation": "In Python, `def` is used to define a reusable block of code called a function.",
+            "code_reference": "function parameters",
+            "explanation": "Parameters allow you to pass specific values into a function so it can perform logic on that data.",
         },
         {
-            "question": "What does the `return` statement do inside a function?",
+            "question": "In the context of your function, what does the `return` statement accomplish?",
             "options": [
-                {"key": "A", "text": "Sends a value back to the caller"},
-                {"key": "B", "text": "Prints the value to the screen"},
-                {"key": "C", "text": "Stops the entire program"},
-                {"key": "D", "text": "Creates a new variable"},
+                {"key": "A", "text": "It provides the final result of the function's logic back to the caller"},
+                {"key": "B", "text": "It restarts the function from the beginning"},
+                {"key": "C", "text": "It prints a message to the screen without changing any data"},
+                {"key": "D", "text": "It stops the entire program execution"},
             ],
             "correct": "A",
             "topic": "functions",
             "difficulty": "beginner",
             "code_reference": "return statement",
-            "explanation": "`return` exits the function and passes the specified value back to wherever the function was called.",
+            "explanation": "The `return` statement exits the function and 'gives back' the calculated value.",
         },
     ],
     "conditionals": [
         {
-            "question": "What does an `if` statement do?",
+            "question": "How does the `if` statement in your code affect the execution flow?",
             "options": [
-                {"key": "A", "text": "Runs a block of code only when a condition is True"},
-                {"key": "B", "text": "Loops over a list"},
-                {"key": "C", "text": "Defines a function"},
-                {"key": "D", "text": "Imports a library"},
+                {"key": "A", "text": "It chooses whether to run a specific block of code based on a condition"},
+                {"key": "B", "text": "It forces the code to run multiple times"},
+                {"key": "C", "text": "It defines a new variable name"},
+                {"key": "D", "text": "It imports an external library"},
             ],
             "correct": "A",
             "topic": "conditionals",
             "difficulty": "beginner",
             "code_reference": "if statement",
-            "explanation": "An `if` statement checks a condition and executes its body only when that condition is True.",
+            "explanation": "Conditionals allow the program to make decisions and execute different logic paths depending on whether a condition is True or False.",
         },
     ],
     "variables": [
         {
-            "question": "What is a variable used for in programming?",
+            "question": "What happens to a variable's value when a new value is assigned to it in your code?",
             "options": [
-                {"key": "A", "text": "Storing a value so it can be used later"},
-                {"key": "B", "text": "Defining a loop"},
-                {"key": "C", "text": "Importing a module"},
-                {"key": "D", "text": "Printing output"},
+                {"key": "A", "text": "The old value is replaced by the new one"},
+                {"key": "B", "text": "The old value and new value are added together automatically"},
+                {"key": "C", "text": "The program crashes immediately"},
+                {"key": "D", "text": "Nothing, variables cannot be changed once created"},
             ],
             "correct": "A",
             "topic": "variables",
             "difficulty": "beginner",
             "code_reference": "variable assignment",
-            "explanation": "Variables hold data values in memory so they can be referenced and modified throughout a program.",
-        },
-    ],
-    "lists": [
-        {
-            "question": "How do you access the first element of a list named `items` in Python?",
-            "options": [
-                {"key": "A", "text": "`items[0]`"},
-                {"key": "B", "text": "`items[1]`"},
-                {"key": "C", "text": "`items.first()`"},
-                {"key": "D", "text": "`items.get(0)`"},
-            ],
-            "correct": "A",
-            "topic": "lists",
-            "difficulty": "beginner",
-            "code_reference": "list indexing",
-            "explanation": "Python lists are zero-indexed, so `items[0]` gives the first element.",
-        },
-    ],
-    "strings": [
-        {
-            "question": "Which of these correctly concatenates two strings in Python?",
-            "options": [
-                {"key": "A", "text": '`"hello" + " world"`'},
-                {"key": "B", "text": '`"hello" * " world"`'},
-                {"key": "C", "text": '`"hello" - " world"`'},
-                {"key": "D", "text": '`"hello" / " world"`'},
-            ],
-            "correct": "A",
-            "topic": "strings",
-            "difficulty": "beginner",
-            "code_reference": "string operation",
-            "explanation": "The `+` operator joins (concatenates) two strings together.",
-        },
-    ],
-    "error_handling": [
-        {
-            "question": "What is the purpose of a `try`/`except` block?",
-            "options": [
-                {"key": "A", "text": "To catch and handle errors without crashing the program"},
-                {"key": "B", "text": "To define a function"},
-                {"key": "C", "text": "To create a loop"},
-                {"key": "D", "text": "To import a module"},
-            ],
-            "correct": "A",
-            "topic": "error_handling",
-            "difficulty": "beginner",
-            "code_reference": "try/except block",
-            "explanation": "`try`/`except` lets the program attempt risky code and recover gracefully if an exception is raised.",
-        },
-    ],
-    "classes": [
-        {
-            "question": "What is a class in object-oriented programming?",
-            "options": [
-                {"key": "A", "text": "A blueprint for creating objects with shared attributes and methods"},
-                {"key": "B", "text": "A type of loop"},
-                {"key": "C", "text": "A built-in function"},
-                {"key": "D", "text": "A way to import modules"},
-            ],
-            "correct": "A",
-            "topic": "classes",
-            "difficulty": "beginner",
-            "code_reference": "class definition",
-            "explanation": "A class defines a template for objects, bundling related data (attributes) and behaviour (methods) together.",
-        },
-    ],
-    "recursion": [
-        {
-            "question": "What makes a function recursive?",
-            "options": [
-                {"key": "A", "text": "It calls itself within its own body"},
-                {"key": "B", "text": "It uses a `for` loop"},
-                {"key": "C", "text": "It imports another module"},
-                {"key": "D", "text": "It returns `None`"},
-            ],
-            "correct": "A",
-            "topic": "recursion",
-            "difficulty": "intermediate",
-            "code_reference": "recursive call",
-            "explanation": "A recursive function solves a problem by calling itself with a smaller sub-problem until a base case is reached.",
-        },
-    ],
-    "dictionaries": [
-        {
-            "question": "How do you access the value for key `'name'` in a dictionary `d`?",
-            "options": [
-                {"key": "A", "text": "`d['name']`"},
-                {"key": "B", "text": "`d.name`"},
-                {"key": "C", "text": "`d[0]`"},
-                {"key": "D", "text": "`d.get_key('name')`"},
-            ],
-            "correct": "A",
-            "topic": "dictionaries",
-            "difficulty": "beginner",
-            "code_reference": "dictionary access",
-            "explanation": "Dictionary values are retrieved by their key using square-bracket notation: `d['name']`.",
+            "explanation": "Assignment (`=`) updates the data stored in a variable, replacing whatever was there before.",
         },
     ],
 }
 
 _GENERIC_QUESTIONS = [
     {
-        "question": "What is the purpose of indentation in Python code?",
+        "question": "How does the computer know which lines of code belong inside a function or loop in this snippet?",
         "options": [
-            {"key": "A", "text": "It defines code blocks such as loops, functions, and conditionals"},
-            {"key": "B", "text": "It is purely decorative and has no effect"},
-            {"key": "C", "text": "It speeds up execution"},
-            {"key": "D", "text": "It imports modules automatically"},
+            {"key": "A", "text": "By looking at the indentation (spacing) of the lines"},
+            {"key": "B", "text": "By the color of the text"},
+            {"key": "C", "text": "By the number of variables used"},
+            {"key": "D", "text": "It runs every line regardless of where they are"},
         ],
         "correct": "A",
         "topic": "variables",
         "difficulty": "beginner",
         "code_reference": "indentation",
-        "explanation": "Python uses indentation to define the scope and structure of code blocks instead of curly braces.",
+        "explanation": "In many languages like Python, indentation defines the structure and scope of code blocks.",
     },
     {
-        "question": "What does `print()` do in Python?",
+        "question": "What is the primary goal of the logic provided in this code snippet?",
         "options": [
-            {"key": "A", "text": "Outputs text or values to the console"},
-            {"key": "B", "text": "Saves data to a file"},
-            {"key": "C", "text": "Defines a new variable"},
-            {"key": "D", "text": "Creates a loop"},
+            {"key": "A", "text": "To process input data and produce a specific result or behavior"},
+            {"key": "B", "text": "To fill up memory on the computer"},
+            {"key": "C", "text": "To create a user interface with buttons"},
+            {"key": "D", "text": "To connect to the internet"},
         ],
         "correct": "A",
         "topic": "input_output",
         "difficulty": "beginner",
-        "code_reference": "print statement",
-        "explanation": "`print()` displays the given value(s) on the standard output (usually the terminal).",
-    },
-    {
-        "question": "Which of the following is a valid variable name in Python?",
-        "options": [
-            {"key": "A", "text": "`my_value`"},
-            {"key": "B", "text": "`2nd_value`"},
-            {"key": "C", "text": "`my-value`"},
-            {"key": "D", "text": "`class`"},
-        ],
-        "correct": "A",
-        "topic": "variables",
-        "difficulty": "beginner",
-        "code_reference": "variable name",
-        "explanation": "Variable names must start with a letter or underscore, contain only letters/digits/underscores, and cannot be reserved keywords.",
-    },
-    {
-        "question": "What does `==` check in Python?",
-        "options": [
-            {"key": "A", "text": "Whether two values are equal"},
-            {"key": "B", "text": "Whether a variable has been assigned"},
-            {"key": "C", "text": "Whether two variables point to the same object"},
-            {"key": "D", "text": "Whether a number is positive"},
-        ],
-        "correct": "A",
-        "topic": "operators",
-        "difficulty": "beginner",
-        "code_reference": "comparison operator",
-        "explanation": "`==` is the equality operator; it returns `True` when both sides have the same value.",
-    },
-    {
-        "question": "What is a `list` in Python?",
-        "options": [
-            {"key": "A", "text": "An ordered, mutable collection of items"},
-            {"key": "B", "text": "A fixed mapping of keys to values"},
-            {"key": "C", "text": "A single integer value"},
-            {"key": "D", "text": "A function definition"},
-        ],
-        "correct": "A",
-        "topic": "lists",
-        "difficulty": "beginner",
-        "code_reference": "list literal",
-        "explanation": "A list stores multiple items in order and can be changed (mutated) after creation.",
+        "code_reference": "logic flow",
+        "explanation": "Programming is essentially about defining a series of steps to transform inputs into outputs.",
     },
 ]
 
@@ -348,7 +212,7 @@ class AssessmentGeneratorAgent:
         self.llm = get_llm_provider()
 
     async def generate_questions(self, code_snippet: str, concepts: list[str], language: str) -> list[dict]:
-        prompt = f"""Generate 10 assessment questions for this {language} code snippet.
+        prompt = f"""Generate 10 assessment questions focusing on the logic and behavior of this {language} code.
 
 The code:
 ```{language}
@@ -357,8 +221,14 @@ The code:
 
 Concepts present: {', '.join(concepts)}
 
-Make questions that specifically reference this code — use line numbers, variable names,
-and function names from the actual code."""
+DO NOT ask general questions about {language} syntax. 
+INSTEAD, ask about:
+1. What the code/function returns for specific example inputs.
+2. How a specific variable changes its value during execution.
+3. The specific logical path taken when a certain condition is met.
+4. The purpose of specific lines within the context of THIS code's goal.
+
+Use the actual function names and variable names from the code. Ensure the questions progress from simple data checks to complex logical flow analysis."""
 
         try:
             raw = await self.llm.complete(
