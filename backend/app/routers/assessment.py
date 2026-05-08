@@ -9,6 +9,7 @@ from sqlalchemy import select
 from app.database import get_db
 from app.models.user import User
 from app.models.assessment import AssessmentSession, AssessmentAnswer
+from app.models.analytics import SkillProgression
 from app.schemas.assessment import (
     AssessmentStart,
     AssessmentStartResponse,
@@ -182,6 +183,16 @@ async def complete_assessment(
     current_user.skill_level = score_data["skill_level"]
     current_user.strong_areas = score_data["strong_areas"]
     current_user.weak_areas = score_data["weak_areas"]
+
+    # FR-05-003: snapshot skill profile so retention score can be computed over time
+    db.add(SkillProgression(
+        user_id=current_user.id,
+        trigger="assessment_complete",
+        skill_level=score_data["skill_level"],
+        assessment_score=score_data["score"],
+        weak_areas=score_data["weak_areas"],
+        strong_areas=score_data["strong_areas"],
+    ))
 
     await db.commit()
 

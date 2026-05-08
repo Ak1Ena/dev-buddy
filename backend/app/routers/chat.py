@@ -10,6 +10,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.chat import ChatSession, ChatMessage
 from app.models.learning import Lesson, LearningPath
+from app.models.analytics import HintUsageEvent
 from app.schemas.chat import ChatRequest, ChatResponse, ChatSessionResponse, ChatMessageResponse, SuggestedLesson
 from app.agents.socratic_mentor import SocraticMentorAgent
 from app.agents.lesson_suggester import LessonSuggesterAgent
@@ -101,6 +102,24 @@ async def send_message(
     db.add(user_msg)
     db.add(ai_msg)
     await db.flush()
+
+    # ── AC-SGS-006: log hint usage event ────────────────────────────────────
+    # Derive topic from the lesson if available, otherwise leave None
+    hint_topic: str | None = None
+    if data.lesson_id:
+        lesson_result_topic = await db.execute(select(Lesson).where(Lesson.id == data.lesson_id))
+        _lesson_for_topic = lesson_result_topic.scalar_one_or_none()
+        if _lesson_for_topic:
+            hint_topic = _lesson_for_topic.topic
+
+    hint_event = HintUsageEvent(
+        user_id=current_user.id,
+        lesson_id=data.lesson_id,
+        session_id=session.id,
+        hint_level=data.hint_level if data.hint_level is not None else 0,
+        topic=hint_topic,
+    )
+    db.add(hint_event)
 
     # ── Hint-3 lesson suggestion ─────────────────────────────────────────────
     # When a student needed a full worked example, analyse the gap and create
@@ -237,6 +256,21 @@ async def stream_message(
             )
             db.add(user_msg)
             db.add(ai_msg)
+
+            # AC-SGS-006: log hint usage event for the stream path
+            stream_topic: str | None = None
+            if lesson_id:
+                lesson_res = await db.execute(select(Lesson).where(Lesson.id == lesson_id))
+                _lesson = lesson_res.scalar_one_or_none()
+                if _lesson:
+                    stream_topic = _lesson.topic
+            db.add(HintUsageEvent(
+                user_id=current_user.id,
+                lesson_id=lesson_id,
+                session_id=session_id,
+                hint_level=hint_level,
+                topic=stream_topic,
+            ))
             await db.commit()
 
         yield f"data: {json.dumps({'done': True})}\n\n"

@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.database import init_db
-from app.routers import auth, assessment, learning, chat
+from app.routers import auth, assessment, learning, chat, analytics
 
 settings = get_settings()
 
@@ -41,6 +41,7 @@ app.include_router(auth.router, prefix="/api/v1")
 app.include_router(assessment.router, prefix="/api/v1")
 app.include_router(learning.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
+app.include_router(analytics.router, prefix="/api/v1")
 
 
 @app.exception_handler(Exception)
