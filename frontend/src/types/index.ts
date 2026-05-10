@@ -74,6 +74,12 @@ export interface LessonContent {
   deep_dive?: {
     title: string;
     content: string;
+    cards?: {
+      title: string;
+      content: string;
+      icon: string;
+      related_nodes: string[];
+    }[];
     concepts?: string[];
   };
   code_walkthrough?: {

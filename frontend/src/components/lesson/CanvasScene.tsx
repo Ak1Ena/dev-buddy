@@ -246,7 +246,7 @@ function drawParticlesOnBezier(
   }
 }
 
-export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
+export default function CanvasScene({ scene, highlightedNodeIds = [] }: { scene: CanvasSceneData, highlightedNodeIds?: string[] }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [isInView, setIsInView] = useState(false);
 
@@ -306,7 +306,7 @@ export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
     let rafId = 0;
     let start = 0;
 
-    const hasAnimation = nodes.some(n => !!n.parent) || edges.length > 0;
+    const hasAnimation = nodes.some(n => !!n.parent) || edges.length > 0 || highlightedNodeIds.length > 0;
 
     const render = (now: number) => {
       if (!start) start = now;
@@ -382,13 +382,16 @@ export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
         const { x, y } = pos.get(node.id)!;
         const { w, h } = sz.get(node.id)!;
         const p = PAL[node.color ?? (node.type === "decision" ? "fuchsia" : node.type === "outcome" ? "emerald" : "sky")] ?? PAL.sky;
+        
+        const isCurrentlyHighlighted = node.highlight || highlightedNodeIds.includes(node.id);
 
-        if (node.highlight) {
+        if (isCurrentlyHighlighted) {
+          const pulse = (Math.sin(elapsed / 200) + 1) / 2; // 0 to 1
           ctx.save();
           ctx.shadowColor = p.border;
-          ctx.shadowBlur  = 22;
+          ctx.shadowBlur  = 15 + (pulse * 15);
           ctx.strokeStyle = p.border;
-          ctx.lineWidth   = 2;
+          ctx.lineWidth   = 2 + (pulse * 1);
           if (node.type === "decision") drawDiamond(ctx, x - 3, y - 3, w + 6, h + 6);
           else if (node.type === "outcome") drawPill(ctx, x - 3, y - 3, w + 6, h + 6);
           else drawRoundedRect(ctx, x - 3, y - 3, w + 6, h + 6, 13);
@@ -403,7 +406,7 @@ export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
         ctx.fill();
 
         ctx.strokeStyle = p.border;
-        ctx.lineWidth   = node.highlight ? 2 : 1;
+        ctx.lineWidth   = isCurrentlyHighlighted ? 2 : 1;
         if (node.type === "decision") drawDiamond(ctx, x, y, w, h);
         else if (node.type === "outcome") drawPill(ctx, x, y, w, h);
         else drawRoundedRect(ctx, x, y, w, h, 10);
@@ -443,7 +446,7 @@ export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
     }
     
     return () => cancelAnimationFrame(rafId);
-  }, [layout, isInView]);
+  }, [layout, isInView, highlightedNodeIds]);
 
   return (
     <div className="rounded-xl overflow-x-auto border border-slate-700/60 bg-slate-950">

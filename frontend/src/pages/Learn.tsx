@@ -7,17 +7,39 @@ import remarkGfm from "remark-gfm";
 import {
   Send, Loader2, ChevronLeft, MessageSquare,
   BookOpen, Lightbulb, Wrench, Sparkles,
-  CheckCircle2, Brain, List,
+  CheckCircle2, Brain, List, Zap, Shield, 
+  Activity, Cpu, Globe, Database, Lock, Settings
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { learningApi, chatApi } from "@/lib/api";
 import type { Lesson, ChatMessage, AnimationFrame } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import WorkshopExercise from "@/components/lesson/WorkshopExercise";
 import AnimationPlayer from "@/components/lesson/AnimationPlayer";
 import CodeWalkthrough from "@/components/lesson/CodeWalkthrough";
 import { topicLabel, cn } from "@/lib/utils";
+
+/* ── Mastery Icon Mapping ── */
+const getMasteryIcon = (name: string) => {
+  const icons: Record<string, any> = {
+    brain: Brain,
+    zap: Zap,
+    shield: Shield,
+    activity: Activity,
+    cpu: Cpu,
+    globe: Globe,
+    database: Database,
+    lock: Lock,
+    settings: Settings,
+    lightbulb: Lightbulb,
+    book: BookOpen,
+    wrench: Wrench,
+  };
+  const Icon = icons[name.toLowerCase()] || Brain;
+  return <Icon className="h-5 w-5" />;
+};
 
 /* ── chat-message segmentation ── */
 type ChatSegment =
@@ -114,6 +136,7 @@ export default function Learn() {
   const [hintLevel, setHintLevel] = useState(0);
   const [currentFrame, setCurrentFrame] = useState(0);
   const [isCheckpoint, setIsCheckpoint] = useState(false);
+  const [highlightedNodeIds, setHighlightedNodeIds] = useState<string[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const contentScrollRef = useRef<HTMLDivElement>(null);
@@ -276,7 +299,7 @@ export default function Learn() {
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col overflow-hidden bg-slate-950">
       {/* ── TOP: Visual Hero (Logic Map) ── */}
-      <div className="relative h-[48%] w-full shrink-0 border-b border-slate-800/60 bg-slate-900/20">
+      <div className="relative h-[45vh] min-h-[400px] w-full shrink-0 border-b border-slate-800/60 bg-slate-900/20">
         <div className="absolute top-0 left-0 h-[1px] w-full bg-slate-800/40 z-10">
           <motion.div
             className="h-full bg-gradient-to-r from-sky-500 via-fuchsia-500 to-emerald-500 origin-left shadow-[0_0_10px_rgba(56,189,248,0.5)]"
@@ -328,6 +351,7 @@ export default function Learn() {
                 <AnimationPlayer 
                   frames={c.animation_frames} 
                   activeFrameIndex={currentFrame}
+                  highlightedNodeIds={highlightedNodeIds}
                   onFrameChange={(idx, isCp) => {
                     setCurrentFrame(idx);
                     setIsCheckpoint(isCp);
@@ -382,15 +406,42 @@ export default function Learn() {
 
               {c.deep_dive && (
                 <Section id="sec-deep-dive">
-                  <div className="rounded-2xl glass-card p-8 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none group-hover:opacity-20 transition-opacity">
-                      <Brain className="h-24 w-24 text-sky-400" />
+                  <SectionHeading icon={<Brain />} label={c.deep_dive.title || "Architectural Insight"} iconClass="text-sky-400" />
+                  
+                  {c.deep_dive.cards && c.deep_dive.cards.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {c.deep_dive.cards.map((card, idx) => (
+                        <Card 
+                          key={idx}
+                          onMouseEnter={() => setHighlightedNodeIds(card.related_nodes)}
+                          onMouseLeave={() => setHighlightedNodeIds([])}
+                          className="group relative overflow-hidden bg-slate-900/40 border-slate-800/60 hover:border-sky-500/50 transition-all duration-300 p-6 glass-card"
+                        >
+                          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                            {getMasteryIcon(card.icon)}
+                          </div>
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="h-8 w-8 rounded-lg bg-sky-500/10 flex items-center justify-center border border-sky-500/20 text-sky-400">
+                              {getMasteryIcon(card.icon)}
+                            </div>
+                            <h4 className="font-bold text-slate-100 group-hover:text-sky-300 transition-colors">{card.title}</h4>
+                          </div>
+                          <div className="prose prose-sm prose-invert max-w-none text-slate-400 group-hover:text-slate-300 transition-colors">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{card.content}</ReactMarkdown>
+                          </div>
+                        </Card>
+                      ))}
                     </div>
-                    <SectionHeading icon={<Brain />} label={c.deep_dive.title || "Architectural Insight"} iconClass="text-sky-400" />
-                    <div className="prose prose-sm prose-invert max-w-none prose-p:leading-8 prose-p:text-slate-300 prose-headings:text-white prose-strong:text-sky-300">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{c.deep_dive.content}</ReactMarkdown>
+                  ) : (
+                    <div className="rounded-2xl glass-card p-8 relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none group-hover:opacity-20 transition-opacity">
+                        <Brain className="h-24 w-24 text-sky-400" />
+                      </div>
+                      <div className="prose prose-sm prose-invert max-w-none prose-p:leading-8 prose-p:text-slate-300 prose-headings:text-white prose-strong:text-sky-300">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{c.deep_dive.content}</ReactMarkdown>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </Section>
               )}
 

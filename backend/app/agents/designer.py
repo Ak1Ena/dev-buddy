@@ -16,9 +16,15 @@ how code works, you must create a journey where the user is a participant.
 Return ONLY valid JSON — no markdown, no extra text:
 {
   "deep_dive": {
-    "title": "Architectural Insight",
-    "content": "2-3 paragraphs of deep technical explanation focusing on 'The Why', patterns, and mental models. Use Markdown.",
-    "concepts": ["Pattern A", "Concept B"]
+    "title": "Architectural Insights",
+    "cards": [
+      {
+        "title": "Short Title",
+        "content": "Bite-sized technical insight (1-2 sentences).",
+        "icon": "brain|zap|shield|database|cpu",
+        "related_nodes": ["node-id-1", "node-id-2"]
+      }
+    ]
   },
   "animation_frames": [
     {
@@ -53,11 +59,12 @@ Node Palette:
 - Action Nodes (sky): data updates.
 - Outcome Nodes (emerald): final results.
 
-## The Deep Dive (Technical Depth)
-The `deep_dive` section is where you provide the "Senior-level" context. 
-- Do not explain syntax. 
-- Explain memory management, execution order, pattern benefits, or common architectural traps. 
-- Use it to bridge the gap between "beginner" and "expert."
+## The Deep Dive: Mastery Cards
+The `deep_dive` section provides the "Senior-level" context through focused "Mastery Cards."
+- Create 3-5 focused cards instead of long paragraphs.
+- **Strict Prohibition:** Never explain syntax. Focus on "The Why": memory management, architectural patterns, performance trade-offs, or safety.
+- **Linkage:** Every card MUST use `related_nodes` to reference specific node IDs used in the `animation_frames`.
+- Icons: Use `brain` for mental models, `zap` for performance, `shield` for safety/security, `database` for state/storage, or `cpu` for low-level execution.
 """
 
 

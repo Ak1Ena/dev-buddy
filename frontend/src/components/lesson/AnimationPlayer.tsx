@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 interface Props {
   frames: AnimationFrame[];
   activeFrameIndex?: number;
+  highlightedNodeIds?: string[];
   onFrameChange?: (idx: number, isCheckpoint: boolean) => void;
 }
 
@@ -18,7 +19,7 @@ const TICK_MS = 60;
 type SpeedOption = 0.25 | 0.5 | 1 | 2;
 const SPEED_OPTIONS: SpeedOption[] = [0.25, 0.5, 1, 2];
 
-export default function AnimationPlayer({ frames, activeFrameIndex, onFrameChange }: Props) {
+export default function AnimationPlayer({ frames, activeFrameIndex, highlightedNodeIds = [], onFrameChange }: Props) {
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState<"forward" | "backward">("forward");
   const [autoPlay, setAutoPlay] = useState(false);
@@ -213,7 +214,10 @@ export default function AnimationPlayer({ frames, activeFrameIndex, onFrameChang
                     transition={{ delay: 0.1, duration: 0.4 }}
                     className="relative"
                   >
-                    <CanvasScene scene={frame.canvas_scene} />
+                    <CanvasScene 
+                      scene={frame.canvas_scene} 
+                      highlightedNodeIds={highlightedNodeIds}
+                    />
                     
                     {/* Effects Overlay */}
                     {frame.effects && frame.effects.length > 0 && (
