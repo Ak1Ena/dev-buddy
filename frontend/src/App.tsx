@@ -8,6 +8,7 @@ import Assessment from "@/pages/Assessment";
 import Dashboard from "@/pages/Dashboard";
 import SpaceDetail from "@/pages/SpaceDetail";
 import Learn from "@/pages/Learn";
+import Workshop from "@/pages/Workshop";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
         <Route path="/space/:spaceId" element={<RequireAuth><SpaceDetail /></RequireAuth>} />
         <Route path="/learn/:lessonId" element={<RequireAuth><Learn /></RequireAuth>} />
+        <Route path="/learn/:lessonId/workshop" element={<RequireAuth><Workshop /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>

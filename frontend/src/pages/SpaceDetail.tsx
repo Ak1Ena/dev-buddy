@@ -41,7 +41,13 @@ export default function SpaceDetail() {
 
   useEffect(() => {
     fetchSpace();
-  }, [fetchSpace]);
+    // Poll every 3s if there's no path yet (for Instant Discovery background tasks)
+    let interval: any;
+    if (!loading && space && !space.path) {
+      interval = setInterval(fetchSpace, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [fetchSpace, loading, space?.path]);
 
   const handleActivateAndGenerate = async () => {
     if (!space) return;
@@ -92,16 +98,26 @@ export default function SpaceDetail() {
       {!path ? (
         <div className="rounded-2xl border border-slate-700 bg-slate-800/50 py-12 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-500/10">
-            <Sparkles className="h-7 w-7 text-sky-400" />
+            {space.is_active ? (
+              <Loader2 className="h-7 w-7 animate-spin text-sky-400" />
+            ) : (
+              <Sparkles className="h-7 w-7 text-sky-400" />
+            )}
           </div>
-          <h2 className="mb-2 text-lg font-semibold text-slate-100">No learning path yet</h2>
-          <p className="mb-6 text-sm text-slate-400">
-            Generate a personalized path for this space.
+          <h2 className="mb-2 text-lg font-semibold text-slate-100">
+            {space.is_active ? "Forging Your Mastery Path..." : "No learning path yet"}
+          </h2>
+          <p className="mb-6 text-sm text-slate-400 px-8">
+            {space.is_active 
+              ? "Our agents are analyzing your code and structuring a cinematic logic topology. This usually takes a few moments."
+              : "Generate a personalized path for this space."}
           </p>
-          <Button loading={generating} onClick={handleActivateAndGenerate} className="mx-auto gap-2">
-            <Sparkles className="h-4 w-4" />
-            Generate Path
-          </Button>
+          {!space.is_active && (
+            <Button loading={generating} onClick={handleActivateAndGenerate} className="mx-auto gap-2">
+              <Sparkles className="h-4 w-4" />
+              Generate Path
+            </Button>
+          )}
         </div>
       ) : (
         <>

@@ -10,7 +10,7 @@ from app.agents.utils import extract_json
 logger = logging.getLogger(__name__)
 
 SYSTEM = """You are a programming assessment designer for beginners.
-Given a code snippet and its extracted concepts, generate exactly 10 multiple-choice questions focusing on the LOGIC and BEHAVIOR of the code.
+Given a code snippet and its extracted concepts, generate exactly {count} multiple-choice questions focusing on the LOGIC and BEHAVIOR of the code.
 
 Questions MUST:
 1. Reference specific parts of the provided code (e.g., "What value does `calculate_sum` return if the input is `[1, 2, 3]`?")
@@ -21,31 +21,31 @@ Questions MUST:
 6. Progress from simpler to more complex logical paths.
 
 Return ONLY valid JSON — no markdown, no extra text:
-{
+{{
   "questions": [
-    {
+    {{
       "id": "q1",
       "question": "Question text referencing specific logic in the code",
       "options": [
-        {"key": "A", "text": "option text"},
-        {"key": "B", "text": "option text"},
-        {"key": "C", "text": "option text"},
-        {"key": "D", "text": "option text"}
+        {{"key": "A", "text": "option text"}},
+        {{"key": "B", "text": "option text"}},
+        {{"key": "C", "text": "option text"}},
+        {{"key": "D", "text": "option text"}}
       ],
       "correct": "A",
       "topic": "functions",
       "difficulty": "beginner",
       "code_reference": "line 3",
       "explanation": "Why this answer is correct based on the code's logic"
-    }
+    }}
   ]
-}
+}}
 
 topic must be one of: variables, data_types, operators, conditionals, loops, functions,
 lists, dictionaries, strings, input_output, error_handling, recursion, oop_basics,
 modules, closures, higher_order_functions, list_comprehension, classes
 
-Generate exactly 10 questions covering the logic of the code."""
+Generate exactly {count} questions covering the logic of the code."""
 
 
 
@@ -176,7 +176,7 @@ _GENERIC_QUESTIONS = [
 ]
 
 
-def _generate_fallback_questions(code_snippet: str, concepts: list[str], language: str) -> list[dict]:
+def _generate_fallback_questions(code_snippet: str, concepts: list[str], language: str, question_count: int = 10) -> list[dict]:
     questions: list[dict] = []
     used_topics: set[str] = set()
 
@@ -186,13 +186,13 @@ def _generate_fallback_questions(code_snippet: str, concepts: list[str], languag
                 if q["topic"] not in used_topics:
                     questions.append(q)
                     used_topics.add(q["topic"])
-                if len(questions) >= 8:
+                if len(questions) >= question_count:
                     break
-        if len(questions) >= 8:
+        if len(questions) >= question_count:
             break
 
     for q in _GENERIC_QUESTIONS:
-        if len(questions) >= 10:
+        if len(questions) >= question_count:
             break
         if q["topic"] not in used_topics:
             questions.append(q)
@@ -200,20 +200,20 @@ def _generate_fallback_questions(code_snippet: str, concepts: list[str], languag
 
     # Pad if still short
     i = 0
-    while len(questions) < 10:
+    while len(questions) < question_count:
         questions.append(_GENERIC_QUESTIONS[i % len(_GENERIC_QUESTIONS)])
         i += 1
 
     # Assign stable IDs
-    return [{"id": f"q{i+1}", **q} for i, q in enumerate(questions[:10])]
+    return [{"id": f"q{i+1}", **q} for i, q in enumerate(questions[:question_count])]
 
 
 class AssessmentGeneratorAgent:
     def __init__(self):
         self.llm = get_llm_provider()
 
-    async def generate_questions(self, code_snippet: str, concepts: list[str], language: str) -> list[dict]:
-        prompt = f"""Generate 10 assessment questions focusing on the logic and behavior of this {language} code.
+    async def generate_questions(self, code_snippet: str, concepts: list[str], language: str, question_count: int = 10) -> list[dict]:
+        prompt = f"""Generate {question_count} assessment questions focusing on the logic and behavior of this {language} code.
 
 The code:
 ```{language}
@@ -235,24 +235,24 @@ Use the actual function names and variable names from the code. Ensure the quest
             raw = await asyncio.wait_for(
                 self.llm.complete(
                     messages=[{"role": "user", "content": prompt}],
-                    system=SYSTEM,
+                    system=SYSTEM.format(count=question_count),
                     max_tokens=16000,
                 ),
-                timeout=5.0,
+                timeout=10.0, # Bumped to 10s for more stability
             )
             if raw and raw.strip():
                 data = extract_json(raw)
                 questions = data if isinstance(data, list) else data.get("questions", [])
-                if len(questions) >= 5:
-                    return questions
+                if len(questions) >= (question_count // 2 + 1): # Expect at least half
+                    return questions[:question_count]
                 logger.warning("LLM returned only %d questions, using static fallback", len(questions))
         except asyncio.TimeoutError:
-            logger.warning("Question generation exceeded 5s — using static fallback")
+            logger.warning("Question generation exceeded timeout — using static fallback")
         except Exception as exc:
             logger.warning("LLM question generation failed, using static fallback: %s", exc)
 
         logger.info("Using static question generation fallback")
-        return _generate_fallback_questions(code_snippet, concepts, language)
+        return _generate_fallback_questions(code_snippet, concepts, language, question_count=question_count)
 
 
 def check_answer(questions: list[dict], question_id: str, answer_key: str) -> dict:

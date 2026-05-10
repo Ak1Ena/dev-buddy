@@ -1,121 +1,121 @@
-import sys
+
+import os
 import time
-import uuid
+import random
+import string
 from playwright.sync_api import sync_playwright
 
-def test_full_flow():
+def get_random_string(length=8):
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+
+def run_audit():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        context = browser.new_context()
+        # Use a larger viewport for screenshots
+        context = browser.new_context(viewport={'width': 1440, 'height': 900})
         page = context.new_page()
-
-        # 1. Registration
-        print("Registering...")
-        page.goto("http://localhost:3000/register")
-        username = f"testuser_{uuid.uuid4().hex[:8]}"
-        email = f"{username}@example.com"
-        page.fill("#email", email)
-        page.fill("#username", username)
-        page.fill("#password", "Password123!")
-        page.click("button:has-text('Create Account')")
-
-        # 2. Assessment - Wait for redirect
-        print("Waiting for assessment...")
-        page.wait_for_url("**/assessment", timeout=30000)
-
-        # Paste code
-        code = """
-def factorial(n):
-    if n == 0:
-        return 1
-    else:
-        return n * factorial(n-1)
+        
+        print("1. Navigating to landing page...")
+        page.goto('http://localhost:3000')
+        page.wait_for_load_state('networkidle')
+        page.screenshot(path='audit_01_landing.png', full_page=True)
+        
+        print("2. Pasting code snippet...")
+        code_snippet = """
+def quick_sort(arr):
+    if len(arr) <= 1:
+        return arr
+    pivot = arr[len(arr) // 2]
+    left = [x for x in arr if x < pivot]
+    middle = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+    return quick_sort(left) + middle + quick_sort(right)
 """
-        page.fill("textarea", code)
-        page.click("button:has-text('Analyze My Code')")
-
-        # Wait for quiz to be ready (polling)
-        print("Analyzing code (this may take a minute)...")
-        # Increase timeout for LLM analysis
-        page.wait_for_selector("text=Question 1 of", timeout=120000)
-
-        # Answer 10 questions
-        for i in range(10):
-            print(f"Answering question {i+1}...")
-            # Wait for options to be available
-            page.wait_for_selector("button.w-full.rounded-xl")
-            options = page.locator("button.w-full.rounded-xl")
-            options.first.click()
+        page.fill('textarea[placeholder*="Paste your code"]', code_snippet)
+        
+        print("3. Clicking Visualize Logic...")
+        page.click('button:has-text("Visualize Logic")')
+        
+        # Check if Register modal appears
+        print("4. Handling Registration...")
+        page.wait_for_selector('text=Save Your Logic Map', timeout=5000)
+        
+        username = f"testuser_{get_random_string()}"
+        email = f"{username}@example.com"
+        password = "Password123!"
+        
+        page.fill('input[placeholder="coder_01"]', username)
+        page.fill('input[placeholder="you@example.com"]', email)
+        page.fill('input[placeholder="••••••••"]', password)
+        page.click('button:has-text("Unlock Mastery Path")')
+        
+        print("5. Verifying AnalyzingBridge...")
+        try:
+            # The bridge should appear immediately
+            page.wait_for_selector('[data-testid="analyzing-bridge"]', timeout=5000)
+            print("   AnalyzingBridge visible.")
+            page.screenshot(path='audit_05_analyzing.png')
+        except:
+            # Fallback check for any part of the bridge
+            if page.locator('text=Constructing Logic Topology').count() > 0:
+                 print("   AnalyzingBridge detected by text.")
+            else:
+                 print("   AnalyzingBridge NOT detected.")
             
-            # Wait for feedback and Next button
-            page.wait_for_selector("button:has-text('Next Question'), button:has-text('See Results')")
-            page.click("button:has-text('Next Question'), button:has-text('See Results')")
+        print("6. Waiting for redirect to SpaceDetail...")
+        page.wait_for_url('**/space/*', timeout=30000)
+        print(f"   Redirected to: {page.url}")
+        page.wait_for_load_state('networkidle')
+        
+        print("7. Waiting for Learning Path Generation (Polling)...")
+        # In SpaceDetail, if no path, it shows "Forging Your Mastery Path..."
+        try:
+            # Wait until the "lessons" are visible or the "Preparing" state is gone
+            page.wait_for_selector('text=lessons', timeout=60000)
+            print("   Learning path generated.")
+            page.screenshot(path='audit_07_space_detail_ready.png', full_page=True)
+        except Exception as e:
+            print(f"   Timed out waiting for learning path: {e}")
+            page.screenshot(path='audit_07_failed_path.png')
+            browser.close()
+            return
 
-        # 3. Dashboard
-        print("Waiting for dashboard...")
-        page.wait_for_url("**/dashboard", timeout=60000)
-        page.screenshot(path='dashboard.png')
+        print("8. Clicking first lesson...")
+        # Select the first lesson button
+        first_lesson = page.locator('button:has-text("1")').first
+        first_lesson.click()
+        
+        print("9. Verifying Learn Page...")
+        page.wait_for_url('**/learn/*', timeout=10000)
+        page.wait_for_load_state('networkidle')
+        
+        # Wait for content to load (it might poll if content is null)
+        try:
+            page.wait_for_selector('text=Conceptual Targets', timeout=30000)
+            print("   Learn Page content loaded.")
+        except:
+             print("   Timed out waiting for Learn Page content.")
 
-        # 4. Select a lesson
-        print("Selecting a space...")
-        # Path generation should be done. Click on the first space.
-        # It might be named after the code snippet summary or just "Space"
-        # Let's wait for any SpaceCard button
-        page.wait_for_selector("button.group.relative.w-full")
-        page.locator("button.group.relative.w-full").first.click()
-        
-        # Wait for redirect to SpaceDetail
-        print("Waiting for space detail...")
-        page.wait_for_url("**/space/*", timeout=30000)
-        
-        # Click on the first lesson
-        print("Selecting a lesson...")
-        page.wait_for_selector("button.w-full.rounded-xl.border.border-slate-700")
-        page.locator("button.w-full.rounded-xl.border.border-slate-700").first.click()
-        
-        # 5. Learn Page
-        print("Entering Learn page...")
-        page.wait_for_url("**/learn/*", timeout=30000)
-        # Wait for content to load
-        page.wait_for_selector("h1.text-sm.font-bold", timeout=30000)
-        page.screenshot(path='learn_page.png')
+        time.sleep(2) # Stabilize
+        page.screenshot(path='audit_09_learn_page.png', full_page=True)
 
-        # Verify Vertical Visual Stack
-        # AnimationPlayer at top
-        if page.locator("canvas").count() > 0 or page.locator("div.mesh-gradient").count() > 0:
-            print("Verified: Visual Hero section is visible.")
+        # Functional Checks
+        viz_present = page.locator('canvas').count() > 0 or page.locator('[class*="AnimationPlayer"]').count() > 0
+        print(f"   Logic Visualization (AnimationPlayer) present: {viz_present}")
         
-        # Chat on right
-        chat = page.locator("text=AI Mentor")
-        if chat.is_visible():
-            print("Verified: Chat is visible.")
+        mentor_present = page.locator('text=AI Mentor').count() > 0
+        print(f"   AI Mentor present: {mentor_present}")
+        
+        concepts_present = page.locator('text=Conceptual Targets').count() > 0
+        print(f"   Conceptual Targets present: {concepts_present}")
+        
+        deep_dive_present = page.locator('text=Architectural Insight').count() > 0 or page.locator('text=Deep Dive').count() > 0
+        print(f"   Technical Deep Dive present: {deep_dive_present}")
 
-        # 6. Socratic Interaction
-        print("Testing Socratic Interaction...")
-        page.fill("textarea[placeholder='Ask a technical question...']", "What is the base case in this factorial function?")
-        page.click("button .lucide-send, button:has(svg.lucide-send)")
+        # Human-Centric UX Audit markers
+        # Check fonts/contrast (indirectly by ensuring elements are visible and readable in screenshot)
         
-        # Wait for response (look for the assistant message bubble)
-        print("Waiting for mentor response...")
-        # Assistant messages have 'bg-slate-800/60'
-        page.wait_for_selector("div.bg-slate-800\/60", timeout=60000)
-        page.screenshot(path='chat_response.png')
-        
-        # Check if response asks a question (Socratic)
-        messages = page.locator("div.bg-slate-800\/60").all()
-        last_response = messages[-1].inner_text()
-        print(f"Mentor response snippet: {last_response[:100]}...")
-        if "?" in last_response:
-            print("Verified: Mentor responded with a question (Socratic).")
-        else:
-            print("Warning: Mentor response might not be Socratic. Check screenshot.")
-
-        print("Full flow test completed successfully!")
         browser.close()
 
 if __name__ == "__main__":
-    try:
-        test_full_flow()
-    except Exception as e:
-        print(f"Test failed: {e}")
-        sys.exit(1)
+    run_audit()

@@ -129,11 +129,54 @@ export interface AnimationEffect {
   color?: "sky" | "amber" | "emerald" | "fuchsia" | "red" | "slate";
 }
 
+export type DataStatus =
+  | "filled"
+  | "empty"
+  | "active"
+  | "updated"
+  | "compare"
+  | "result"
+  | "removed";
+
+export interface ArrayCell {
+  key: string | number;
+  value: string | null;
+  status?: DataStatus;
+  note?: string;
+}
+
+export interface ArrayCursor {
+  key: string | number;
+  label: string;
+  color?: "sky" | "emerald" | "fuchsia" | "amber" | "red" | "slate";
+}
+
+export interface VarRow {
+  name: string;
+  value: string;
+  status?: DataStatus;
+  note?: string;
+}
+
+export interface ListItem {
+  value: string;
+  status?: DataStatus;
+  note?: string;
+}
+
+export type DataView =
+  | { kind: "array"; label: string; cells: ArrayCell[]; cursors?: ArrayCursor[]; note?: string }
+  | { kind: "vars"; label: string; rows: VarRow[]; note?: string }
+  | { kind: "object"; label: string; rows: VarRow[]; note?: string }
+  | { kind: "stack"; label: string; items: ListItem[]; note?: string }
+  | { kind: "queue"; label: string; items: ListItem[]; note?: string };
+
 export interface AnimationFrame {
   frame: number;
   title: string;
   code_state: string;
   canvas_scene?: CanvasSceneData;
+  data_views?: DataView[];
   effects?: AnimationEffect[];
   visual?: string;
   narration: string;
@@ -151,6 +194,7 @@ export interface Lesson {
   difficulty: string;
   content: LessonContent | null;
   progress: LessonProgress | null;
+  space_id?: string | null;
 }
 
 export interface LearningPath {

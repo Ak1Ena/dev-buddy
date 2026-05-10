@@ -184,7 +184,13 @@ class PlannerAgent:
             logger.warning("Misconception detection raised unexpectedly: %s", exc)
             misconceptions = []
 
+        # Handle missing or empty assessment data (Instant Discovery)
+        weak_areas = weak_areas or []
+        strong_areas = strong_areas or []
+        concepts = concepts or []
         gap_count = len(weak_areas)
+        
+        is_discovery = not weak_areas and not strong_areas and score == 0
 
         if misconceptions:
             misconception_lines = "\n".join(
@@ -201,6 +207,20 @@ class PlannerAgent:
         else:
             misconception_block = ""
 
+        if is_discovery:
+            path_type_instruction = (
+                "This is a 'Discovery Path' based purely on the detected concepts. "
+                "Create a logical progression from foundational to advanced concepts found in the code."
+            )
+            gap_info = f"Concepts found in code: {', '.join(concepts) if concepts else 'foundational concepts'}"
+        else:
+            path_type_instruction = (
+                f"The student has {gap_count} gap{'s' if gap_count != 1 else ''} to fill. "
+                "Generate exactly as many lessons as needed — one per weak area, plus any essential prerequisites. "
+                "Do NOT add lessons for concepts the student already understands."
+            )
+            gap_info = f"Weak areas — concepts they got WRONG (each needs a lesson): {', '.join(weak_areas) if weak_areas else 'none'}"
+
         prompt = f"""Create a personalized learning path for this student.
 
 Their submitted code:
@@ -210,14 +230,13 @@ Their submitted code:
 
 Concepts detected in their code: {', '.join(concepts) if concepts else 'general'}
 Assessment score: {score}/100
-Weak areas — concepts they got WRONG (each needs a lesson): {', '.join(weak_areas) if weak_areas else 'none'}
+{gap_info}
 Strong areas — concepts they got RIGHT (skip these): {', '.join(strong_areas) if strong_areas else 'none'}
 Skill level: {skill_level}
-Number of weak areas: {gap_count}{misconception_block}
+{misconception_block}
 
-The student has {gap_count} gap{'s' if gap_count != 1 else ''} to fill.
-Generate exactly as many lessons as needed — one per weak area, plus any essential prerequisites.
-Do NOT add lessons for concepts the student already understands."""
+Rules for this path:
+{path_type_instruction}"""
 
         for attempt, max_tok in enumerate([4000, 2000], start=1):
             try:

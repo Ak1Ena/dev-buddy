@@ -87,6 +87,8 @@ export const assessmentApi = {
 };
 
 export const learningApi = {
+  instantDiscovery: (code_snippet: string) =>
+    api.post("/learning/instant-discovery", { code_snippet }),
   generatePath: () =>
     api.post("/learning/generate-path"),
   getActivePath: () => api.get("/learning/path"),

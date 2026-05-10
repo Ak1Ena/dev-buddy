@@ -45,15 +45,14 @@ Tutorial แบบเส้นตรง (Linear Learning) ไม่สามา�
 หากปัญหานี้ไม่ได้รับการแก้ไข อุตสาหกรรมเทคโนโลยีอาจเผชิญกับการขาดแคลนนักพัฒนาที่มีทักษะการคิดเชิงลึก (Thinkers) และมีเพียงผู้ที่สามารถใช้เครื่องมือ AI เพื่อสร้างโค้ดตามคำสั่ง (Coders) โดยขาดความเข้าใจพื้นฐานในการออกแบบและแก้ปัญหา
 
 3. แนวทางการแก้ปัญหา
-devBuddy AI: The Discovery Engine
+devBuddy AI: The Instant Discovery Engine
 devBuddy AI ถูกออกแบบบนแนวคิด:
 Socratic Method
 Constructivist Learning
 Scaffolding
 Active Recall
 Cognitive Apprenticeship
-โดยมีเป้าหมายเพื่อสร้าง “Learning Through Discovery” หรือการเรียนรู้ผ่านการค้นพบด้วยตนเอง
-แทนที่ AI จะให้คำตอบโดยตรง ระบบจะค่อย ๆ ช่วยผู้เรียนสร้างกระบวนการคิดทีละขั้นตอน
+โดยเปลี่ยนจากระบบเดิมที่ต้องผ่านแบบทดสอบ (Quiz-based) ไปสู่ระบบ “Instant Discovery” ที่ผู้เรียนสามารถนำโค้ดมาวางเพื่อสร้าง Visualization ได้ทันที เพื่อลดแรงเสียดทานในการเริ่มต้นเรียนรู้ (Curiosity-First) แทนที่ AI จะให้คำตอบโดยตรง ระบบจะค่อย ๆ ช่วยผู้เรียนสร้างกระบวนการคิดทีละขั้นตอน
 
 4. นวัตกรรมหลักของระบบ
 4.1 Socratic Guidance System
@@ -79,18 +78,18 @@ Level 3 — Guided Example
 
 4.2 Adaptive Curriculum Design
 ระบบวิเคราะห์ช่องว่างความรู้
-ระบบ PlannerAgent วิเคราะห์:
-จุดแข็ง (Strong Areas)
-จุดอ่อน (Weak Areas)
-รูปแบบความผิดพลาดซ้ำ ๆ
-เพื่อสร้าง Dynamic Learning Path ที่เหมาะสมกับผู้เรียนแต่ละคน
-ตัวอย่าง:
-หากผู้เรียนมีปัญหาเรื่อง Loops
-ระบบจะสร้าง Workshop เพิ่มเติมเกี่ยวกับ Iteration และ State Tracking โดยอัตโนมัติ
+ระบบ PlannerAgent วิเคราะห์โค้ดโดยตรงเพื่อหาจุดแข็งและจุดอ่อน เพื่อสร้าง Dynamic Learning Path โดยไม่ต้องผ่าน 10-question gate แบบเดิม
 
-4.3 Cinematic Visual Reinforcement
-ระบบสร้างภาพจำเชิงตรรกะ
-devBuddy เปลี่ยนโค้ดให้กลายเป็นภาพเคลื่อนไหวแบบ Real-time เพื่อช่วยให้ผู้เรียน “เห็น” การทำงานภายในของโปรแกรม
+4.3 Cinematic Visual Reinforcement (Discovery Gates)
+ระบบสร้างภาพจำเชิงตรรกะพร้อมจุดตรวจสอบ (Discovery Gates)
+devBuddy เปลี่ยนโค้ดให้กลายเป็นภาพเคลื่อนไหวแบบ Real-time เพื่อช่วยให้ผู้เรียน “เห็น” การทำงานภายในของโปรแกรม โดยมีการเพิ่ม “Discovery Gates” หรือจุดหยุดการทำงานที่สาขาตรรกะสำคัญ (Logic Branches) เพื่อบังคับให้ผู้เรียนคาดการณ์ผลลัพธ์ (Prediction) ก่อนที่ระบบจะแสดงผลต่อไป
+
+แนวคิด “Show, Don’t Tell”
+ระบบยึดหลักการว่า ภาพประกอบต้อง “แสดงสถานะของข้อมูลจริง” แทนการบรรยายด้วยข้อความ
+- โครงสร้างข้อมูล (Array, Variable, Dictionary, Stack, Queue) ถูกแสดงเป็นภาพที่อัปเดตทีละขั้น
+- ตัวชี้ (Cursor) เคลื่อนไหวตาม Loop variable เพื่อให้ผู้เรียนเห็น “การเดิน” ของ Index
+- การเปลี่ยนแปลงในแต่ละขั้นถูกเน้นด้วย Visual State (active / updated / compare / result) เพื่อให้สมองจับจุดเปลี่ยนได้ทันที
+
 Visualization Effects
 Event
 Visualization
@@ -111,6 +110,19 @@ Data Flow
 Recursion
 ซึ่งเป็นจุดที่ผู้เริ่มต้นมักเกิดความสับสนมากที่สุด
 
+4.5 Code-Level Misconception Detection
+ระบบตรวจจับความเข้าใจผิดเชิงลึกจากโค้ดของผู้เรียน
+แทนที่จะวินิจฉัยช่องว่างความรู้จากคะแนนแบบทดสอบเพียงอย่างเดียว devBuddy ใช้ CodeAnalyzerAgent วิเคราะห์โค้ดที่ผู้เรียนส่งเข้ามาโดยตรง เพื่อค้นหา Pattern ของความเข้าใจผิดที่พบบ่อย เช่น:
+- Off-by-one error ใน Loop boundary
+- การ Mutate ตัวแปรโดยไม่ตั้งใจ
+- ความเข้าใจคลาดเคลื่อนเรื่อง Variable Scope
+- การใช้ Reference vs. Value ผิด
+
+ความเข้าใจผิดที่ตรวจพบจะถูกส่งต่อไปยัง PlannerAgent เพื่อให้บทเรียนที่สร้างขึ้น “จัดการกับความเข้าใจผิดที่เฉพาะเจาะจงของผู้เรียน” โดยตรง — ไม่ใช่แค่สอนหัวข้อโดยทั่วไป
+
+ผลลัพธ์เชิงกลยุทธ์
+แนวคิดนี้เปลี่ยนหลักสูตรจากการเรียน “ตามหัวข้อ” (Topic-by-Topic) ไปสู่การเรียน “ตามจุดที่เข้าใจผิดจริง” (Misconception-Targeted) ซึ่งสอดคล้องโดยตรงกับ Constructivism และ Cognitive Apprenticeship ในหัวข้อที่ 7 — ผู้เรียนได้รับการแก้ไขในจุดที่ตนเองเข้าใจคลาดเคลื่อนจริง ก่อนที่ความเข้าใจผิดเหล่านั้นจะกลายเป็นนิสัย
+
 5. สถาปัตยกรรมระบบ (System Architecture)
 devBuddy AI ใช้แนวคิด Agentic Architecture และ Asynchronous Processing เพื่อรองรับการวิเคราะห์และการสร้าง Visualization แบบเรียลไทม์
 System Workflow
@@ -130,27 +142,13 @@ Cinematic Visualization UI
 
 
 6. เทคโนโลยีที่ใช้ (Technology Stack)
-Component
-Technology
-Strategic Role
-AI Orchestration
-Claude (Anthropic)
-วิเคราะห์โค้ดและสร้าง Socratic Dialogue
-Backend
-FastAPI + asyncio
-ประมวลผล Agents แบบ Asynchronous
-Frontend
-Next.js 14 + TypeScript
-สร้าง Interactive Learning Experience
-UI Styling
-Tailwind CSS
-ออกแบบ Cinematic User Interface
-State Management
-Zustand
-จัดการ Reactive State
-Database
-PostgreSQL / SQLite
-เก็บข้อมูล Progress และ Analytics
+Component | Technology | Strategic Role
+AI Orchestration | Claude (Anthropic) | วิเคราะห์โค้ดและสร้าง Socratic Dialogue
+Backend | FastAPI + asyncio | ประมวลผล Agents แบบ Asynchronous
+Frontend | React + Vite + TypeScript | สร้าง Interactive Learning Experience (อัปเดตจาก Next.js เพื่อความคล่องตัวในการทำ Logic Visualization)
+UI Styling | Tailwind CSS | ออกแบบ Cinematic User Interface
+State Management | Zustand | จัดการ Reactive State
+Database | PostgreSQL / SQLite | เก็บข้อมูล Progress และ Analytics
 
 
 7. แนวคิดด้าน Learning Science
@@ -191,9 +189,6 @@ Misconception Frequency
 เพิ่ม Retention ของแนวคิดพื้นฐาน
 
 9. แผนการพัฒนาในอนาคต (Roadmap)
-Intelligent Misconception Detection
-วิเคราะห์ความเข้าใจผิดแบบเรียลไทม์และแก้ไขก่อนกลายเป็นนิสัย
-
 Multi-Language Expansion
 รองรับภาษาโปรแกรมเพิ่มเติม เช่น:
 Python

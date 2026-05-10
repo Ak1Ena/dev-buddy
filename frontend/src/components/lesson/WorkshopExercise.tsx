@@ -31,7 +31,7 @@ export default function WorkshopExercise({ workshop, onComplete }: WorkshopExerc
   };
 
   const handleGetHint = () => {
-    if (hintsUsed >= workshop.hints.length) return;
+    if (!workshop.hints || hintsUsed >= workshop.hints.length) return;
     const nextHint = workshop.hints[hintsUsed];
     setShownHints((prev) => [...prev, nextHint]);
     setHintsUsed((h) => h + 1);
@@ -40,7 +40,7 @@ export default function WorkshopExercise({ workshop, onComplete }: WorkshopExerc
   const handleSubmit = () => {
     if (!answer.trim()) return;
     const correct =
-      answer.trim().toLowerCase() === workshop.answer.trim().toLowerCase();
+      answer.trim().toLowerCase() === (workshop.answer || "").trim().toLowerCase();
     setIsCorrect(correct);
     setSubmitted(true);
     const score = correct ? computeScore(hintsUsed) : 0;
@@ -54,12 +54,15 @@ export default function WorkshopExercise({ workshop, onComplete }: WorkshopExerc
     multiple_choice: "secondary",
   };
 
+  const typeLabel = typeLabels[workshop.type] || "Practice";
+  const typeVariant = typeVariantMap[workshop.type] || "default";
+
   return (
     <div className="space-y-5">
       {/* Type badge + title */}
       <div className="flex flex-wrap items-center gap-3">
-        <Badge variant={typeVariantMap[workshop.type]}>
-          {typeLabels[workshop.type]}
+        <Badge variant={typeVariant}>
+          {typeLabel}
         </Badge>
         <h3 className="font-semibold text-slate-100">{workshop.title}</h3>
       </div>
@@ -127,7 +130,7 @@ export default function WorkshopExercise({ workshop, onComplete }: WorkshopExerc
             Submit
             <ChevronRight className="h-4 w-4" />
           </Button>
-          {hintsUsed < workshop.hints.length && (
+          {workshop.hints && hintsUsed < workshop.hints.length && (
             <Button
               variant="outline"
               onClick={handleGetHint}
@@ -182,7 +185,7 @@ export default function WorkshopExercise({ workshop, onComplete }: WorkshopExerc
             <div className="mt-3 space-y-3">
               <p className="text-sm text-slate-400">Would you like a hint, or do you want to try again?</p>
               <div className="flex items-center gap-2.5 flex-wrap">
-                {hintsUsed < workshop.hints.length && (
+                {workshop.hints && hintsUsed < workshop.hints.length && (
                   <Button
                     variant="outline"
                     onClick={() => {

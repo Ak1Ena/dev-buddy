@@ -12,16 +12,21 @@ from app.database import get_db, AsyncSessionLocal
 from app.models.user import User
 from app.models.assessment import AssessmentSession
 from app.models.learning import LearningSpace, LearningPath, Lesson, LessonProgress
+from app.agents.planner import PlannerAgent
+from app.agents.designer import DesignerAgent
+from app.agents.code_analyzer import CodeAnalyzerAgent
+from app.agents.assessment_generator import AssessmentGeneratorAgent
+from app.utils.auth import get_current_user
+from app.schemas.assessment import CodeAnalysis
 from app.schemas.learning import (
     LearningPathResponse,
     LessonResponse,
     LessonProgressUpdate,
     CreateSpaceRequest,
     SpaceSummary,
+    InstantDiscoveryRequest,
+    InstantDiscoveryResponse,
 )
-from app.agents.planner import PlannerAgent
-from app.agents.designer import DesignerAgent
-from app.utils.auth import get_current_user
 
 router = APIRouter(prefix="/learning", tags=["learning"])
 
@@ -29,6 +34,120 @@ router = APIRouter(prefix="/learning", tags=["learning"])
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+async def _orchestrate_discovery_background(
+    user_id: str,
+    space_id: str,
+    session_id: str,
+    code_snippet: str,
+    language: str,
+    analysis: dict,
+    skill_level: str,
+):
+    """Background task to generate 3 questions, a learning path, and the hero map in parallel."""
+    planner = PlannerAgent()
+    designer = DesignerAgent()
+    assessment_gen = AssessmentGeneratorAgent()
+
+    # Trigger Planner, Designer, and Assessment in parallel
+    # Designer generates the "Hero Map" for the overall code logic
+    tasks = [
+        assessment_gen.generate_questions(code_snippet, analysis["concepts"], language, question_count=3),
+        planner.generate_learning_path(
+            code_snippet=code_snippet,
+            language=language,
+            concepts=analysis["concepts"],
+            skill_level=skill_level,
+            weak_areas=[],
+            strong_areas=[],
+            score=0,
+        ),
+        designer.generate_animation(
+            topic="overview",
+            title="Hero Logic Map",
+            language=language,
+            code_snippet=code_snippet,
+        ),
+    ]
+
+    try:
+        questions, plan_data, hero_anim = await asyncio.gather(*tasks)
+
+        async with AsyncSessionLocal() as db:
+            # 1. Update Assessment Session with 3 questions
+            await db.execute(
+                update(AssessmentSession)
+                .where(AssessmentSession.id == session_id)
+                .values(
+                    generated_questions=questions,
+                    total_questions=len(questions),
+                    status="ready",
+                )
+            )
+
+            # 2. Deactivate existing paths for this user
+            await db.execute(
+                update(LearningPath)
+                .where(LearningPath.user_id == user_id, LearningPath.is_active == True)
+                .values(is_active=False)
+            )
+
+            # 3. Create the Learning Path
+            path = LearningPath(
+                user_id=user_id,
+                learning_space_id=space_id,
+                title=plan_data["title"],
+                description=plan_data.get("description", ""),
+                language=language,
+                skill_level=skill_level,
+                source_code=code_snippet,
+                extracted_concepts=analysis["concepts"],
+                total_lessons=len(plan_data["lessons"]),
+                is_active=True,
+            )
+            db.add(path)
+            await db.flush()
+
+            # 4. Create Lessons
+            for i, lesson_data in enumerate(plan_data["lessons"]):
+                lesson = Lesson(
+                    learning_path_id=path.id,
+                    title=lesson_data["title"],
+                    topic=lesson_data["topic"],
+                    description=lesson_data.get("description", ""),
+                    order_index=lesson_data["order_index"],
+                    estimated_minutes=lesson_data.get("estimated_minutes", 20),
+                    difficulty=lesson_data.get("difficulty", "beginner"),
+                )
+                
+                # Attach Hero Map to the first lesson if it's an overview
+                if i == 0 and hero_anim:
+                    lesson.content = hero_anim
+                
+                db.add(lesson)
+
+            await db.commit()
+            logger.info("Instant Discovery background tasks completed for space %s", space_id)
+            
+            # Start pre-filling remaining lessons
+            asyncio.create_task(_prefill_lesson_content(
+                path_id=path.id,
+                language=language,
+                skill_level=skill_level,
+                source_code=code_snippet,
+                weak_areas=[],
+            ))
+
+    except Exception as exc:
+        logger.error("Instant Discovery background orchestration failed: %s", exc, exc_info=True)
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                update(AssessmentSession)
+                .where(AssessmentSession.id == session_id)
+                .values(status="error")
+            )
+            await db.commit()
+
 
 async def _build_lesson_content(
     topic: str,
@@ -139,6 +258,88 @@ async def _deactivate_all_spaces(user_id: str, db: AsyncSession):
 # Learning-space CRUD
 # ---------------------------------------------------------------------------
 
+@router.post("/instant-discovery", response_model=InstantDiscoveryResponse, status_code=201)
+async def instant_discovery(
+    body: InstantDiscoveryRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Primary orchestration for the 'Instant Discovery' flow.
+    1. Analyzes code immediately (SLA < 3s).
+    2. Creates a Space and an AssessmentSession.
+    3. Triggers Path, Hero Map, and Questions in parallel background.
+    4. Returns early to allow frontend to show the Logic Map.
+    """
+    # Step 1: Analyze Code
+    analyzer = CodeAnalyzerAgent()
+    analysis = await analyzer.analyze(body.code_snippet)
+    
+    language = body.language or analysis["language"]
+    
+    # Step 2: Create Learning Space
+    await _deactivate_all_spaces(current_user.id, db)
+    lang_label = language.title()
+    
+    # Count existing spaces for name uniqueness
+    count_result = await db.execute(
+        select(LearningSpace).where(
+            LearningSpace.user_id == current_user.id,
+            LearningSpace.name.like(f"{lang_label}%"),
+        )
+    )
+    existing_count = len(count_result.scalars().all())
+    space_name = lang_label if existing_count == 0 else f"{lang_label} {existing_count + 1}"
+    
+    space = LearningSpace(
+        user_id=current_user.id,
+        name=space_name,
+        is_active=True,
+    )
+    db.add(space)
+    
+    # Step 3: Create Assessment Session (status: generating)
+    session = AssessmentSession(
+        user_id=current_user.id,
+        code_snippet=body.code_snippet,
+        detected_language=language,
+        code_summary=analysis.get("summary"),
+        extracted_concepts=analysis["concepts"],
+        concept_locations=analysis.get("concept_locations"),
+        status="generating",
+    )
+    db.add(session)
+    
+    await db.commit()
+    await db.refresh(space)
+    await db.refresh(session)
+    
+    # Step 4: Trigger Parallel Discovery Tasks
+    background_tasks.add_task(
+        _orchestrate_discovery_background,
+        user_id=current_user.id,
+        space_id=space.id,
+        session_id=session.id,
+        code_snippet=body.code_snippet,
+        language=language,
+        analysis=analysis,
+        skill_level=current_user.skill_level or "beginner",
+    )
+    
+    return InstantDiscoveryResponse(
+        space_id=space.id,
+        session_id=session.id,
+        analysis=CodeAnalysis(
+            language=language,
+            difficulty=analysis["difficulty"],
+            concepts=analysis["concepts"],
+            summary=analysis.get("summary", ""),
+            concept_locations=analysis.get("concept_locations", {}),
+        ),
+    )
+
+
 @router.post("/spaces", response_model=SpaceSummary, status_code=201)
 async def create_learning_space(
     body: CreateSpaceRequest,
@@ -214,26 +415,24 @@ async def generate_learning_path(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if not current_user.assessment_completed:
-        raise HTTPException(status_code=400, detail="Complete the assessment first")
-
-    # Fetch most recent completed assessment
+    # Fetch most recent assessment (regardless of completion for Instant Discovery)
     result = await db.execute(
         select(AssessmentSession)
         .where(
             AssessmentSession.user_id == current_user.id,
-            AssessmentSession.status == "completed",
+            AssessmentSession.status.in_(["ready", "completed"]),
         )
-        .order_by(AssessmentSession.completed_at.desc())
+        .order_by(AssessmentSession.created_at.desc())
     )
     assessment = result.scalars().first()
+    
     if not assessment:
-        raise HTTPException(status_code=400, detail="No completed assessment found")
+        raise HTTPException(status_code=400, detail="No assessment session found. Please upload code first.")
 
     # Ensure an active space exists; auto-create one named after the language
     active_space = await _get_active_space(current_user.id, db)
     if not active_space:
-        lang_label = assessment.detected_language.title()
+        lang_label = (assessment.detected_language or "General").title()
         # Count how many spaces this user already has for that language
         count_result = await db.execute(
             select(LearningSpace).where(
@@ -252,14 +451,20 @@ async def generate_learning_path(
         await db.flush()
 
     planner = PlannerAgent()
+    
+    # Use user's assessment data if completed, otherwise empty (Instant Discovery)
+    weak_areas = current_user.weak_areas or [] if current_user.assessment_completed else []
+    strong_areas = current_user.strong_areas or [] if current_user.assessment_completed else []
+    score = current_user.assessment_score or 0 if current_user.assessment_completed else 0
+
     plan_data = await planner.generate_learning_path(
         code_snippet=assessment.code_snippet,
-        language=assessment.detected_language,
+        language=assessment.detected_language or "python",
         concepts=assessment.extracted_concepts or [],
-        skill_level=current_user.skill_level,
-        weak_areas=current_user.weak_areas or [],
-        strong_areas=current_user.strong_areas or [],
-        score=current_user.assessment_score or 0,
+        skill_level=current_user.skill_level or "beginner",
+        weak_areas=weak_areas,
+        strong_areas=strong_areas,
+        score=score,
     )
 
     # Deactivate any existing active paths across all spaces
@@ -274,8 +479,8 @@ async def generate_learning_path(
         learning_space_id=active_space.id,
         title=plan_data["title"],
         description=plan_data.get("description", ""),
-        language=assessment.detected_language,
-        skill_level=current_user.skill_level,
+        language=assessment.detected_language or "python",
+        skill_level=current_user.skill_level or "beginner",
         source_code=assessment.code_snippet,
         extracted_concepts=assessment.extracted_concepts,
         total_lessons=len(plan_data["lessons"]),
@@ -307,10 +512,10 @@ async def generate_learning_path(
     background_tasks.add_task(
         _prefill_lesson_content,
         path_id=path.id,
-        language=assessment.detected_language,
-        skill_level=current_user.skill_level,
+        language=assessment.detected_language or "python",
+        skill_level=current_user.skill_level or "beginner",
         source_code=assessment.code_snippet,
-        weak_areas=current_user.weak_areas or [],
+        weak_areas=weak_areas,
     )
 
     return formatted
@@ -398,7 +603,12 @@ async def get_lesson(
         await db.commit()
         await db.refresh(lesson)
 
-    return _format_lesson(lesson)
+    space_lookup = await db.execute(
+        select(LearningPath.learning_space_id).where(LearningPath.id == lesson.learning_path_id)
+    )
+    space_id = space_lookup.scalar_one_or_none()
+
+    return _format_lesson(lesson, space_id=space_id)
 
 
 @router.patch("/lesson/{lesson_id}/progress")
@@ -523,7 +733,7 @@ def _format_path(path: LearningPath) -> LearningPathResponse:
     )
 
 
-def _format_lesson(lesson: Lesson) -> LessonResponse:
+def _format_lesson(lesson: Lesson, space_id: str | None = None) -> LessonResponse:
     progress_data = None
     if lesson.progress:
         p = lesson.progress
@@ -549,4 +759,5 @@ def _format_lesson(lesson: Lesson) -> LessonResponse:
         difficulty=lesson.difficulty,
         content=content,
         progress=progress_data,
+        space_id=space_id,
     )

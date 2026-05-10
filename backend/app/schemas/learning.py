@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
+from app.schemas.assessment import CodeAnalysis
 
 
 class LessonProgressUpdate(BaseModel):
@@ -23,6 +24,7 @@ class LessonResponse(BaseModel):
     difficulty: str
     content: dict | None
     progress: dict | None = None
+    space_id: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -50,3 +52,14 @@ class SpaceSummary(BaseModel):
     path: LearningPathResponse | None = None
 
     model_config = {"from_attributes": True}
+
+
+class InstantDiscoveryRequest(BaseModel):
+    code_snippet: str
+    language: str | None = None
+
+
+class InstantDiscoveryResponse(BaseModel):
+    space_id: str
+    session_id: str
+    analysis: CodeAnalysis

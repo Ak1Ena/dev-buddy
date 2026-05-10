@@ -1,144 +1,109 @@
-import sys
+
+import os
 import time
-import uuid
+import random
+import string
 from playwright.sync_api import sync_playwright
 
-def run_verification():
+def get_random_string(length=8):
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+
+def run_audit():
+    audit_results = {
+        "functional": {},
+        "ux": {}
+    }
+    
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
+        context = browser.new_context(viewport={'width': 1440, 'height': 900})
+        page = context.new_page()
         
-        # Resolutions to test
-        resolutions = [
-            {"width": 1920, "height": 1080},
-            {"width": 1366, "height": 768}
-        ]
+        # 1. Landing Page
+        print("1. Auditing Landing Page...")
+        page.goto('http://localhost:3000')
+        page.wait_for_load_state('networkidle')
         
-        for res in resolutions:
-            print(f"\n--- Testing at {res['width']}x{res['height']} ---")
-            context = browser.new_context(viewport=res)
-            page = context.new_page()
-
-            # 1. Registration & Assessment (Simplified if possible, but let's follow the flow)
-            print("Registering...")
-            page.goto("http://localhost:3000/register")
-            username = f"verify_{uuid.uuid4().hex[:8]}"
-            email = f"{username}@example.com"
-            page.fill("#email", email)
-            page.fill("#username", username)
-            page.fill("#password", "Password123!")
-            page.click("button:has-text('Create Account')")
-
-            print("Waiting for assessment...")
-            page.wait_for_url("**/assessment", timeout=30000)
-
-            code = """
-def check_performance(data):
-    # This function checks if a list has duplicates
-    seen = set()
-    for item in data:
-        if item in seen:
-            return True
-        seen.add(item)
-    return False
-"""
-            page.fill("textarea", code)
-            page.click("button:has-text('Analyze My Code')")
-
-            print("Analyzing code...")
-            page.wait_for_selector("text=Question 1 of", timeout=120000)
-
-            for i in range(10):
-                print(f"Answering question {i+1}...")
-                page.wait_for_selector("button.w-full.rounded-xl")
-                options = page.locator("button.w-full.rounded-xl")
-                options.first.click()
-                page.wait_for_selector("button:has-text('Next Question'), button:has-text('See Results')")
-                page.click("button:has-text('Next Question'), button:has-text('See Results')")
-
-            print("Waiting for dashboard...")
-            page.wait_for_url("**/dashboard", timeout=60000)
-
-            print("Selecting space...")
-            page.wait_for_selector("button.group.relative.w-full")
-            page.locator("button.group.relative.w-full").first.click()
+        # UX: Readability
+        body_bg = page.evaluate("window.getComputedStyle(document.body).backgroundColor")
+        text_color = page.evaluate("window.getComputedStyle(document.querySelector('h1')).color")
+        audit_results["ux"]["landing_bg"] = body_bg
+        audit_results["ux"]["landing_h1_color"] = text_color
+        
+        page.screenshot(path='audit_landing.png')
+        
+        # 2. Functional: Magic Paste
+        print("2. Testing Magic Paste...")
+        code_snippet = "def hello(): print('world')"
+        page.fill('textarea', code_snippet)
+        page.click('button:has-text("Visualize Logic")')
+        
+        # 3. Functional: Register
+        print("3. Testing Register Modal...")
+        page.wait_for_selector('text=Save Your Logic Map')
+        page.screenshot(path='audit_register_modal.png')
+        
+        username = f"u_{get_random_string()}"
+        page.fill('input[placeholder="coder_01"]', username)
+        page.fill('input[placeholder="you@example.com"]', f"{username}@test.com")
+        page.fill('input[placeholder="••••••••"]', "Password123!")
+        page.click('button:has-text("Unlock Mastery Path")')
+        
+        # 4. Functional: AnalyzingBridge
+        print("4. Testing AnalyzingBridge...")
+        try:
+            page.wait_for_selector('text=Mapping Logic Topologies', timeout=5000)
+            audit_results["functional"]["bridge_visible"] = True
+            print("   AnalyzingBridge detected.")
+        except:
+            audit_results["functional"]["bridge_visible"] = False
+            print("   AnalyzingBridge NOT detected.")
+        
+        page.screenshot(path='audit_bridge.png')
+        
+        # 5. Functional: SpaceDetail
+        print("5. Testing SpaceDetail...")
+        page.wait_for_url('**/space/*', timeout=15000)
+        audit_results["functional"]["redirect_to_space"] = True
+        
+        # Check for status message
+        status_msg = page.locator('text=Forging Your Mastery Path').count() > 0
+        audit_results["ux"]["visibility_system_status_space"] = status_msg
+        
+        page.screenshot(path='audit_space_detail_loading.png')
+        
+        # Wait for path
+        print("   Waiting for path generation...")
+        try:
+            page.wait_for_selector('text=lessons', timeout=60000)
+            audit_results["functional"]["path_generated"] = True
+        except:
+            audit_results["functional"]["path_generated"] = False
             
-            print("Waiting for space detail...")
-            page.wait_for_url("**/space/*", timeout=30000)
+        page.screenshot(path='audit_space_detail_ready.png')
+        
+        # 6. Functional: Lesson/Learn
+        print("6. Testing Learn Page...")
+        page.locator('button:has-text("1")').first.click()
+        page.wait_for_url('**/learn/*', timeout=10000)
+        
+        # Wait for content
+        try:
+            page.wait_for_selector('text=Conceptual Targets', timeout=60000)
+            audit_results["functional"]["lesson_content_loaded"] = True
+        except:
+            audit_results["functional"]["lesson_content_loaded"] = False
             
-            print("Selecting lesson...")
-            page.wait_for_selector("button.w-full.rounded-xl.border.border-slate-700")
-            page.locator("button.w-full.rounded-xl.border.border-slate-700").first.click()
-            
-            print("Entering Learn page...")
-            page.wait_for_url("**/learn/*", timeout=30000)
-            
-            # Wait for content to load (Deep Dive cards)
-            print("Waiting for Mastery Cards...")
-            # We wait for the Brain icon or the Architectural Insights heading
-            page.wait_for_selector("text=Architectural Insight", timeout=60000)
-            
-            # Verify Layout: Ensure Visual Hero (Top) and Mastery Workspace (Bottom) do not overlap.
-            # Visual Hero is a div with h-[45vh] or similar.
-            # Mastery Workspace is below it.
-            hero = page.locator(".relative.h-\\[45vh\\]")
-            workspace = page.locator(".flex.flex-1.overflow-hidden")
-            
-            hero_box = hero.bounding_box()
-            workspace_box = workspace.bounding_box()
-            
-            print(f"Hero box: {hero_box}")
-            print(f"Workspace box: {workspace_box}")
-            
-            if hero_box['y'] + hero_box['height'] <= workspace_box['y']:
-                print("Verified: Visual Hero and Workspace do not overlap.")
-            else:
-                print("FAILED: Visual Hero and Workspace overlap!")
-
-            # Verify Mastery Cards
-            cards = page.locator(".glass-card")
-            card_count = cards.count()
-            print(f"Found {card_count} Mastery Cards.")
-            
-            if card_count > 0:
-                print("Verified: Mastery Cards are rendered.")
-                # Check for icons
-                icons = cards.first.locator("svg")
-                if icons.count() > 0:
-                    print("Verified: Icons are visible on cards.")
-                else:
-                    print("FAILED: No icons found on cards.")
-            else:
-                # Check if it fell back to single text block (which it shouldn't if cards were generated)
-                print("FAILED: No Mastery Cards found.")
-
-            # Verify Logic Sync
-            # Find a card with related_nodes. In our test case, we hope LLM generated them.
-            # Hover over the first card
-            if card_count > 0:
-                print("Testing Logic Sync (Hover)...")
-                # We can't easily check internal React state, but we can check if anything changed in the AnimationPlayer.
-                # Or just verify the hover doesn't crash and maybe look for visual changes if possible.
-                # Actually, the instructions say "check if the AnimationPlayer receives the highlightedNodeIds or if the canvas nodes visually change".
-                # Checking visual change on canvas is hard. Let's try to see if any node gets a highlight class or style change if applicable.
-                
-                # First, let's see if we can find any nodes in the AnimationPlayer
-                nodes = page.locator("canvas")
-                print(f"Canvas count: {nodes.count()}")
-                
-                cards.first.hover()
-                page.wait_for_timeout(500) # Wait for hover effect
-                
-                # Screenshot for manual verification later if needed
-                page.screenshot(path=f'verification_{res["width"]}_{res["height"]}.png')
-                print(f"Screenshot saved as verification_{res['width']}_{res['height']}.png")
-
-            context.close()
+        page.screenshot(path='audit_learn_page.png')
+        
+        # UX: Elements presence
+        audit_results["functional"]["viz_present"] = page.locator('canvas').count() > 0 or page.locator('[class*="AnimationPlayer"]').count() > 0
+        audit_results["functional"]["mentor_present"] = page.locator('text=AI Mentor').count() > 0
         
         browser.close()
+        
+    print("\nAudit Complete. Results:")
+    print(audit_results)
 
 if __name__ == "__main__":
-    try:
-        run_verification()
-    except Exception as e:
-        print(f"Verification failed: {e}")
-        sys.exit(1)
+    run_audit()

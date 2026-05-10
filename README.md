@@ -10,19 +10,17 @@ Most online courses give you a rigid path and a generic certificate. Most AI too
 
 Whether you're building your first project or trying to master a complex library, devBuddy helps you bridge the gap between "making it work" and "knowing how it works."
 
-## The Self-Taught Journey
+## The Self-Taught Journey (Instant Discovery)
 
 ```
-1. Input your project logic or a concept you're wrestling with
+1. Paste Logic: Input your project logic or a concept you're wrestling with.
       ↓
-2. AI identifies the "Mental Model" gaps in your current understanding
+2. Visualize: Instantly see interactive Logic Maps that visualize the flow of your code.
       ↓
-3. Interactive Logic Maps visualize the flow of your code (Graph-First)
-      ↓
-4. Socratic Mentorship guides you to the solution through analytical thinking
-      ↓
-5. Build genuine technical depth that translates to real-world engineering
+3. Master: Use Socratic Discovery Gates to build genuine technical depth.
 ```
+
+**Note:** The previous 10-question assessment gate has been removed to prioritize immediate, curiosity-driven learning.
 
 ## Why This Matters for Self-Taught Coders
 
@@ -32,11 +30,11 @@ Whether you're building your first project or trying to master a complex library
 
 ## Features
 
-### Mastery-Based Assessment
-Instead of generic quizzes, devBuddy analyzes your code to find exactly where your conceptual foundation needs strengthening.
+### Instant Discovery Engine
+Instead of generic quizzes, devBuddy instantly analyzes your code and generates a high-fidelity logic map, allowing you to dive straight into exploration.
 
-### Logic Map Visualization
-We transform abstract code into interactive, graph-based flowcharts. See the "Logic Topology" of your programs to build a permanent mental model of how data and control flow work.
+### Logic Map Visualization (Discovery Gates)
+We transform abstract code into interactive, graph-based flowcharts. See the "Logic Topology" of your programs. Discovery Gates force active prediction at key logic branches.
 
 ### Socratic Senior Mentor
 Our AI mentor never spoils the answer. It asks the high-signal questions a senior engineer would ask, guiding you to discover architectural insights yourself.
@@ -49,8 +47,7 @@ Every lesson is generated dynamically based on your specific project needs and c
 | Agent | Role |
 |---|---|
 | **Code Analyzer** | Parses submitted code, extracts concepts, estimates difficulty |
-| **Assessment Generator** | Creates 10 targeted questions from the code's concepts |
-| **Planner** | Builds a lesson sequence based on quiz results |
+| **Planner** | Builds a lesson sequence based on extracted concepts |
 | **Content Designer** | Generates lesson content grounded in the user's code |
 | **Socratic Mentor** | Answers questions with guiding questions, never direct solutions |
 
@@ -58,7 +55,7 @@ Every lesson is generated dynamically based on your specific project needs and c
 
 - **Frontend:** React + Vite + TypeScript + Tailwind CSS
 - **Backend:** Python + FastAPI
-- **AI:** Claude API (claude-sonnet-4-6) — all agents
+- **AI:** Claude API (claude-3-7-sonnet) — all agents
 - **Database:** SQLite (dev) / PostgreSQL (prod)
 - **Code Editor:** Monaco Editor (same as VS Code)
 

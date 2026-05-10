@@ -93,36 +93,55 @@ function measureNodes(nodes: CanvasNode[], ctx: CanvasRenderingContext2D): Map<s
 
 function buildChildren(nodes: CanvasNode[]): Map<string, string[]> {
   const m = new Map(nodes.map(n => [n.id, [] as string[]]));
-  nodes.forEach(n => { if (n.parent) m.get(n.parent)?.push(n.id); });
+  nodes.forEach(n => {
+    if (n.parent && m.has(n.parent)) {
+      m.get(n.parent)?.push(n.id);
+    }
+  });
   return m;
 }
 
-function subtreeW(id: string, ch: Map<string, string[]>, sz: Map<string, Sz>): number {
+function subtreeW(id: string, ch: Map<string, string[]>, sz: Map<string, Sz>, visited = new Set<string>()): number {
+  if (visited.has(id)) return 0;
+  visited.add(id);
+  
   const kids = ch.get(id) ?? [];
   const self = sz.get(id)?.w ?? MIN_W;
   if (!kids.length) return self;
-  return Math.max(self, kids.reduce((s, k) => s + subtreeW(k, ch, sz), 0) + H_GAP * (kids.length - 1));
+  
+  const kidsWidth = kids.reduce((s, k) => s + subtreeW(k, ch, sz, visited), 0) + H_GAP * (kids.length - 1);
+  return Math.max(self, kidsWidth);
 }
 
 function treeLayout(nodes: CanvasNode[], sz: Map<string, Sz>): Map<string, Pos> {
   const pos = new Map<string, Pos>();
   const ch  = buildChildren(nodes);
-  const sw  = new Map(nodes.map(n => [n.id, subtreeW(n.id, ch, sz)]));
+  const sw  = new Map(nodes.map(n => [n.id, subtreeW(n.id, ch, sz, new Set())]));
 
-  function place(id: string, ox: number, y: number) {
-    const { w, h } = sz.get(id)!;
-    pos.set(id, { x: ox + (sw.get(id)! - w) / 2, y });
+  function place(id: string, ox: number, y: number, visited = new Set<string>()) {
+    if (visited.has(id)) return;
+    visited.add(id);
+    
+    const nodeSz = sz.get(id);
+    if (!nodeSz) return;
+    const { w, h } = nodeSz;
+    
+    const nodeSw = sw.get(id) ?? w;
+    pos.set(id, { x: ox + (nodeSw - w) / 2, y });
+    
     let cx = ox;
     for (const kid of (ch.get(id) ?? [])) {
-      place(kid, cx, y + h + V_GAP);
-      cx += sw.get(kid)! + H_GAP;
+      place(kid, cx, y + h + V_GAP, visited);
+      cx += (sw.get(kid) ?? MIN_W) + H_GAP;
     }
   }
 
   let ox = PAD;
-  for (const root of nodes.filter(n => !n.parent)) {
+  // A root is a node with no parent, OR a parent that doesn't exist in the current set
+  const roots = nodes.filter(n => !n.parent || !nodes.find(p => p.id === n.parent));
+  for (const root of roots) {
     place(root.id, ox, PAD);
-    ox += sw.get(root.id)! + H_GAP * 2;
+    ox += (sw.get(root.id) ?? MIN_W) + H_GAP * 2;
   }
   return pos;
 }
@@ -131,8 +150,11 @@ function hLayout(nodes: CanvasNode[], sz: Map<string, Sz>): Map<string, Pos> {
   const pos = new Map<string, Pos>();
   let x = PAD;
   for (const n of nodes) {
-    pos.set(n.id, { x, y: PAD });
-    x += sz.get(n.id)!.w + H_GAP;
+    const nodeSz = sz.get(n.id);
+    if (nodeSz) {
+      pos.set(n.id, { x, y: PAD });
+      x += nodeSz.w + H_GAP;
+    }
   }
   return pos;
 }
@@ -250,11 +272,12 @@ export default function CanvasScene({ scene, highlightedNodeIds = [] }: { scene:
   const ref = useRef<HTMLCanvasElement>(null);
   const [isInView, setIsInView] = useState(false);
 
-  const { nodes, edges = [] } = scene;
+  const nodes = scene?.nodes || [];
+  const edges = scene?.edges || [];
 
   // Memoize layout and measurements
   const layout = useMemo(() => {
-    if (!nodes.length) return null;
+    if (!nodes || nodes.length === 0) return null;
     
     // Create a temporary context for measurement
     const canvas = document.createElement("canvas");
@@ -267,10 +290,12 @@ export default function CanvasScene({ scene, highlightedNodeIds = [] }: { scene:
 
     let maxX = 0, maxY = 0;
     for (const n of nodes) {
-      const { x, y } = pos.get(n.id)!;
-      const { w, h } = sz.get(n.id)!;
-      maxX = Math.max(maxX, x + w);
-      maxY = Math.max(maxY, y + h);
+      const p = pos.get(n.id);
+      const s = sz.get(n.id);
+      if (p && s) {
+        maxX = Math.max(maxX, p.x + s.w);
+        maxY = Math.max(maxY, p.y + s.h);
+      }
     }
     const CW = maxX + PAD;
     const CH = maxY + PAD;
@@ -379,8 +404,12 @@ export default function CanvasScene({ scene, highlightedNodeIds = [] }: { scene:
 
       // Nodes
       for (const node of nodes) {
-        const { x, y } = pos.get(node.id)!;
-        const { w, h } = sz.get(node.id)!;
+        const p_pos = pos.get(node.id);
+        const p_sz = sz.get(node.id);
+        if (!p_pos || !p_sz) continue;
+        
+        const { x, y } = p_pos;
+        const { w, h } = p_sz;
         const p = PAL[node.color ?? (node.type === "decision" ? "fuchsia" : node.type === "outcome" ? "emerald" : "sky")] ?? PAL.sky;
         
         const isCurrentlyHighlighted = node.highlight || highlightedNodeIds.includes(node.id);

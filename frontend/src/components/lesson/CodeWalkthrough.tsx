@@ -44,6 +44,8 @@ export default function CodeWalkthrough({ items }: Props) {
 
   const item = items[current];
 
+  if (items.length === 0) return null;
+
   return (
     <div className="rounded-2xl border border-slate-700/60 overflow-hidden">
       {/* ── Header ── */}
@@ -156,12 +158,12 @@ export default function CodeWalkthrough({ items }: Props) {
                   What it does
                 </p>
                 <p className="text-sm leading-relaxed text-slate-200">
-                  {item.plain_english}
+                  {item?.plain_english}
                 </p>
               </div>
 
               {/* Why */}
-              {item.why && (
+              {item?.why && (
                 <div className="flex gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3.5 py-3">
                   <Zap className="h-3.5 w-3.5 shrink-0 text-amber-400 mt-0.5" />
                   <div>

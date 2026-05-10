@@ -94,12 +94,8 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (user && !user.assessment_completed) {
-      navigate("/assessment", { replace: true });
-      return;
-    }
     fetchSpaces();
-  }, [user, navigate, fetchSpaces]);
+  }, [user, fetchSpaces]);
 
   const totalCompleted = spaces.reduce((sum, s) => sum + (s.path?.completed_lessons ?? 0), 0);
 

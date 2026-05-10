@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Play, Pause, Brain, HelpCircle } from "lucid
 import { cn } from "@/lib/utils";
 import type { AnimationFrame } from "@/types";
 import CanvasScene from "./CanvasScene";
+import DataViewRenderer from "./DataView";
 import { Button } from "@/components/ui/button";
 
 interface Props {
@@ -32,7 +33,9 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
   const frame = frames[idx];
   const total = frames.length;
 
-  const isCheckpoint = !!frame.is_checkpoint && !checkpointCleared[idx];
+  if (total === 0) return null;
+
+  const isCheckpoint = !!frame?.is_checkpoint && !checkpointCleared[idx];
 
   // Sync with prop from parent
   useEffect(() => {
@@ -165,7 +168,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
       </div>
 
       {/* ── Frame content ── */}
-      <div className="relative overflow-hidden mesh-gradient" style={{ minHeight: "450px" }}>
+      <div className="relative mesh-gradient">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={idx}
@@ -173,23 +176,23 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
             animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, x: isForward ? -20 : 20, filter: "blur(10px)" }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="p-6 md:p-8 space-y-6"
+            className="p-5 md:p-6 space-y-5"
           >
             {/* Frame Title & Progress */}
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
-                <h3 className="text-xl font-bold text-white tracking-tight">
-                  {frame.title}
+                <h3 className="text-lg font-bold text-white tracking-tight">
+                  {frame?.title}
                 </h3>
-                <p className="text-sm font-medium text-slate-400 leading-relaxed max-w-2xl">
-                  {frame.narration}
+                <p className="text-sm font-medium text-slate-400 leading-relaxed">
+                  {frame?.narration}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-              {/* Code State - taking 2 cols */}
-              <div className="lg:col-span-2 group">
+            <div className="flex flex-col gap-5">
+              {/* Code State */}
+              <div className="group">
                 <div className="rounded-xl overflow-hidden border border-slate-700/40 bg-slate-950/40 glass-panel shadow-lg transition-all duration-300 group-hover:border-sky-500/30">
                   <div className="flex items-center justify-between bg-slate-900/60 px-4 py-2 border-b border-slate-700/40">
                     <div className="flex gap-1.5">
@@ -199,23 +202,32 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
                     </div>
                     <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Live State</span>
                   </div>
-                  <pre className="px-5 py-4 font-mono text-sm leading-relaxed text-sky-300 overflow-x-auto selection:bg-sky-500/30">
-                    {frame.code_state}
+                  <pre className="px-5 py-4 font-mono text-xs leading-relaxed text-sky-300 overflow-x-auto selection:bg-sky-500/30">
+                    {frame?.code_state}
                   </pre>
                 </div>
               </div>
 
-              {/* Canvas Scene - taking 3 cols */}
-              <div className="lg:col-span-3">
-                {frame.canvas_scene && (
+              {/* Data Views (preferred) or Canvas Scene (fallback) */}
+              <div>
+                {frame?.data_views && frame.data_views.length > 0 ? (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.1, duration: 0.4 }}
                     className="relative"
                   >
-                    <CanvasScene 
-                      scene={frame.canvas_scene} 
+                    <DataViewRenderer views={frame.data_views} />
+                  </motion.div>
+                ) : frame?.canvas_scene && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1, duration: 0.4 }}
+                    className="relative"
+                  >
+                    <CanvasScene
+                      scene={frame.canvas_scene}
                       highlightedNodeIds={highlightedNodeIds}
                     />
                     
@@ -268,7 +280,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
                       </div>
                       
                       <p className="text-lg font-medium text-slate-200 leading-relaxed">
-                        {frame.checkpoint_question ?? "Analyze the current state. What do you think happens next in the logic?"}
+                        {frame?.checkpoint_question ?? "Analyze the current state. What do you think happens next in the logic?"}
                       </p>
                       
                       <div className="flex items-center gap-2 text-amber-400/80">
