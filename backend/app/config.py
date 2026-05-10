@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./devbuddy.db"
 
     # ── LLM Provider selection ────────────────────────────────────────────────
-    # Options: anthropic | openrouter | openai | gemini | ollama
+    # Options: anthropic | openrouter | openai | gemini | ollama | openwebui
     llm_provider: str = "anthropic"
 
     # Model name — format depends on provider:
@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     #   openai:      gpt-4o | gpt-4o-mini | gpt-4-turbo
     #   gemini:      gemini-2.0-flash | gemini-2.5-pro | gemini-2.5-flash
     #   ollama:      llama3.2 | mistral | codellama (whatever you have pulled)
+    #   openwebui:   (your open-webui model id)
     llm_model: str = "claude-sonnet-4-6"
 
     # ── Provider API keys (only the one you use is required) ─────────────────
@@ -30,6 +31,7 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""
     openai_api_key: str = ""
     gemini_api_key: str = ""
+    openwebui_api_key: str = ""
 
     # ── OpenRouter optional metadata ─────────────────────────────────────────
     openrouter_site_url: str = "http://localhost:3000"
@@ -37,6 +39,9 @@ class Settings(BaseSettings):
 
     # ── Ollama (local) ────────────────────────────────────────────────────────
     ollama_base_url: str = "http://localhost:11434/v1"
+
+    # ── Open WebUI ────────────────────────────────────────────────────────────
+    openwebui_base_url: str = "http://localhost:3000/api"
 
     # ── JWT Auth ──────────────────────────────────────────────────────────────
     jwt_secret_key: str = "jwt-secret-change-in-production"

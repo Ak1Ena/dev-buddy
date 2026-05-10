@@ -42,7 +42,7 @@ async def _build_lesson_content(
     planner = PlannerAgent()
     designer = DesignerAgent()
 
-    content, frames = await asyncio.gather(
+    content, anim_result = await asyncio.gather(
         planner.generate_lesson_content(
             topic=topic,
             title=title,
@@ -59,8 +59,14 @@ async def _build_lesson_content(
         ),
     )
 
-    if frames:
-        content["animation_frames"] = frames
+    if isinstance(anim_result, dict):
+        if "animation_frames" in anim_result:
+            content["animation_frames"] = anim_result["animation_frames"]
+        if "deep_dive" in anim_result:
+            content["deep_dive"] = anim_result["deep_dive"]
+    elif isinstance(anim_result, list):
+        content["animation_frames"] = anim_result
+
     return content
 
 

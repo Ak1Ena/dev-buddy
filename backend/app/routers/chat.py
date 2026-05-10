@@ -84,6 +84,8 @@ async def send_message(
         hint_level=data.hint_level,
         skill_level=current_user.skill_level,
         weak_areas=current_user.weak_areas,
+        current_frame=data.current_frame,
+        is_checkpoint=data.is_checkpoint,
     )
 
     # Save messages

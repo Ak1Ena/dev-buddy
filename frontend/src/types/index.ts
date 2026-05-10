@@ -71,6 +71,11 @@ export interface Workshop {
 export interface LessonContent {
   concept_hook?: string;
   animation_frames?: AnimationFrame[];
+  deep_dive?: {
+    title: string;
+    content: string;
+    concepts?: string[];
+  };
   code_walkthrough?: {
     code: string;
     plain_english: string;
@@ -86,7 +91,7 @@ export interface LessonContent {
 
 export interface CanvasNode {
   id: string;
-  type: "variable" | "literal" | "container";
+  type: "variable" | "literal" | "container" | "decision" | "action" | "outcome" | "data";
   label: string;
   value?: string;
   color?: "sky" | "emerald" | "fuchsia" | "amber" | "red" | "slate";
@@ -126,6 +131,8 @@ export interface AnimationFrame {
   effects?: AnimationEffect[];
   visual?: string;
   narration: string;
+  is_checkpoint?: boolean;
+  checkpoint_question?: string;
 }
 
 export interface Lesson {

@@ -112,9 +112,9 @@ export default function Landing() {
             variants={fadeInUp}
             className="mb-6 max-w-4xl text-5xl font-extrabold leading-tight tracking-tight text-slate-100 sm:text-6xl lg:text-7xl"
           >
-            Learn to Code.{" "}
+            The Mentor for{" "}
             <span className="bg-gradient-to-r from-sky-400 via-fuchsia-400 to-sky-400 bg-clip-text text-transparent">
-              Think, Don't Copy.
+              Self-Taught Developers.
             </span>
           </motion.h1>
 
@@ -122,9 +122,9 @@ export default function Landing() {
             variants={fadeInUp}
             className="mb-10 max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl"
           >
-            devBuddy is an AI-powered programming mentor that teaches through
-            guided questioning — helping you build genuine understanding instead
-            of memorizing solutions.
+            devBuddy is the AI-powered senior developer you’ve been missing. 
+            Build deep mental models through Socratic dialogue and 
+            interactive logic maps—designed for independent learners.
           </motion.p>
 
           <motion.div variants={fadeInUp} className="flex flex-wrap items-center justify-center gap-4">

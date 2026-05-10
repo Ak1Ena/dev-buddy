@@ -1,146 +1,229 @@
-Project Proposal
-devBuddy AI — Interactive Socratic Programming Mentor for Beginners
-รายวิชา
-AI
-ผู้พัฒนา
-นายสิรภพ คัชมาตย์
-
-1. ชื่อผลิตภัณฑ์ (Project Title)
 devBuddy AI
-“Interactive Socratic Programming Mentor for Beginners”
-แพลตฟอร์มการเรียนรู้เขียนโปรแกรมที่ใช้ AI เพื่อส่งเสริมการคิดวิเคราะห์ (Critical Thinking) และการแก้ปัญหา (Problem Solving) ผ่านการเรียนรู้แบบโต้ตอบ (Interactive Learning)
+The Socratic Programming Mentor for the Next Generation of Developers
+ผู้พัฒนา: สิรภพ ตัชมาตย์ (Siraphop Tachamat)
+สโลแกน:
+“Teaching students how to think, not what to type.”
+“สอนให้เรียนรู้กระบวนการคิด ไม่ใช่เพียงการพิมพ์ตามคำสั่ง”
 
-2. ความเป็นมาและปัญหา (Background and Problem Statement)
-ในปัจจุบัน ผู้เริ่มต้นเรียนเขียนโปรแกรมจำนวนมากเริ่มพึ่งพาเครื่องมือ AI เช่น ChatGPT หรือ GitHub Copilot เพื่อสร้างโค้ดโดยตรง ส่งผลให้เกิดปัญหาในการพัฒนาทักษะการคิดเชิงตรรกะและการแก้ปัญหาด้วยตนเอง
-แม้ AI จะช่วยให้การเขียนโปรแกรมรวดเร็วขึ้น แต่ผู้เรียนจำนวนมากยังขาดความเข้าใจในหลักการพื้นฐานของโปรแกรม เช่น การทำงานของตัวแปร หน่วยความจำ การวนลูป และกระบวนการทำงานของโปรแกรมระหว่าง Runtime
-ปัญหาสำคัญที่พบ ได้แก่:
+1. บทนำ (Introduction)
+ในยุคที่ปัญญาประดิษฐ์สามารถสร้างโค้ดที่สมบูรณ์ได้ภายในไม่กี่วินาที การเรียนรู้การเขียนโปรแกรมกำลังเผชิญกับจุดเปลี่ยนสำคัญ นักเรียนจำนวนมากเริ่มพึ่งพา AI เพื่อ “รับคำตอบ” มากกว่าการพัฒนากระบวนการคิดด้วยตนเอง ส่งผลให้แม้จะสามารถสร้างโปรแกรมที่ทำงานได้ แต่กลับขาดความเข้าใจเชิงตรรกะและทักษะการแก้ปัญหาอย่างแท้จริง
+devBuddy AI ถูกพัฒนาขึ้นในฐานะ “AI-First Mentorship Platform” ที่มุ่งเน้นการสร้างนักพัฒนาที่มีทักษะการคิดวิเคราะห์ (Analytical Thinking) ผ่านแนวคิด Socratic Learning และ Active Discovery แทนการเป็นเพียงเครื่องมือช่วยเขียนโค้ดทั่วไป
+แพลตฟอร์มนี้เปลี่ยนบทบาทของ AI จาก “Answer Engine” ไปสู่ “Discovery Engine” โดยช่วยให้ผู้เรียนค้นพบคำตอบด้วยตนเองผ่านคำถาม คำใบ้ และการสร้างภาพจำเชิงตรรกะ (Mental Model Visualization)
 
-2.1 การพึ่งพา AI มากเกินไป (AI Dependency)
-ผู้เรียนมักใช้ AI เพื่อขอคำตอบสำเร็จรูป ทำให้เกิดพฤติกรรม “คัดลอก–วาง” โดยไม่ได้วิเคราะห์เหตุผลหรือหลักการเบื้องหลัง ส่งผลให้ขาดทักษะการแก้ปัญหาอย่างแท้จริง
-2.2 ความเข้าใจแนวคิดเชิงนามธรรม (Abstract Programming Concepts)
-แนวคิดสำคัญ เช่น Memory Management, Variable Scope, Function Execution และ Loop Execution เป็นเรื่องที่เข้าใจยากเมื่อเรียนผ่านข้อความเพียงอย่างเดียว
-2.3 ความเหนื่อยล้าในการเรียนรู้ (Learning Fatigue)
-เมื่อผู้เรียนพบข้อผิดพลาด (Bug) หรือโจทย์ที่ซับซ้อนโดยไม่มีแนวทางที่เหมาะสม อาจทำให้เกิดความท้อแท้และเลิกเรียนรู้ในที่สุด
-2.4 การเรียนรู้ที่ไม่เหมาะกับแต่ละบุคคล (Lack of Personalized Learning)
-ระบบการเรียนรู้ทั่วไปมักใช้แนวทางเดียวกับผู้เรียนทุกคน ทำให้ไม่สามารถตอบสนองต่อระดับความเข้าใจและจุดอ่อนของผู้เรียนแต่ละคนได้
+2. ปัญหาที่พบ
+The “AI-Crutch” Paradox
+ปัจจุบันวงการการศึกษาด้านวิทยาการคอมพิวเตอร์กำลังเผชิญกับปรากฏการณ์ที่เรียกว่า:
+“AI-Crutch Paradox”
+ภาวะที่ AI กลายเป็นไม้ค้ำยันที่ขัดขวางการพัฒนาทักษะการคิดของผู้เรียน
+แม้เครื่องมือ AI Coding Assistant จะช่วยเพิ่มความรวดเร็วในการพัฒนาโปรแกรม แต่กลับส่งผลกระทบเชิงลึกต่อกระบวนการเรียนรู้ในหลายด้าน
 
-3. วัตถุประสงค์ของโครงการ (Objectives)
-พัฒนาระบบ AI ที่ช่วย “สอนให้คิด” แทนการ “ให้คำตอบสำเร็จรูป”
-ส่งเสริมทักษะการแก้ปัญหา (Problem Solving) และการคิดเชิงตรรกะ (Computational Thinking)
-ลดพฤติกรรมการพึ่งพา AI แบบไม่วิเคราะห์
-สร้างประสบการณ์การเรียนรู้แบบโต้ตอบ (Interactive Learning Experience)
-พัฒนาระบบการเรียนรู้ที่สามารถปรับระดับตามพฤติกรรมและความสามารถของผู้เรียนได้
+2.1 The Solution Trap
+กับดักของคำตอบสำเร็จรูป
+เมื่อผู้เรียนได้รับโค้ดที่ถูกต้องทันที กระบวนการ “Cognitive Struggle” หรือความพยายามในการวิเคราะห์และแก้ปัญหาจะถูกข้ามไป ซึ่งเป็นส่วนสำคัญที่สุดของการสร้างทักษะ Problem Solving
+ผลลัพธ์คือ:
+ผู้เรียนสามารถ “ใช้ AI สร้างโค้ดได้”
+แต่ไม่สามารถ “อธิบายเหตุผล” ของโค้ดนั้นได้
 
-4. แนวทางการแก้ไขปัญหา (Proposed Solution)
-devBuddy AI เปลี่ยนบทบาทของ AI จาก “เครื่องมือสร้างโค้ด” เป็น
-“Interactive Socratic Learning Mentor”
-โดยใช้หลักการ Socratic Method เพื่อกระตุ้นการคิด วิเคราะห์ และการเรียนรู้ผ่านการลงมือปฏิบัติ
+2.2 Conceptual Gaps
+ช่องว่างทางความเข้าใจ
+วัฒนธรรม Copy-Paste จาก AI ทำให้ผู้เรียนจำนวนมาก:
+รันโปรแกรมผ่าน
+แต่ไม่เข้าใจ Logic และ Syntax ที่อยู่เบื้องหลัง
+เมื่อบริบทของปัญหาเปลี่ยนไป ผู้เรียนจะไม่สามารถประยุกต์ใช้ความรู้เดิมได้อย่างมีประสิทธิภาพ
 
+2.3 Generic Learning Paths
+เส้นทางการเรียนรู้แบบเหมาโหล
+Tutorial แบบเส้นตรง (Linear Learning) ไม่สามารถตอบสนองต่อ:
+ความเร็วในการเรียนรู้ที่แตกต่างกัน
+จุดอ่อนเฉพาะบุคคล
+รูปแบบการคิดที่หลากหลาย
+ส่งผลให้ผู้เรียนบางส่วน:
+รู้สึกเบื่อ เพราะเนื้อหาง่ายเกินไป
+หรือรู้สึกท้อแท้ เพราะตามบทเรียนไม่ทัน
 
+ผลกระทบเชิงกลยุทธ์ (Strategic Impact)
+หากปัญหานี้ไม่ได้รับการแก้ไข อุตสาหกรรมเทคโนโลยีอาจเผชิญกับการขาดแคลนนักพัฒนาที่มีทักษะการคิดเชิงลึก (Thinkers) และมีเพียงผู้ที่สามารถใช้เครื่องมือ AI เพื่อสร้างโค้ดตามคำสั่ง (Coders) โดยขาดความเข้าใจพื้นฐานในการออกแบบและแก้ปัญหา
 
+3. แนวทางการแก้ปัญหา
+devBuddy AI: The Discovery Engine
+devBuddy AI ถูกออกแบบบนแนวคิด:
+Socratic Method
+Constructivist Learning
+Scaffolding
+Active Recall
+Cognitive Apprenticeship
+โดยมีเป้าหมายเพื่อสร้าง “Learning Through Discovery” หรือการเรียนรู้ผ่านการค้นพบด้วยตนเอง
+แทนที่ AI จะให้คำตอบโดยตรง ระบบจะค่อย ๆ ช่วยผู้เรียนสร้างกระบวนการคิดทีละขั้นตอน
 
-
-4.1 การชี้นำแทนการให้คำตอบ (Guidance over Answers)
-AI จะไม่เฉลยโค้ดสำเร็จรูปทันที แต่จะวิเคราะห์ปัญหา พร้อมตั้งคำถามเพื่อกระตุ้นให้ผู้เรียนค้นหาคำตอบด้วยตนเอง
+4. นวัตกรรมหลักของระบบ
+4.1 Socratic Guidance System
+ระบบคำใบ้เชิง Socratic
+หัวใจสำคัญของ devBuddy คือระบบคำใบ้ 4 ระดับ ที่ถูกออกแบบให้ “ไม่เฉลยคำตอบโดยตรง”
+Level 0 — Socratic Question
+AI ตั้งคำถามปลายเปิดเพื่อกระตุ้นการคิด
 ตัวอย่าง:
-“ตัวแปรนี้เปลี่ยนค่าตอนไหน?”
-“Loop นี้หยุดทำงานเมื่อใด?”
-“ลองสังเกตค่าของ index ในรอบสุดท้าย”
+“ค่าของตัวแปรนี้เปลี่ยนไปตอนไหน?”
 
-4.2 ระบบคำใบ้แบบปรับระดับ (Adaptive Hinting System)
-ระบบจะให้คำใบ้เป็นลำดับขั้น (Hint Levels) เพื่อช่วยผู้เรียนอย่างเหมาะสม โดยหลีกเลี่ยงการเฉลยทันที
-ประกอบด้วย:
-Hint Level 1: แนะแนวคิด
-Hint Level 2: ชี้จุดที่ควรสังเกต
-Hint Level 3: อธิบายแนวทางการแก้ปัญหา
+Level 1 — Concept Hint
+ทบทวนหลักการหรือทฤษฎีที่เกี่ยวข้อง
+ตัวอย่าง:
+“ลูป while จะทำงานต่อเมื่อเงื่อนไขยังเป็นจริง”
 
-4.3 ระบบวิเคราะห์จุดอ่อนของผู้เรียน (Personalized Learning Analysis)
-AI จะวิเคราะห์รูปแบบข้อผิดพลาดและพฤติกรรมการเรียนรู้ของผู้ใช้ เช่น:
-การสับสนเรื่อง Loop
-การใช้งาน Variable Scope ผิด
-ปัญหาในการ Debug
-จากนั้นระบบจะปรับระดับโจทย์ คำใบ้ และกิจกรรมการเรียนรู้ให้เหมาะสมกับผู้เรียนแต่ละคน
+Level 2 — Directional Hint
+ชี้ตำแหน่งหรือจุดที่ควรพิจารณาใหม่
+ตัวอย่าง:
+“ลองดูบรรทัดที่มีการอัปเดตค่า index”
+
+Level 3 — Guided Example
+มอบตัวอย่างคู่ขนานที่มีตรรกะใกล้เคียงกัน เพื่อให้ผู้เรียนประยุกต์ใช้ด้วยตนเอง
+
+4.2 Adaptive Curriculum Design
+ระบบวิเคราะห์ช่องว่างความรู้
+ระบบ PlannerAgent วิเคราะห์:
+จุดแข็ง (Strong Areas)
+จุดอ่อน (Weak Areas)
+รูปแบบความผิดพลาดซ้ำ ๆ
+เพื่อสร้าง Dynamic Learning Path ที่เหมาะสมกับผู้เรียนแต่ละคน
+ตัวอย่าง:
+หากผู้เรียนมีปัญหาเรื่อง Loops
+ระบบจะสร้าง Workshop เพิ่มเติมเกี่ยวกับ Iteration และ State Tracking โดยอัตโนมัติ
+
+4.3 Cinematic Visual Reinforcement
+ระบบสร้างภาพจำเชิงตรรกะ
+devBuddy เปลี่ยนโค้ดให้กลายเป็นภาพเคลื่อนไหวแบบ Real-time เพื่อช่วยให้ผู้เรียน “เห็น” การทำงานภายในของโปรแกรม
+Visualization Effects
+Event
+Visualization
+Variable Created
+Spawn Effect
+Value Changed
+Pulse Animation
+Function Called
+Burst Transition
+Data Flow
+Animated Edges
+
+ระบบนี้ช่วยสร้าง Mental Model เกี่ยวกับ:
+Memory
+Variable Lifetime
+Function Execution
+Data Flow
+Recursion
+ซึ่งเป็นจุดที่ผู้เริ่มต้นมักเกิดความสับสนมากที่สุด
+
+5. สถาปัตยกรรมระบบ (System Architecture)
+devBuddy AI ใช้แนวคิด Agentic Architecture และ Asynchronous Processing เพื่อรองรับการวิเคราะห์และการสร้าง Visualization แบบเรียลไทม์
+System Workflow
+Student Input
+     ↓
+Code Analyzer
+     ↓
+Gap Detection Engine
+     ↓
+PlannerAgent
+     ↓
+SocraticMentorAgent
+     ↓
+DesignerAgent
+     ↓
+Cinematic Visualization UI
 
 
-
-
-4.4 Runtime Visualization System
-ระบบจะแสดงการทำงานของโปรแกรมในรูปแบบภาพและแอนิเมชัน เพื่อช่วยให้ผู้เรียนเข้าใจแนวคิดเชิงนามธรรมได้ง่ายขึ้น
-ตัวอย่าง Visualization:
-การเปลี่ยนแปลงค่าของตัวแปร
-Memory Simulation
-Function Call Stack
-Loop Execution Timeline
-Data Flow Animation
-
-4.5 Interactive Learning Workshop
-ระบบจะสร้างกิจกรรมการเรียนรู้แบบโต้ตอบ (Interactive Workshops) เพื่อให้ผู้เรียนเรียนรู้ผ่านการทดลองและการแก้ปัญหา
-ตัวอย่างกิจกรรม:
-Predict the Output
-Debugging Challenges
-Step-by-Step Code Execution
-Fill-in-the-Code Exercises
-Drag-and-Drop Memory Simulation
-
-4.6 Learning Roadmap and Progress Tracking
-ระบบจะแสดงความก้าวหน้าของผู้เรียนผ่าน:
-Learning Milestones
-Skill Progression
-Achievement System
-Personalized Learning Roadmap
-เพื่อสร้างแรงจูงใจและช่วยให้ผู้เรียนเห็นพัฒนาการของตนเอง
-
-
-
-
-
-5. ขอบเขตของระบบ (Scope of System)
-ระบบรองรับ:
-ผู้เรียนระดับ Beginner
-ภาษาโปรแกรมพื้นฐาน เช่น Python และ JavaScript
-การ Debug และอธิบายโค้ด
-Runtime Visualization
-Interactive Learning Workshop
-ระบบติดตามพัฒนาการของผู้เรียน
-
-6. แนวทางการพัฒนา (Technical Roadmap)
-6.1 สถาปัตยกรรมระบบ (System Architecture)
-Frontend
-ใช้ Streamlit สำหรับสร้าง User Interface ที่ใช้งานง่าย และรองรับการแสดงผล Visualization และ Workshop แบบโต้ตอบ
+6. เทคโนโลยีที่ใช้ (Technology Stack)
+Component
+Technology
+Strategic Role
+AI Orchestration
+Claude (Anthropic)
+วิเคราะห์โค้ดและสร้าง Socratic Dialogue
 Backend
-ใช้ FastAPI สำหรับจัดการ API, Session Management และ Business Logic ของระบบ
-AI Engine
-ใช้ Large Language Model (LLM) ผ่าน API พร้อมออกแบบ System Prompt ให้ AI ทำหน้าที่เป็น Socratic Mentor แทนการเฉลยคำตอบโดยตรง
-Visualization System
-ใช้ HTML/CSS/JavaScript Animations สำหรับจำลองการทำงานของโปรแกรมแบบ Real-time
+FastAPI + asyncio
+ประมวลผล Agents แบบ Asynchronous
+Frontend
+Next.js 14 + TypeScript
+สร้าง Interactive Learning Experience
+UI Styling
+Tailwind CSS
+ออกแบบ Cinematic User Interface
+State Management
+Zustand
+จัดการ Reactive State
 Database
-ใช้ SQLite หรือ PostgreSQL สำหรับจัดเก็บข้อมูลผู้เรียน Progress และ Learning History
+PostgreSQL / SQLite
+เก็บข้อมูล Progress และ Analytics
 
 
+7. แนวคิดด้าน Learning Science
+devBuddy AI พัฒนาขึ้นบนพื้นฐานของทฤษฎีการเรียนรู้หลายแขนง ได้แก่:
+Learning Theory
+การประยุกต์ใช้
+Socratic Method
+ใช้คำถามเพื่อกระตุ้นการคิด
+Constructivism
+ให้ผู้เรียนสร้างความรู้ด้วยตนเอง
+Scaffolding
+ให้คำช่วยเหลือแบบค่อยเป็นค่อยไป
+Active Recall
+กระตุ้นการดึงความรู้กลับมาใช้
+Cognitive Apprenticeship
+จำลองการสอนแบบ Mentor
 
+แนวคิดเหล่านี้ช่วยให้การเรียนรู้มีความยั่งยืนและเกิดความเข้าใจเชิงลึกมากกว่าการจดจำเพียงผิวเผิน
 
-7. จุดเด่นของนวัตกรรม (Innovation Highlights)
-ใช้แนวคิด Socratic AI เพื่อส่งเสริมการคิดวิเคราะห์
-มีระบบ Adaptive Hinting ที่ปรับตามระดับผู้เรียน
-แสดง Runtime Visualization แบบ Interactive
-สร้าง Learning Workshop แบบโต้ตอบ
-วิเคราะห์จุดอ่อนของผู้เรียนเพื่อสร้าง Personalized Learning Experience
-มุ่งเน้นการพัฒนาทักษะ Problem Solving มากกว่าการ Generate Code
+8. การประเมินผล (Evaluation Metrics)
+เพื่อวัดประสิทธิภาพของระบบ devBuddy AI จะใช้ตัวชี้วัดดังต่อไปนี้:
+Metric
+Objective
+Hint Dependency Rate
+วัดการพึ่งพาคำใบ้
+Problem Completion Time
+เวลาที่ใช้ในการแก้ปัญหา
+Concept Retention Score
+ความสามารถในการประยุกต์ใช้ความรู้
+Workshop Completion Rate
+อัตราการเรียนจบ Workshop
+Misconception Frequency
+ความถี่ของความเข้าใจผิด
 
-8. ผลลัพธ์ที่คาดว่าจะได้รับ (Expected Outcomes)
-ผู้เรียนมีความเข้าใจเชิงลึกเกี่ยวกับหลักการเขียนโปรแกรม
-เพิ่มทักษะการ Debug และการแก้ปัญหา
-ลดพฤติกรรมการคัดลอกโค้ดจาก AI โดยไม่วิเคราะห์
-เพิ่มแรงจูงใจในการเรียนรู้ผ่าน Interactive Learning
-ผู้เรียนสามารถวิเคราะห์และแก้ปัญหาได้ด้วยตนเองมากขึ้น
-ได้ต้นแบบระบบ AI Learning Platform ที่สามารถต่อยอดได้ในอนาคต
+เป้าหมายของระบบคือ:
+ลดการพึ่งพา AI Answer Generation
+เพิ่ม Problem-Solving Confidence
+เพิ่ม Retention ของแนวคิดพื้นฐาน
 
+9. แผนการพัฒนาในอนาคต (Roadmap)
+Intelligent Misconception Detection
+วิเคราะห์ความเข้าใจผิดแบบเรียลไทม์และแก้ไขก่อนกลายเป็นนิสัย
 
+Multi-Language Expansion
+รองรับภาษาโปรแกรมเพิ่มเติม เช่น:
+Python
+JavaScript
+C++
+Java
+Go
 
-9. สรุป (Conclusion)
-devBuddy AI เป็นแพลตฟอร์มการเรียนรู้เขียนโปรแกรมที่มุ่งเน้นการพัฒนาทักษะการคิดวิเคราะห์และการแก้ปัญหา ผ่านการใช้ AI ในบทบาท “ผู้ชี้แนะ” แทน “ผู้ให้คำตอบ”
-ระบบผสมผสานแนวคิด Socratic Method, Adaptive Learning และ Runtime Visualization เพื่อสร้างประสบการณ์การเรียนรู้ที่มีปฏิสัมพันธ์ เข้าใจง่าย และเหมาะสมกับผู้เริ่มต้น
-โครงการนี้มีเป้าหมายในการเปลี่ยน AI จาก “เครื่องมือสร้างโค้ด” ไปสู่ “ระบบสนับสนุนการเรียนรู้” ที่ช่วยพัฒนาศักยภาพของผู้เรียนอย่างยั่งยืนในระยะยาว
+Peer-Socratic Dialogues
+พื้นที่เรียนรู้แบบกลุ่ม โดย AI จะทำหน้าที่เป็น Moderator ในการตั้งคำถามและกระตุ้นการอภิปราย
 
+Mastery Graph
+ระบบต้นไม้ความรู้ (Knowledge Tree) ที่เติบโตตามระดับความเข้าใจจริงของผู้เรียน
+ใช้เป็น:
+Proof of Competency
+Learning Portfolio
+Skill Visualization
+
+10. บทสรุป (Conclusion)
+devBuddy AI ไม่ได้ถูกสร้างขึ้นเพื่อแทนที่การเรียนรู้ด้วยมนุษย์ แต่ถูกออกแบบเพื่อยกระดับกระบวนการเรียนรู้ให้ลึกซึ้งยิ่งขึ้น
+ในโลกที่ AI สามารถสร้างโค้ดได้ทันที ความสามารถที่สำคัญที่สุดของนักพัฒนาในอนาคตอาจไม่ใช่ “การพิมพ์โค้ดได้เร็วที่สุด” แต่คือ:
+การคิดวิเคราะห์
+การเข้าใจตรรกะ
+การแก้ปัญหาอย่างเป็นระบบ
+และการเรียนรู้ด้วยตนเองอย่างยั่งยืน
+devBuddy AI จึงมีเป้าหมายในการสร้าง:
+“นักคิดที่สามารถใช้ AI ได้อย่างมีความเข้าใจ”
+แทนที่จะสร้างเพียง “ผู้ใช้ AI ที่รอรับคำตอบ”
+
+devBuddy AI
+“Building Thinkers, Not Just Coders.”
 
 

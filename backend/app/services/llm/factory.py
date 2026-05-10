@@ -18,6 +18,16 @@ def get_llm_provider() -> LLMProvider:
         from app.services.llm.anthropic_provider import AnthropicProvider
         return AnthropicProvider(api_key=settings.anthropic_api_key, model=settings.llm_model)
 
+    if provider == "openwebui":
+        if not settings.openwebui_api_key:
+            raise ValueError("OPENWEBUI_API_KEY is not set in .env")
+        from app.services.llm.openai_provider import OpenAIProvider
+        return OpenAIProvider(
+            api_key=settings.openwebui_api_key,
+            model=settings.llm_model,
+            base_url=settings.openwebui_base_url,
+        )
+
     if provider == "openrouter":
         if not settings.openrouter_api_key:
             raise ValueError("OPENROUTER_API_KEY is not set in .env")
@@ -58,5 +68,5 @@ def get_llm_provider() -> LLMProvider:
 
     raise ValueError(
         f"Unknown LLM provider: '{provider}'. "
-        "Choose from: anthropic, openrouter, openai, gemini, ollama"
+        "Choose from: anthropic, openrouter, openai, gemini, ollama, openwebui"
     )

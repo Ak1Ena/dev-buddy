@@ -1,76 +1,48 @@
 # devBuddy AI 🎓
 
-An AI-powered Socratic programming mentor that starts with **your code** — not a generic curriculum.
+The AI-powered senior mentor for the **Self-Taught Developer**.
 
 ## Core Concept
 
-Most learning platforms ask "what language do you want to learn?" and hand you a cookie-cutter course.
+Most online courses give you a rigid path and a generic certificate. Most AI tools just give you the answer.
 
-**devBuddy does the opposite:**
+**devBuddy is different.** We provide the senior-level mentorship that self-taught developers often miss. 
 
-> Paste code you found, copied, or wrote — and don't fully understand.
-> devBuddy analyzes it, quizzes you on the exact concepts inside it, then teaches you everything you need to actually understand it.
+Whether you're building your first project or trying to master a complex library, devBuddy helps you bridge the gap between "making it work" and "knowing how it works."
 
-You learn the concepts behind *your* code, not abstract textbook examples.
-
-## User Flow
+## The Self-Taught Journey
 
 ```
-1. Paste your code
+1. Input your project logic or a concept you're wrestling with
       ↓
-2. AI analyzes it → identifies concepts, patterns, and complexity
+2. AI identifies the "Mental Model" gaps in your current understanding
       ↓
-3. Get 10 questions generated from your specific code
+3. Interactive Logic Maps visualize the flow of your code (Graph-First)
       ↓
-4. AI scores your answers → finds what you know vs. don't know
+4. Socratic Mentorship guides you to the solution through analytical thinking
       ↓
-5. Get 10 personalized lessons that explain your code concept by concept
-      ↓
-6. Chat with the Socratic AI mentor while working through each lesson
+5. Build genuine technical depth that translates to real-world engineering
 ```
 
-## Why This Approach
+## Why This Matters for Self-Taught Coders
 
-**The real problem:** Beginners today copy code from Stack Overflow, GitHub Copilot, or ChatGPT — and ship it without understanding it. When it breaks, they're stuck.
+**The Problem:** Without a traditional classroom or a senior lead, self-taught developers often build "knowledge silos"—they know how to use a tool but struggle with the underlying computer science patterns.
 
-**The solution:** Instead of ignoring this behavior, devBuddy uses it as the starting point. Paste the code you don't understand. We'll meet you exactly where you are.
-
-## Pain Points Solved
-
-- **"I copied this code but have no idea how it works"** — That's the entry point, not a problem to avoid.
-- **Generic curriculums** — Every learning path is generated from *your* actual code, not a template.
-- **AI dependency** — The Socratic mentor never gives direct answers. It asks guiding questions that make you think.
-- **Abstract concepts** — Lessons are grounded in your real code, not toy examples.
-- **Learning fatigue** — You're always working toward understanding something you actually care about.
+**The Solution:** devBuddy acts as your "Personal Senior Developer." We don't just help you fix bugs; we help you **level up your thinking** through Socratic dialogue and cinematic logic visualization.
 
 ## Features
 
-### Code-Based Assessment
-Paste any code snippet. The AI identifies every concept present (loops, recursion, closures, etc.) and generates 10 targeted questions that test whether you understand those specific concepts.
+### Mastery-Based Assessment
+Instead of generic quizzes, devBuddy analyzes your code to find exactly where your conceptual foundation needs strengthening.
 
-### Personalized Lesson Generation
-Based on your quiz answers, the AI builds a lesson plan covering only what you need to learn — ordered from foundational gaps to advanced concepts found in your code.
+### Logic Map Visualization
+We transform abstract code into interactive, graph-based flowcharts. See the "Logic Topology" of your programs to build a permanent mental model of how data and control flow work.
 
-### Socratic AI Mentor
-Every lesson has a chat interface. The mentor never gives you the answer directly. It asks questions that guide you to the insight yourself:
-- *"What do you think happens to `i` at the end of each loop iteration?"*
-- *"Why do you think the function returns `None` here instead of a value?"*
+### Socratic Senior Mentor
+Our AI mentor never spoils the answer. It asks the high-signal questions a senior engineer would ask, guiding you to discover architectural insights yourself.
 
-### Adaptive Hints (3 Levels)
-When you're stuck, hints escalate gradually:
-1. Conceptual nudge
-2. Point at the specific line/pattern
-3. Show a similar (different) worked example
-
-### Runtime Visualization
-Step through your code visually — watch variables change value, loops iterate, and the call stack grow and shrink.
-
-### Interactive Workshops
-Exercises built around your code:
-- **Predict the Output** — what does this print?
-- **Debug the Challenge** — find the bug
-- **Fill in the Blank** — complete the missing part
-- **Explain the Line** — describe what this does in plain English
+### Adaptive Curriculum
+Every lesson is generated dynamically based on your specific project needs and current skill level, ensuring you're always working at the edge of your ability.
 
 ## AI Orchestration
 

@@ -5,9 +5,11 @@ import { cn } from "@/lib/utils";
 import type { AnimationFrame } from "@/types";
 import CanvasScene from "./CanvasScene";
 import EffectLayer from "./EffectLayer";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   frames: AnimationFrame[];
+  onFrameChange?: (idx: number, isCheckpoint: boolean) => void;
 }
 
 const BASE_FRAME_DURATION = 2800;
@@ -16,28 +18,40 @@ const TICK_MS = 60;
 type SpeedOption = 0.25 | 0.5 | 1 | 2;
 const SPEED_OPTIONS: SpeedOption[] = [0.25, 0.5, 1, 2];
 
-export default function AnimationPlayer({ frames }: Props) {
+export default function AnimationPlayer({ frames, onFrameChange }: Props) {
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState<"forward" | "backward">("forward");
   const [autoPlay, setAutoPlay] = useState(false);
   const [frameProgress, setFrameProgress] = useState(0); // 0–100
   const [speed, setSpeed] = useState<SpeedOption>(1);
+  const [checkpointCleared, setCheckpointCleared] = useState<Record<number, boolean>>({});
 
   const frameDuration = BASE_FRAME_DURATION / speed;
 
   const frame = frames[idx];
   const total = frames.length;
 
+  const isCheckpoint = !!frame.is_checkpoint && !checkpointCleared[idx];
+
   const go = (next: number) => {
+    if (next > idx && isCheckpoint) return; // Block forward if checkpoint not cleared
     setDir(next > idx ? "forward" : "backward");
     setIdx(next);
   };
+
+  useEffect(() => {
+    onFrameChange?.(idx, isCheckpoint);
+  }, [idx, isCheckpoint, onFrameChange]);
   const prev = () => { if (idx > 0) go(idx - 1); };
   const next = () => { if (idx < total - 1) go(idx + 1); };
 
+  const handleClearCheckpoint = () => {
+    setCheckpointCleared((prev) => ({ ...prev, [idx]: true }));
+  };
+
   // Auto-advance interval
   useEffect(() => {
-    if (!autoPlay) return;
+    if (!autoPlay || isCheckpoint) return;
     const t = setInterval(() => {
       setIdx((i) => {
         if (i >= total - 1) { setAutoPlay(false); return i; }
@@ -46,7 +60,7 @@ export default function AnimationPlayer({ frames }: Props) {
       });
     }, frameDuration);
     return () => clearInterval(t);
-  }, [autoPlay, total, frameDuration]);
+  }, [autoPlay, total, frameDuration, isCheckpoint]);
 
   // Progress-within-frame ticker
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -57,7 +71,7 @@ export default function AnimationPlayer({ frames }: Props) {
     elapsedRef.current = 0;
     setFrameProgress(0);
 
-    if (!autoPlay) {
+    if (!autoPlay || isCheckpoint) {
       if (tickRef.current) clearInterval(tickRef.current);
       tickRef.current = null;
       return;
@@ -72,7 +86,7 @@ export default function AnimationPlayer({ frames }: Props) {
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
     };
-  }, [autoPlay, idx, frameDuration]);
+  }, [autoPlay, idx, frameDuration, isCheckpoint]);
 
   const secondsLeft = Math.max(
     0,
@@ -82,28 +96,41 @@ export default function AnimationPlayer({ frames }: Props) {
   const isForward = dir === "forward";
 
   return (
-    <div className="rounded-2xl border border-slate-700/60 bg-slate-950 overflow-hidden select-none">
+    <div className="rounded-2xl border border-slate-700/60 bg-slate-950/80 backdrop-blur-sm overflow-hidden select-none shadow-2xl ring-1 ring-slate-700/30">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between border-b border-slate-700/50 bg-slate-900/80 px-5 py-3">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-fuchsia-500/20 text-xs font-bold text-fuchsia-300 ring-1 ring-fuchsia-500/30">
-            {idx + 1}
-          </span>
-          <span className="text-xs font-semibold uppercase tracking-widest text-slate-500">
-            Animation
-          </span>
+      <div className="flex items-center justify-between border-b border-slate-700/50 bg-slate-900/40 px-5 py-3">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-fuchsia-500/10 text-[10px] font-bold text-fuchsia-400 ring-1 ring-fuchsia-500/30">
+              {idx + 1}
+            </span>
+            {isCheckpoint && (
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-amber-500" />
+              </span>
+            )}
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 block leading-none mb-0.5">
+              Logic Stream
+            </span>
+            <span className="text-xs font-medium text-slate-300">
+              Frame {idx + 1} of {total}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {/* Speed selector */}
-          <div className="flex items-center gap-0.5 rounded-full border border-slate-700/60 bg-slate-900 p-0.5">
+          <div className="hidden sm:flex items-center gap-1 rounded-lg border border-slate-700/40 bg-slate-950/50 p-1">
             {SPEED_OPTIONS.map((s) => (
               <button
                 key={s}
                 onClick={() => setSpeed(s)}
                 className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums transition-all",
+                  "rounded px-1.5 py-0.5 text-[9px] font-bold transition-all",
                   speed === s
-                    ? "bg-fuchsia-500/20 text-fuchsia-300 ring-1 ring-fuchsia-500/30"
+                    ? "bg-sky-500/20 text-sky-300 shadow-[0_0_10px_rgba(14,165,233,0.2)]"
                     : "text-slate-600 hover:text-slate-400"
                 )}
               >
@@ -112,166 +139,147 @@ export default function AnimationPlayer({ frames }: Props) {
             ))}
           </div>
           {/* Play / Pause */}
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setAutoPlay((v) => !v)}
+            disabled={isCheckpoint}
             className={cn(
-              "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all",
+              "h-8 gap-2 rounded-lg border px-3 text-xs font-bold transition-all uppercase tracking-wider",
               autoPlay
-                ? "border-fuchsia-500/40 bg-fuchsia-500/10 text-fuchsia-300"
-                : "border-slate-700/60 text-slate-600 hover:text-slate-400"
+                ? "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-300 hover:bg-fuchsia-500/20"
+                : "border-slate-700/50 bg-slate-800/50 text-slate-400 hover:bg-slate-700/50",
+              isCheckpoint && "opacity-20 grayscale pointer-events-none"
             )}
           >
-            {autoPlay ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-            {autoPlay ? "Pause" : "Play"}
-          </button>
+            {autoPlay ? <Pause className="h-3 w-3 fill-current" /> : <Play className="h-3 w-3 fill-current" />}
+            {autoPlay ? "Pause" : "Auto"}
+          </Button>
         </div>
       </div>
 
       {/* ── Frame content ── */}
-      <div className="relative overflow-hidden" style={{ minHeight: "360px" }}>
+      <div className="relative overflow-hidden mesh-gradient" style={{ minHeight: "400px" }}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={idx}
-            initial={{ opacity: 0, x: isForward ? 40 : -40 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: isForward ? -40 : 40 }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="p-6 space-y-5"
+            initial={{ opacity: 0, x: isForward ? 20 : -20, filter: "blur(10px)" }}
+            animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, x: isForward ? -20 : 20, filter: "blur(10px)" }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="p-6 md:p-8 space-y-6"
           >
-            {/* Frame title */}
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-600 mb-0.5">
-                Frame {frame.frame}
-              </p>
-              <h3 className="text-base font-semibold text-white">{frame.title}</h3>
-            </div>
-
-            {/* Code state */}
-            <div className="rounded-xl overflow-hidden border border-slate-700/60">
-              <div className="flex items-center gap-1.5 bg-slate-900 px-4 py-2 border-b border-slate-700/60">
-                <div className="h-2 w-2 rounded-full bg-red-500/50" />
-                <div className="h-2 w-2 rounded-full bg-yellow-500/50" />
-                <div className="h-2 w-2 rounded-full bg-emerald-500/50" />
-                <span className="ml-2 text-xs text-slate-600">state</span>
-              </div>
-              <pre className="bg-slate-950 px-5 py-3.5 font-mono text-sm leading-6 text-sky-300 overflow-x-auto">
-                {frame.code_state}
-              </pre>
-            </div>
-
-            {/* Canvas scene (new) or text visual fallback (legacy) */}
-            {frame.canvas_scene ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.08, duration: 0.3 }}
-              >
-                <CanvasScene scene={frame.canvas_scene} />
-              </motion.div>
-            ) : frame.visual ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1, duration: 0.3 }}
-                className="flex gap-3 rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/5 px-4 py-3.5"
-              >
-                <span className="text-2xl shrink-0 leading-none">
-                  {frame.visual.match(/^\S+/)?.[0] ?? "✨"}
-                </span>
-                <p className="text-sm leading-relaxed text-fuchsia-200">
-                  {frame.visual.replace(/^\S+\s*/, "")}
+            {/* Frame Title & Progress */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <h3 className="text-xl font-bold text-white tracking-tight">
+                  {frame.title}
+                </h3>
+                <p className="text-sm font-medium text-slate-400 leading-relaxed max-w-2xl">
+                  {frame.narration}
                 </p>
-              </motion.div>
-            ) : null}
+              </div>
+            </div>
 
-            {/* Effect layer.
-                When the canvas is showing edges with particles, we don't
-                duplicate the same animation below. Instead, render a compact
-                text list of "why this changed" per pulse effect — keeping the
-                explanations without the visual clutter.
-                When there's no canvas, fall back to the full EffectLayer. */}
-            {frame.effects && frame.effects.length > 0 && (
-              frame.canvas_scene ? (
-                (() => {
-                  const annotated = frame.effects.filter(
-                    (e) => e.why || (e.label && (e.from_value || e.to_value || e.from || e.to))
-                  );
-                  if (annotated.length === 0) return null;
-                  return (
-                    <motion.ul
-                      className="space-y-1.5 pl-0.5"
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.14, duration: 0.25 }}
-                    >
-                      {annotated.map((e, i) => {
-                        const fromVal = e.from_value ?? e.from;
-                        const toVal = e.to_value ?? e.to;
-                        return (
-                          <li
-                            key={i}
-                            className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs leading-relaxed"
-                          >
-                            {e.target && (
-                              <span className="font-mono font-semibold text-fuchsia-300">
-                                {e.target}
-                              </span>
-                            )}
-                            {fromVal != null && toVal != null && (
-                              <span className="font-mono text-slate-500">
-                                <span className="line-through decoration-slate-600">{fromVal}</span>
-                                <span className="mx-1.5 text-slate-600">→</span>
-                                <span className="text-slate-300">{toVal}</span>
-                              </span>
-                            )}
-                            <span className="text-slate-400">{e.why ?? e.label}</span>
-                          </li>
-                        );
-                      })}
-                    </motion.ul>
-                  );
-                })()
-              ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+              {/* Code State - taking 2 cols */}
+              <div className="lg:col-span-2 group">
+                <div className="rounded-xl overflow-hidden border border-slate-700/40 bg-slate-950/40 glass-panel shadow-lg transition-all duration-300 group-hover:border-sky-500/30">
+                  <div className="flex items-center justify-between bg-slate-900/60 px-4 py-2 border-b border-slate-700/40">
+                    <div className="flex gap-1.5">
+                      <div className="h-2 w-2 rounded-full bg-slate-700" />
+                      <div className="h-2 w-2 rounded-full bg-slate-700" />
+                      <div className="h-2 w-2 rounded-full bg-slate-700" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Live State</span>
+                  </div>
+                  <pre className="px-5 py-4 font-mono text-sm leading-relaxed text-sky-300 overflow-x-auto selection:bg-sky-500/30">
+                    {frame.code_state}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Canvas Scene - taking 3 cols */}
+              <div className="lg:col-span-3">
+                {frame.canvas_scene && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1, duration: 0.4 }}
+                    className="relative"
+                  >
+                    <CanvasScene scene={frame.canvas_scene} />
+                    
+                    {/* Effects Overlay */}
+                    {frame.effects && frame.effects.length > 0 && (
+                      <div className="absolute top-4 right-4 flex flex-col gap-2">
+                        {frame.effects.map((e, i) => (
+                          e.why && (
+                            <motion.div
+                              key={i}
+                              initial={{ opacity: 0, x: 10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              className="bg-slate-900/80 backdrop-blur-md border border-slate-700/50 px-3 py-1.5 rounded-lg text-[10px] font-medium text-slate-300 shadow-xl"
+                            >
+                              <span className="text-sky-400 font-bold mr-2">{e.target}:</span>
+                              {e.why}
+                            </motion.div>
+                          )
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </div>
+            </div>
+
+            {/* Checkpoint UI */}
+            <AnimatePresence>
+              {isCheckpoint && (
                 <motion.div
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.14, duration: 0.25 }}
+                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95, filter: "blur(8px)" }}
+                  className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6 shadow-[0_0_50px_rgba(245,158,11,0.15)] ring-1 ring-amber-500/20"
                 >
-                  <EffectLayer effects={frame.effects} />
+                  <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/30">
+                      <Brain className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500/80 block">
+                        Prediction Required
+                      </span>
+                      <h4 className="text-lg font-bold text-amber-100">Active Discovery</h4>
+                    </div>
+                  </div>
+                  <p className="text-base font-medium text-slate-200 mb-6 leading-relaxed">
+                    {frame.checkpoint_question ?? "What do you think happens next in the logic?"}
+                  </p>
+                  <Button 
+                    size="lg" 
+                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-8 shadow-lg shadow-amber-500/20 group transition-all"
+                    onClick={handleClearCheckpoint}
+                  >
+                    Reveal Discovery
+                    <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Button>
                 </motion.div>
-              )
-            )}
+              )}
+            </AnimatePresence>
 
-            {/* Narration */}
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.18, duration: 0.3 }}
-              className="text-base font-medium leading-relaxed text-slate-200"
-            >
-              {frame.narration}
-            </motion.div>
-
-            {/* Per-frame countdown progress bar (auto-play only) */}
-            {autoPlay && idx < total - 1 && (
+            {/* Auto-play progress bar */}
+            {autoPlay && idx < total - 1 && !isCheckpoint && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="pt-1"
+                className="absolute bottom-0 left-0 w-full h-1 bg-slate-800"
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-slate-600 tabular-nums">
-                    next in {secondsLeft}s
-                  </span>
-                </div>
-                <div className="h-0.5 w-full rounded-full bg-slate-800 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-sky-500 transition-none"
-                    style={{ width: `${frameProgress}%` }}
-                  />
-                </div>
+                <div
+                  className="h-full bg-gradient-to-r from-fuchsia-500 to-sky-500 transition-none"
+                  style={{ width: `${frameProgress}%` }}
+                />
               </motion.div>
             )}
           </motion.div>
@@ -279,48 +287,47 @@ export default function AnimationPlayer({ frames }: Props) {
       </div>
 
       {/* ── Controls ── */}
-      <div className="border-t border-slate-700/50 px-5 py-3 flex items-center justify-between bg-slate-900/60">
-        <button
+      <div className="border-t border-slate-700/50 px-5 py-4 flex items-center justify-between bg-slate-900/60 backdrop-blur-sm">
+        <Button
+          variant="outline"
+          size="sm"
           onClick={prev}
           disabled={idx === 0}
-          className="flex items-center gap-1 rounded-lg border border-slate-700/60 px-3 py-1.5 text-xs font-medium text-slate-500 disabled:opacity-30 hover:enabled:border-slate-500 hover:enabled:text-slate-300 transition-all"
+          className="h-9 gap-1.5 border-slate-700/60 bg-slate-800/40 text-slate-400 hover:text-slate-200 hover:border-slate-500 disabled:opacity-30 uppercase tracking-tighter font-bold text-[10px]"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
-          Prev
-        </button>
+          Back
+        </Button>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {frames.map((_, i) => (
             <button
               key={i}
               onClick={() => go(i)}
+              disabled={i > idx && isCheckpoint}
               className={cn(
-                "rounded-full transition-all duration-200",
+                "h-1.5 rounded-full transition-all duration-300",
                 i === idx
-                  ? "h-2 w-5 bg-fuchsia-500"
-                  : "h-2 w-2 bg-slate-700 hover:bg-slate-500"
+                  ? "w-8 bg-fuchsia-500 shadow-[0_0_12px_rgba(168,85,247,0.6)]"
+                  : i < idx 
+                    ? "w-2 bg-slate-500" 
+                    : "w-2 bg-slate-800 hover:bg-slate-700",
+                i > idx && isCheckpoint && "opacity-30 cursor-not-allowed"
               )}
             />
           ))}
         </div>
 
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           onClick={next}
-          disabled={idx === total - 1}
-          className="flex items-center gap-1 rounded-lg border border-slate-700/60 px-3 py-1.5 text-xs font-medium text-slate-500 disabled:opacity-30 hover:enabled:border-slate-500 hover:enabled:text-slate-300 transition-all"
+          disabled={idx === total - 1 || isCheckpoint}
+          className="h-9 gap-1.5 border-slate-700/60 bg-slate-800/40 text-slate-400 hover:text-slate-200 hover:border-slate-500 disabled:opacity-30 uppercase tracking-tighter font-bold text-[10px]"
         >
-          Next
+          Proceed
           <ChevronRight className="h-3.5 w-3.5" />
-        </button>
-      </div>
-
-      {/* Progress bar */}
-      <div className="h-0.5 bg-slate-800">
-        <motion.div
-          className="h-full bg-gradient-to-r from-fuchsia-500 to-sky-500"
-          animate={{ width: `${((idx + 1) / total) * 100}%` }}
-          transition={{ type: "spring", stiffness: 300, damping: 40 }}
-        />
+        </Button>
       </div>
     </div>
   );

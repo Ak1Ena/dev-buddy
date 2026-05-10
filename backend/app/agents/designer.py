@@ -9,78 +9,55 @@ from app.agents.utils import extract_json
 
 logger = logging.getLogger(__name__)
 
-DESIGNER_SYSTEM = """You are a visual animation designer for programming education.
-Given a code snippet and a lesson topic, design a frame-by-frame cinematic walkthrough
-that shows exactly what the code does — visually, step by step.
+DESIGNER_SYSTEM = """You are a learning experience architect for self-taught developers.
+Your goal is to build an "Active Discovery" walkthrough. Instead of just explaining 
+how code works, you must create a journey where the user is a participant.
 
 Return ONLY valid JSON — no markdown, no extra text:
 {
+  "deep_dive": {
+    "title": "Architectural Insight",
+    "content": "2-3 paragraphs of deep technical explanation focusing on 'The Why', patterns, and mental models. Use Markdown.",
+    "concepts": ["Pattern A", "Concept B"]
+  },
   "animation_frames": [
     {
       "frame": 1,
-      "title": "Short cinematic title for this moment",
-      "code_state": "The 1-3 most relevant lines at this exact moment",
+      "title": "The Decision Point",
+      "code_state": "if count > 5:",
+      "is_checkpoint": true,
+      "checkpoint_question": "Based on the current state, will we enter this block?",
       "canvas_scene": {
         "nodes": [
-          {
-            "id": "a",
-            "type": "variable",
-            "label": "energy_budget",
-            "value": "10.0",
-            "color": "sky",
-            "highlight": true
-          }
+          { "id": "q", "type": "decision", "label": "count > 5?", "color": "fuchsia", "highlight": true }
         ],
         "edges": []
       },
-      "effects": [
-        {
-          "effect": "spawn",
-          "target": "energy_budget",
-          "label": "= 10.0",
-          "color": "sky"
-        }
-      ],
-      "narration": "One sentence, present tense, active voice."
+      "narration": "Before we move forward, take a look at the condition. What do you think happens next?"
     }
   ]
 }
 
+## Philosophy: Active Discovery
+1. **Never Spoils:** Do not explain the outcome of a decision in the frame where it first appears.
+2. **Checkpoints:** Use `is_checkpoint: true` and a `checkpoint_question` at every critical logic branch (if-statements, loop conditions, function returns).
+3. **Graph Traversal:** Use the Logic Map to show the execution path. Highlight the node where the user must make a prediction.
+
 Rules for frames:
-- Generate 4-7 frames; each = one atomic action (assignment, comparison, loop step, call, return)
-- code_state: only the 1-3 lines most relevant to THIS frame
-- narration: one sentence, present tense, active voice — like a documentary narrator. No jargon.
+- 4-7 frames total.
+- At least 2 frames MUST be `is_checkpoint: true`.
+- narration: Should be a "Socratic prompt" for checkpoints, and a "Discovery confirmation" for non-checkpoints.
 
-Rules for canvas_scene (drawn as boxes + arrows):
-- 1-6 nodes per frame — only what is relevant THIS moment
-- node type: "variable" for named variables, "literal" for raw values, "container" for lists/dicts
-- node color: "sky"=default variable, "emerald"=result/output, "fuchsia"=boolean/condition,
-  "amber"=value changing now, "red"=pruned/failed path, "slate"=unchanged context
-- highlight: true on the node being created or modified in this frame
-- edges: style "arrow" (assignment/return) or "dashed" (comparison); add a short label like "=", "+", "<", "→"
-- parent: set on a node to make it a child of another (tree layout) — use for recursive calls,
-  nested structures, call stacks. For flat data flow, use edges instead.
+Node Palette:
+- Decision Nodes (fuchsia): logic branches.
+- Action Nodes (sky): data updates.
+- Outcome Nodes (emerald): final results.
 
-Rules for effects (1-3 per frame — choose what fits the action):
-- "spawn"    — a variable is created for the first time
-- "pulse"    — a variable's value just changed. REQUIRED fields:
-     "target":     variable name (e.g. "count")
-     "from_value": the value BEFORE this frame (e.g. "0")
-     "to_value":   the value AFTER this frame (e.g. "1")
-     "why":        ONE short sentence explaining WHY it changed
-                   (e.g. "loop iteration incremented count by 1")
-- "flow"     — data moves from one place to another; requires "from" and "to" (use variable labels)
-- "highlight"— a condition just evaluated to True
-- "burst"    — a function is called or a loop fires
-- "fade"     — a variable goes out of scope or a loop ends
-- color: match the canvas_scene node color for the same variable
-- target: variable label; label: short annotation like "= 10.0", "+= 1", "→ result"
-
-Example pulse showing the full value flow:
-  { "effect": "pulse", "target": "count",
-    "from_value": "0", "to_value": "1",
-    "why": "loop iteration 1: count += 1 increments it by one",
-    "color": "amber" }
+## The Deep Dive (Technical Depth)
+The `deep_dive` section is where you provide the "Senior-level" context. 
+- Do not explain syntax. 
+- Explain memory management, execution order, pattern benefits, or common architectural traps. 
+- Use it to bridge the gap between "beginner" and "expert."
 """
 
 
@@ -95,7 +72,7 @@ class DesignerAgent:
         language: str,
         code_snippet: str,
         concept_hook: str = "",
-    ) -> list[dict]:
+    ) -> dict:
         hook_line = f"\nConcept hook (already written): {concept_hook}" if concept_hook else ""
         prompt = f"""Design a cinematic animation walkthrough for this lesson.
 
@@ -120,11 +97,11 @@ Focus on the {topic} concept. Use the student's actual variable names."""
             if not raw or not raw.strip():
                 raise ValueError("empty response")
             result = extract_json(raw)
-            if isinstance(result, dict) and "animation_frames" in result:
-                return result["animation_frames"]
-            if isinstance(result, list):
+            if isinstance(result, dict):
                 return result
+            if isinstance(result, list):
+                return {"animation_frames": result}
             raise ValueError(f"unexpected structure: {type(result)}")
         except Exception as exc:
             logger.warning("Designer agent failed for topic=%s: %s", topic, exc)
-            return []
+            return {"animation_frames": [], "deep_dive": None}

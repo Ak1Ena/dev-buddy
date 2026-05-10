@@ -8,6 +8,8 @@ class ChatRequest(BaseModel):
     lesson_id: str | None = None
     code_context: str | None = None  # current code in editor
     hint_level: int = 0  # 0=question, 1=concept, 2=direction, 3=full_hint
+    current_frame: int | None = None
+    is_checkpoint: bool | None = None
 
 
 class ChatMessageResponse(BaseModel):

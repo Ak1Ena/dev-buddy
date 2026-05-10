@@ -18,3 +18,45 @@ code, pre, .font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-slate-900/40 backdrop-blur-md border border-slate-800/60;
+  }
+  
+  .glass-card {
+    @apply bg-slate-900/60 backdrop-blur-lg border border-slate-700/40;
+  }
+
+  .glow-sky {
+    box-shadow: 0 0 20px -5px rgba(14, 165, 233, 0.4);
+  }
+
+  .glow-fuchsia {
+    box-shadow: 0 0 20px -5px rgba(168, 85, 247, 0.4);
+  }
+
+  .glow-emerald {
+    box-shadow: 0 0 20px -5px rgba(16, 185, 129, 0.4);
+  }
+
+  .glow-amber {
+    box-shadow: 0 0 20px -5px rgba(245, 158, 11, 0.4);
+  }
+
+  .mesh-gradient {
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(245, 158, 11, 0.1) 0px, transparent 50%);
+  }
+
+  .text-gradient-sky {
+    @apply bg-gradient-to-r from-sky-400 to-sky-200 bg-clip-text text-transparent;
+  }
+  
+  .text-gradient-fuchsia {
+    @apply bg-gradient-to-r from-fuchsia-400 to-fuchsia-200 bg-clip-text text-transparent;
+  }
+}
