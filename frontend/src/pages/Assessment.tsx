@@ -55,7 +55,7 @@ export default function Assessment() {
   const [submittingAnswer, setSubmittingAnswer] = useState(false);
   const [result, setResult] = useState<AssessmentResult | null>(null);
 
-  // ── Step 1: Submit code ──────────────────────────────────────────────────
+  // ── Step 1: Submit code & Poll ───────────────────────────────────────────
   const handleSubmitCode = useCallback(async () => {
     const code = codeInput.trim();
     if (code.length < 10) {
@@ -65,12 +65,11 @@ export default function Assessment() {
     setPageState("analyzing");
     try {
       const res = await assessmentApi.start(code);
-      const { session_id, questions: qs, code_analysis } = res.data;
-      setSessionId(session_id);
-      setQuestions(qs);
-      setCodeLanguage(code_analysis.language);
-      setCodeSummary(code_analysis.summary);
-      setPageState("quiz");
+      const sid = res.data.session_id;
+      setSessionId(sid);
+      
+      // Start polling
+      pollAssessmentStatus(sid);
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
       const msg = Array.isArray(detail)
@@ -80,6 +79,38 @@ export default function Assessment() {
       setPageState("code_input");
     }
   }, [codeInput]);
+
+  const pollAssessmentStatus = async (sid: string) => {
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      if (attempts > 30) { // 30 seconds timeout
+        clearInterval(interval);
+        toast.error("Analysis is taking too long. Please try again.");
+        setPageState("code_input");
+        return;
+      }
+      try {
+        const res = await assessmentApi.getSession(sid);
+        if (res.data.status === "ready") {
+          clearInterval(interval);
+          const { questions: qs, code_analysis } = res.data;
+          setQuestions(qs);
+          setCodeLanguage(code_analysis.language);
+          setCodeSummary(code_analysis.summary);
+          setPageState("quiz");
+        } else if (res.data.status === "error") {
+          clearInterval(interval);
+          toast.error("Analysis failed. Please check your code snippet.");
+          setPageState("code_input");
+        }
+      } catch (err) {
+        clearInterval(interval);
+        toast.error("Failed to check status.");
+        setPageState("code_input");
+      }
+    }, 1000);
+  };
 
   // ── Step 2: Answer question ───────────────────────────────────────────────
   const handleSelectOption = async (key: string) => {

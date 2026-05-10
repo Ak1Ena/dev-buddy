@@ -78,6 +78,8 @@ export const assessmentApi = {
   // User pastes their code — backend analyzes it and generates 10 questions
   start: (code_snippet: string) =>
     api.post("/assessment/start", { code_snippet }),
+  getSession: (sessionId: string) =>
+    api.get(`/assessment/session/${sessionId}`),
   submitAnswer: (data: { session_id: string; question_id: string; answer_key: string }) =>
     api.post("/assessment/submit-answer", data),
   complete: (sessionId: string) =>
@@ -105,6 +107,8 @@ export const chatApi = {
     lesson_id?: string;
     code_context?: string;
     hint_level?: number;
+    current_frame?: number | null;
+    is_checkpoint?: boolean | null;
   }) => api.post("/chat/send", data),
   getSession: (sessionId: string) => api.get(`/chat/session/${sessionId}`),
 };

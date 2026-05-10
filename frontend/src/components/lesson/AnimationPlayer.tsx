@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Play, Pause } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play, Pause, Brain, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AnimationFrame } from "@/types";
 import CanvasScene from "./CanvasScene";
-import EffectLayer from "./EffectLayer";
 import { Button } from "@/components/ui/button";
 
 interface Props {
   frames: AnimationFrame[];
+  activeFrameIndex?: number;
   onFrameChange?: (idx: number, isCheckpoint: boolean) => void;
 }
 
@@ -18,7 +18,7 @@ const TICK_MS = 60;
 type SpeedOption = 0.25 | 0.5 | 1 | 2;
 const SPEED_OPTIONS: SpeedOption[] = [0.25, 0.5, 1, 2];
 
-export default function AnimationPlayer({ frames, onFrameChange }: Props) {
+export default function AnimationPlayer({ frames, activeFrameIndex, onFrameChange }: Props) {
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState<"forward" | "backward">("forward");
   const [autoPlay, setAutoPlay] = useState(false);
@@ -33,6 +33,16 @@ export default function AnimationPlayer({ frames, onFrameChange }: Props) {
 
   const isCheckpoint = !!frame.is_checkpoint && !checkpointCleared[idx];
 
+  // Sync with prop from parent
+  useEffect(() => {
+    if (activeFrameIndex !== undefined && activeFrameIndex !== idx) {
+      // Only sync if not currently in a checkpoint
+      if (!isCheckpoint) {
+        setIdx(activeFrameIndex);
+      }
+    }
+  }, [activeFrameIndex, idx, isCheckpoint]);
+
   const go = (next: number) => {
     if (next > idx && isCheckpoint) return; // Block forward if checkpoint not cleared
     setDir(next > idx ? "forward" : "backward");
@@ -42,6 +52,7 @@ export default function AnimationPlayer({ frames, onFrameChange }: Props) {
   useEffect(() => {
     onFrameChange?.(idx, isCheckpoint);
   }, [idx, isCheckpoint, onFrameChange]);
+
   const prev = () => { if (idx > 0) go(idx - 1); };
   const next = () => { if (idx < total - 1) go(idx + 1); };
 
@@ -67,7 +78,6 @@ export default function AnimationPlayer({ frames, onFrameChange }: Props) {
   const elapsedRef = useRef(0);
 
   useEffect(() => {
-    // Reset whenever frame changes, autoPlay turns off, or speed changes
     elapsedRef.current = 0;
     setFrameProgress(0);
 
@@ -88,15 +98,10 @@ export default function AnimationPlayer({ frames, onFrameChange }: Props) {
     };
   }, [autoPlay, idx, frameDuration, isCheckpoint]);
 
-  const secondsLeft = Math.max(
-    0,
-    Math.ceil((frameDuration - elapsedRef.current) / 1000)
-  );
-
   const isForward = dir === "forward";
 
   return (
-    <div className="rounded-2xl border border-slate-700/60 bg-slate-950/80 backdrop-blur-sm overflow-hidden select-none shadow-2xl ring-1 ring-slate-700/30">
+    <div className="rounded-2xl border border-slate-700/60 bg-slate-950/80 backdrop-blur-md overflow-hidden select-none shadow-2xl ring-1 ring-slate-700/30">
       {/* ── Header ── */}
       <div className="flex items-center justify-between border-b border-slate-700/50 bg-slate-900/40 px-5 py-3">
         <div className="flex items-center gap-3">
@@ -159,7 +164,7 @@ export default function AnimationPlayer({ frames, onFrameChange }: Props) {
       </div>
 
       {/* ── Frame content ── */}
-      <div className="relative overflow-hidden mesh-gradient" style={{ minHeight: "400px" }}>
+      <div className="relative overflow-hidden mesh-gradient" style={{ minHeight: "450px" }}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={idx}
@@ -240,31 +245,48 @@ export default function AnimationPlayer({ frames, onFrameChange }: Props) {
                   initial={{ opacity: 0, y: 20, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95, filter: "blur(8px)" }}
-                  className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6 shadow-[0_0_50px_rgba(245,158,11,0.15)] ring-1 ring-amber-500/20"
+                  className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-amber-500/5 discovery-gate p-8 shadow-[0_0_50px_rgba(245,158,11,0.15)] ring-1 ring-amber-500/20"
                 >
-                  <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/30">
-                      <Brain className="h-5 w-5" />
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
+                  
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="space-y-4 max-w-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/30 shadow-inner">
+                          <Brain className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-500 block mb-0.5">
+                            Discovery Gate
+                          </span>
+                          <h4 className="text-xl font-bold text-white tracking-tight">Active Prediction Required</h4>
+                        </div>
+                      </div>
+                      
+                      <p className="text-lg font-medium text-slate-200 leading-relaxed">
+                        {frame.checkpoint_question ?? "Analyze the current state. What do you think happens next in the logic?"}
+                      </p>
+                      
+                      <div className="flex items-center gap-2 text-amber-400/80">
+                        <HelpCircle className="h-4 w-4" />
+                        <p className="text-xs font-bold uppercase tracking-widest">Tip: Hypothesize in the chat to the right</p>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500/80 block">
-                        Prediction Required
-                      </span>
-                      <h4 className="text-lg font-bold text-amber-100">Active Discovery</h4>
+
+                    <div className="flex flex-col gap-3 shrink-0">
+                       <Button 
+                        size="lg" 
+                        className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-10 h-14 rounded-xl shadow-lg shadow-amber-500/20 group transition-all"
+                        onClick={handleClearCheckpoint}
+                      >
+                        REVEAL OUTCOME
+                        <ChevronRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                      </Button>
                     </div>
                   </div>
-                  <p className="text-base font-medium text-slate-200 mb-6 leading-relaxed">
-                    {frame.checkpoint_question ?? "What do you think happens next in the logic?"}
-                  </p>
-                  <Button 
-                    size="lg" 
-                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-8 shadow-lg shadow-amber-500/20 group transition-all"
-                    onClick={handleClearCheckpoint}
-                  >
-                    Reveal Discovery
-                    <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Button>
+                  
+                  {/* Decorative pulse */}
+                  <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-amber-500/10 blur-3xl rounded-full animate-pulse" />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -277,7 +299,7 @@ export default function AnimationPlayer({ frames, onFrameChange }: Props) {
                 className="absolute bottom-0 left-0 w-full h-1 bg-slate-800"
               >
                 <div
-                  className="h-full bg-gradient-to-r from-fuchsia-500 to-sky-500 transition-none"
+                  className="h-full bg-gradient-to-r from-fuchsia-500 via-sky-500 to-emerald-500 transition-none"
                   style={{ width: `${frameProgress}%` }}
                 />
               </motion.div>
@@ -323,7 +345,10 @@ export default function AnimationPlayer({ frames, onFrameChange }: Props) {
           size="sm"
           onClick={next}
           disabled={idx === total - 1 || isCheckpoint}
-          className="h-9 gap-1.5 border-slate-700/60 bg-slate-800/40 text-slate-400 hover:text-slate-200 hover:border-slate-500 disabled:opacity-30 uppercase tracking-tighter font-bold text-[10px]"
+          className={cn(
+            "h-9 gap-1.5 border-slate-700/60 bg-slate-800/40 text-slate-400 hover:text-slate-200 hover:border-slate-500 disabled:opacity-30 uppercase tracking-tighter font-bold text-[10px]",
+            isCheckpoint && "border-amber-500/50 text-amber-500/50"
+          )}
         >
           Proceed
           <ChevronRight className="h-3.5 w-3.5" />

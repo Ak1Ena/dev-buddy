@@ -44,9 +44,23 @@ app.include_router(chat.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    return JSONResponse(status_code=500, content={"detail": str(exc)})
+    logger.error("Unhandled exception: %s", exc, exc_info=True)
+    
+    # In production, don't leak details. In development, you might want them.
+    detail = "Internal Server Error"
+    if settings.app_env == "development":
+        detail = str(exc)
+        
+    return JSONResponse(
+        status_code=500, 
+        content={"detail": detail}
+    )
 
 
 @app.get("/health")

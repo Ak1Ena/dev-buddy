@@ -6,7 +6,7 @@
 
 body {
   margin: 0;
-  background-color: #0f172a;
+  background-color: #020617;
   color: #f1f5f9;
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -21,7 +21,11 @@ code, pre, .font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
 
 @layer utilities {
   .glass-panel {
-    @apply bg-slate-900/40 backdrop-blur-md border border-slate-800/60;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(51, 65, 85, 0.4);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   }
   
   .glass-card {
@@ -33,7 +37,7 @@ code, pre, .font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
   }
 
   .glow-fuchsia {
-    box-shadow: 0 0 20px -5px rgba(168, 85, 247, 0.4);
+    box-shadow: 0 0 20px -5px rgba(217, 70, 239, 0.4);
   }
 
   .glow-emerald {
@@ -45,10 +49,11 @@ code, pre, .font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
   }
 
   .mesh-gradient {
+    background-color: #020617;
     background-image: 
       radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.15) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.15) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(217, 70, 239, 0.1) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%),
       radial-gradient(at 0% 100%, rgba(245, 158, 11, 0.1) 0px, transparent 50%);
   }
 
@@ -58,5 +63,9 @@ code, pre, .font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
   
   .text-gradient-fuchsia {
     @apply bg-gradient-to-r from-fuchsia-400 to-fuchsia-200 bg-clip-text text-transparent;
+  }
+
+  .discovery-gate {
+    @apply backdrop-blur-xl bg-amber-500/5 border-amber-500/20;
   }
 }

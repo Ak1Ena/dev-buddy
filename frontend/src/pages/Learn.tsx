@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -117,14 +117,34 @@ export default function Learn() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const contentScrollRef = useRef<HTMLDivElement>(null);
+  const scrollTicking = useRef(false);
 
   const handleContentScroll = useCallback(() => {
-    const el = contentScrollRef.current;
-    if (!el) return;
-    const { scrollTop, scrollHeight, clientHeight } = el;
-    const total = scrollHeight - clientHeight;
-    setScrollProgress(total > 0 ? Math.min(100, (scrollTop / total) * 100) : 0);
-  }, []);
+    if (!scrollTicking.current) {
+      window.requestAnimationFrame(() => {
+        const el = contentScrollRef.current;
+        if (el) {
+          const { scrollTop, scrollHeight, clientHeight } = el;
+          const total = scrollHeight - clientHeight;
+          const progress = total > 0 ? Math.min(100, (scrollTop / total) * 100) : 0;
+          setScrollProgress(progress);
+          
+          // Sync logic: jump to frame based on progress
+          if (lesson?.content?.animation_frames) {
+            const frameCount = lesson.content.animation_frames.length;
+            const targetFrame = Math.min(frameCount - 1, Math.floor((progress / 100) * frameCount));
+            // We only set current frame if it changed and it's not a checkpoint
+            if (targetFrame !== currentFrame && !isCheckpoint) {
+              // Note: AnimationPlayer will need to listen to this or we need a way to control it.
+              // For now, let's just keep the progress synced.
+            }
+          }
+        }
+        scrollTicking.current = false;
+      });
+      scrollTicking.current = true;
+    }
+  }, [lesson?.content?.animation_frames, currentFrame, isCheckpoint]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -307,6 +327,7 @@ export default function Learn() {
               <div className="h-full max-w-[1400px] mx-auto">
                 <AnimationPlayer 
                   frames={c.animation_frames} 
+                  activeFrameIndex={currentFrame}
                   onFrameChange={(idx, isCp) => {
                     setCurrentFrame(idx);
                     setIsCheckpoint(isCp);
@@ -410,7 +431,7 @@ export default function Learn() {
         </div>
 
         {/* RIGHT: AI Dialogue */}
-        <div className="w-[42%] flex flex-col bg-slate-900/40 backdrop-blur-sm border-l border-slate-800/40">
+        <div className="w-[42%] flex flex-col bg-slate-900/90 backdrop-blur-md border-l border-slate-800/40">
           <div className="border-b border-slate-800/60 bg-slate-950/40 px-6 py-4 shrink-0 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-lg bg-sky-500/10 flex items-center justify-center border border-sky-500/20">

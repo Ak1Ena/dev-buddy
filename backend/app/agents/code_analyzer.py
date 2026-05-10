@@ -240,16 +240,21 @@ class CodeAnalyzerAgent:
 
     async def analyze(self, code_snippet: str) -> dict:
         try:
-            raw = await self.llm.complete(
-                messages=[{"role": "user", "content": f"Analyze this code:\n```\n{code_snippet}\n```"}],
-                system=SYSTEM,
-                max_tokens=8000,
+            raw = await asyncio.wait_for(
+                self.llm.complete(
+                    messages=[{"role": "user", "content": f"Analyze this code:\n```\n{code_snippet}\n```"}],
+                    system=SYSTEM,
+                    max_tokens=8000,
+                ),
+                timeout=3.0,
             )
             logger.debug("CodeAnalyzer raw LLM response: %r", raw[:500] if raw else "<empty>")
             if raw and raw.strip():
                 result = extract_json(raw)
                 if result.get("language") and result.get("concepts"):
                     return result
+        except asyncio.TimeoutError:
+            logger.warning("Code analysis exceeded 3s SLA — using static fallback")
         except Exception as exc:
             logger.warning("LLM code analysis failed, using static fallback: %s", exc)
 

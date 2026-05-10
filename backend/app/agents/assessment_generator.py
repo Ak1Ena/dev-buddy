@@ -3,6 +3,7 @@ Assessment Generator Agent — creates 10 targeted questions from the user's cod
 """
 import logging
 import re
+import asyncio
 from app.services.llm import get_llm_provider
 from app.agents.utils import extract_json
 
@@ -231,10 +232,13 @@ INSTEAD, ask about:
 Use the actual function names and variable names from the code. Ensure the questions progress from simple data checks to complex logical flow analysis."""
 
         try:
-            raw = await self.llm.complete(
-                messages=[{"role": "user", "content": prompt}],
-                system=SYSTEM,
-                max_tokens=16000,
+            raw = await asyncio.wait_for(
+                self.llm.complete(
+                    messages=[{"role": "user", "content": prompt}],
+                    system=SYSTEM,
+                    max_tokens=16000,
+                ),
+                timeout=5.0,
             )
             if raw and raw.strip():
                 data = extract_json(raw)
@@ -242,6 +246,8 @@ Use the actual function names and variable names from the code. Ensure the quest
                 if len(questions) >= 5:
                     return questions
                 logger.warning("LLM returned only %d questions, using static fallback", len(questions))
+        except asyncio.TimeoutError:
+            logger.warning("Question generation exceeded 5s — using static fallback")
         except Exception as exc:
             logger.warning("LLM question generation failed, using static fallback: %s", exc)
 

@@ -1,11 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import type { CanvasSceneData, CanvasNode, CanvasEdge } from "@/types";
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const PAL: Record<string, { bg: string; border: string; val: string; lbl: string }> = {
   sky:     { bg: "rgba(14,165,233,.12)",  border: "#0ea5e9", val: "#38bdf8", lbl: "#7dd3fc" },
   emerald: { bg: "rgba(16,185,129,.12)",  border: "#10b981", val: "#34d399", lbl: "#6ee7b7" },
-  fuchsia: { bg: "rgba(168,85,247,.12)",  border: "#a855f7", val: "#c084fc", lbl: "#d8b4fe" },
+  fuchsia: { bg: "rgba(217, 70, 239, .12)",  border: "#D946EF", val: "#f0abfc", lbl: "#f5d0fe" },
   amber:   { bg: "rgba(245,158,11,.12)",  border: "#f59e0b", val: "#fbbf24", lbl: "#fde68a" },
   red:     { bg: "rgba(239,68,68,.12)",   border: "#ef4444", val: "#f87171", lbl: "#fca5a5" },
   slate:   { bg: "rgba(71,85,105,.15)",   border: "#475569", val: "#94a3b8", lbl: "#cbd5e1" },
@@ -25,7 +25,7 @@ const VAL_FONT = "bold 17px ui-monospace, SFMono-Regular, monospace";
 interface Sz  { w: number; h: number }
 interface Pos { x: number; y: number }
 
-function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+function drawRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.lineTo(x + w - r, y);
@@ -39,12 +39,30 @@ function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: n
   ctx.closePath();
 }
 
-// Conservative char-width estimates used as a safety floor when measureText
-// returns metrics that don't match the actual draw font (e.g. on platforms
-// where ui-monospace/SFMono-Regular are missing and an offline measurement
-// canvas falls back to different metrics than the visible canvas).
-const LBL_CHAR_PX = 5.6;  // ~9px semi-bold monospace
-const VAL_CHAR_PX = 10.4; // ~17px bold monospace
+function drawDiamond(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + w / 2, y);
+  ctx.lineTo(x + w, y + h / 2);
+  ctx.lineTo(x + w / 2, y + h);
+  ctx.lineTo(x, y + h / 2);
+  ctx.closePath();
+}
+
+function drawPill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+  const r = h / 2;
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + r, r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+const LBL_CHAR_PX = 5.6;
+const VAL_CHAR_PX = 10.4;
 
 function measureNodes(nodes: CanvasNode[], ctx: CanvasRenderingContext2D): Map<string, Sz> {
   return new Map(nodes.map(node => {
@@ -60,10 +78,16 @@ function measureNodes(nodes: CanvasNode[], ctx: CanvasRenderingContext2D): Map<s
       vw = Math.max(vwMeasured, valStr.length * VAL_CHAR_PX);
     }
 
-    return [node.id, {
-      w: Math.max(MIN_W, Math.ceil(Math.max(lw, vw) + IPAD * 2)),
-      h: node.value ? H_VAL : H_NOVAL,
-    }];
+    let w = Math.max(MIN_W, Math.ceil(Math.max(lw, vw) + IPAD * 2));
+    let h = node.value ? H_VAL : H_NOVAL;
+    
+    // Diamond needs more width to look balanced
+    if (node.type === "decision") {
+      w = Math.max(w, h * 1.5);
+      h = Math.max(h, w / 1.5);
+    }
+
+    return [node.id, { w, h }];
   }));
 }
 
@@ -152,18 +176,13 @@ function drawCurve(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: nu
   ctx.fill();
 }
 
-// ── Particle settings ────────────────────────────────────────────────────────
-// Speed is constant pixels-per-millisecond, so a long edge takes proportionally
-// longer to traverse than a short one. Particle speed is purely visual flow —
-// it does NOT mean anything semantic (importance, value magnitude, etc.).
-const PARTICLE_VELOCITY = 0.09;   // px/ms ≈ 90 px/sec
+const PARTICLE_VELOCITY = 0.09;
 const PARTICLES_PER_EDGE = 3;
 const PARTICLE_RADIUS = 2.6;
 const TIP = 8;
 
-// Compute a per-edge progress value in [0, 1) given elapsed ms and edge length.
 function edgeProgress(elapsedMs: number, length: number, particleIndex: number): number {
-  const period = Math.max(length / PARTICLE_VELOCITY, 600); // avoid silly-fast on tiny edges
+  const period = Math.max(length / PARTICLE_VELOCITY, 600);
   return ((elapsedMs / period) + particleIndex / PARTICLES_PER_EDGE) % 1;
 }
 
@@ -199,7 +218,6 @@ function drawParticlesOnBezier(
   col: string, elapsedMs: number
 ) {
   const mid = (y1 + y2) / 2;
-  // Approx bezier arc length using a few sample chords.
   let length = 0;
   let prevX = x1, prevY = y1;
   for (let s = 1; s <= 8; s++) {
@@ -230,17 +248,20 @@ function drawParticlesOnBezier(
 
 export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const [isInView, setIsInView] = useState(false);
 
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
+  const { nodes, edges = [] } = scene;
+
+  // Memoize layout and measurements
+  const layout = useMemo(() => {
+    if (!nodes.length) return null;
+    
+    // Create a temporary context for measurement
+    const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!ctx) return null;
 
-    const { nodes, edges = [] } = scene;
-    if (!nodes.length) return;
-
-    const sz  = measureNodes(nodes, ctx);
+    const sz = measureNodes(nodes, ctx);
     const isTree = nodes.some(n => !!n.parent);
     const pos = isTree ? treeLayout(nodes, sz) : hLayout(nodes, sz);
 
@@ -254,6 +275,27 @@ export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
     const CW = maxX + PAD;
     const CH = maxY + PAD;
 
+    return { sz, pos, CW, CH, nodes, edges };
+  }, [nodes, edges]);
+
+  // Intersection Observer to stop animation when not visible
+  useEffect(() => {
+    if (!ref.current) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setIsInView(entry.isIntersecting);
+    }, { threshold: 0.1 });
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas || !layout) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const { sz, pos, CW, CH, nodes, edges } = layout;
+
     const dpr = window.devicePixelRatio || 1;
     canvas.width  = CW * dpr;
     canvas.height = CH * dpr;
@@ -263,6 +305,8 @@ export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
 
     let rafId = 0;
     let start = 0;
+
+    const hasAnimation = nodes.some(n => !!n.parent) || edges.length > 0;
 
     const render = (now: number) => {
       if (!start) start = now;
@@ -292,9 +336,6 @@ export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
         drawParticlesOnBezier(ctx, x1, y1, x2, y2, col, elapsed);
       }
 
-      // Edges — distribute connection points along the box side so multiple
-      // edges sharing a source or target don't overlap. With N edges meeting a
-      // side, slots sit at heights (i+1)/(N+1) of the box.
       const edgeList = edges as CanvasEdge[];
       const outTotal = new Map<string, number>();
       const inTotal  = new Map<string, number>();
@@ -332,8 +373,6 @@ export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
           ctx.fillStyle  = "#64748b";
           ctx.font       = "600 10px ui-monospace, SFMono-Regular, monospace";
           ctx.textAlign  = "center";
-          // Label sits just above each line's own midpoint, so labels naturally
-          // separate when lines spread.
           ctx.fillText(edge.label, (x1 + x2) / 2, (y1 + y2) / 2 - 7);
         }
       }
@@ -342,7 +381,7 @@ export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
       for (const node of nodes) {
         const { x, y } = pos.get(node.id)!;
         const { w, h } = sz.get(node.id)!;
-        const p = PAL[node.color ?? "sky"] ?? PAL.sky;
+        const p = PAL[node.color ?? (node.type === "decision" ? "fuchsia" : node.type === "outcome" ? "emerald" : "sky")] ?? PAL.sky;
 
         if (node.highlight) {
           ctx.save();
@@ -350,52 +389,65 @@ export default function CanvasScene({ scene }: { scene: CanvasSceneData }) {
           ctx.shadowBlur  = 22;
           ctx.strokeStyle = p.border;
           ctx.lineWidth   = 2;
-          rr(ctx, x - 3, y - 3, w + 6, h + 6, 13);
+          if (node.type === "decision") drawDiamond(ctx, x - 3, y - 3, w + 6, h + 6);
+          else if (node.type === "outcome") drawPill(ctx, x - 3, y - 3, w + 6, h + 6);
+          else drawRoundedRect(ctx, x - 3, y - 3, w + 6, h + 6, 13);
           ctx.stroke();
           ctx.restore();
         }
 
         ctx.fillStyle = p.bg;
-        rr(ctx, x, y, w, h, 10);
+        if (node.type === "decision") drawDiamond(ctx, x, y, w, h);
+        else if (node.type === "outcome") drawPill(ctx, x, y, w, h);
+        else drawRoundedRect(ctx, x, y, w, h, 10);
         ctx.fill();
 
         ctx.strokeStyle = p.border;
         ctx.lineWidth   = node.highlight ? 2 : 1;
-        rr(ctx, x, y, w, h, 10);
+        if (node.type === "decision") drawDiamond(ctx, x, y, w, h);
+        else if (node.type === "outcome") drawPill(ctx, x, y, w, h);
+        else drawRoundedRect(ctx, x, y, w, h, 10);
         ctx.stroke();
 
         ctx.fillStyle  = p.lbl;
         ctx.font       = LBL_FONT;
         ctx.textAlign  = "center";
-        ctx.fillText(node.label, x + w / 2, y + (node.value ? 14 : h / 2 + 4));
+        ctx.fillText(node.label, x + w / 2, y + (node.value ? (node.type === "decision" ? h / 2 - 4 : 14) : h / 2 + 4));
 
         if (node.value) {
           ctx.globalAlpha = 0.18;
           ctx.strokeStyle = p.border;
           ctx.lineWidth   = 0.75;
           ctx.beginPath();
-          ctx.moveTo(x + 10, y + 24);
-          ctx.lineTo(x + w - 10, y + 24);
+          ctx.moveTo(x + 10, y + (node.type === "decision" ? h / 2 + 4 : 24));
+          ctx.lineTo(x + w - 10, y + (node.type === "decision" ? h / 2 + 4 : 24));
           ctx.stroke();
           ctx.globalAlpha = 1;
 
           ctx.fillStyle  = p.val;
           ctx.font       = VAL_FONT;
           ctx.textAlign  = "center";
-          ctx.fillText(String(node.value), x + w / 2, y + h / 2 + 13);
+          ctx.fillText(String(node.value), x + w / 2, y + h / 2 + (node.type === "decision" ? 18 : 13));
         }
       }
 
-      rafId = requestAnimationFrame(render);
+      if (hasAnimation && isInView) {
+        rafId = requestAnimationFrame(render);
+      }
     };
 
-    rafId = requestAnimationFrame(render);
+    if (hasAnimation && isInView) {
+      rafId = requestAnimationFrame(render);
+    } else {
+      render(performance.now()); // Single render if no animation or not in view
+    }
+    
     return () => cancelAnimationFrame(rafId);
-  }, [scene]);
+  }, [layout, isInView]);
 
   return (
-    <div className="rounded-xl overflow-x-auto border border-slate-700/60">
-      <canvas ref={ref} className="block" />
+    <div className="rounded-xl overflow-x-auto border border-slate-700/60 bg-slate-950">
+      <canvas ref={ref} className="block mx-auto" />
     </div>
   );
 }
