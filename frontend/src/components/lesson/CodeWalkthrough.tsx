@@ -11,14 +11,27 @@ interface WalkthroughItem {
 
 interface Props {
   items: WalkthroughItem[];
+  /** Controlled mode: when provided, the walkthrough mirrors this index. */
+  current?: number;
+  onCurrentChange?: (i: number) => void;
 }
 
 const BASE_DURATION = 2800;
 type SpeedOption = 0.25 | 0.5 | 1 | 2;
 const SPEED_OPTIONS: SpeedOption[] = [0.25, 0.5, 1, 2];
 
-export default function CodeWalkthrough({ items }: Props) {
-  const [current, setCurrent] = useState(0);
+export default function CodeWalkthrough({ items, current: controlledCurrent, onCurrentChange }: Props) {
+  const isControlled = controlledCurrent !== undefined;
+  const [internalCurrent, setInternalCurrent] = useState(0);
+  const current = isControlled ? (controlledCurrent as number) : internalCurrent;
+  const currentRef = useRef(current);
+  currentRef.current = current;
+  const setCurrent = (next: number | ((prev: number) => number)) => {
+    const resolved = typeof next === "function" ? (next as (prev: number) => number)(currentRef.current) : next;
+    if (!isControlled) setInternalCurrent(resolved);
+    onCurrentChange?.(resolved);
+  };
+
   const [autoPlay, setAutoPlay] = useState(true);
   const [speed, setSpeed] = useState<SpeedOption>(1);
   const activeRef = useRef<HTMLDivElement>(null);

@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronLeft, Loader2, Wrench } from "lucide-react";
+import { ChevronLeft, Flag, Loader2, Wrench } from "lucide-react";
 import toast from "react-hot-toast";
 import { learningApi } from "@/lib/api";
 import type { Lesson } from "@/types";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import WorkshopExercise from "@/components/lesson/WorkshopExercise";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { topicLabel } from "@/lib/utils";
@@ -16,6 +17,7 @@ export default function Workshop() {
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
+  const [surrenderLoading, setSurrenderLoading] = useState(false);
 
   useEffect(() => {
     if (!lessonId) return;
@@ -44,6 +46,22 @@ export default function Workshop() {
     } catch { /* silent */ }
   };
 
+  const handleSurrenderLesson = async () => {
+    if (!lessonId || surrenderLoading) return;
+    setSurrenderLoading(true);
+    try {
+      const res = await learningApi.surrenderLesson(lessonId);
+      const nextLessonId = res.data?.lesson?.id;
+      if (!nextLessonId) throw new Error("Missing deep-dive lesson id");
+      toast.success(res.data?.message ?? "Deep-dive lesson added.");
+      navigate(`/learn/${nextLessonId}`);
+    } catch {
+      toast.error("Failed to create a deep-dive lesson.");
+    } finally {
+      setSurrenderLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-slate-950 mesh-gradient">
@@ -64,7 +82,7 @@ export default function Workshop() {
       <ErrorBoundary>
         <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <button
               onClick={() => navigate(`/learn/${lessonId}`)}
               className="group flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-emerald-400 transition-all"
@@ -72,9 +90,24 @@ export default function Workshop() {
               <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
               Back to Lesson
             </button>
-            <Badge variant="outline" className="text-[9px] h-5 px-2 border-emerald-500/30 text-emerald-400 font-bold uppercase tracking-tighter">
-              {topicLabel(lesson.topic)}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleSurrenderLesson}
+                disabled={surrenderLoading}
+                loading={surrenderLoading}
+                size="sm"
+                variant="outline"
+                className="h-8 border-emerald-500/30 bg-emerald-500/10 px-3 text-[10px] font-bold uppercase tracking-widest text-emerald-300 hover:border-emerald-400/60 hover:bg-emerald-500/20 hover:text-emerald-100"
+                aria-label="Surrender workshop and create a focused deep-dive lesson"
+                title="Surrender workshop"
+              >
+                {!surrenderLoading && <Flag className="h-3.5 w-3.5" />}
+                Surrender
+              </Button>
+              <Badge variant="outline" className="text-[9px] h-5 px-2 border-emerald-500/30 text-emerald-400 font-bold uppercase tracking-tighter">
+                {topicLabel(lesson.topic)}
+              </Badge>
+            </div>
           </div>
 
           {/* Title */}

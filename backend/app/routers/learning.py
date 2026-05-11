@@ -21,12 +21,15 @@ from app.schemas.assessment import CodeAnalysis
 from app.schemas.learning import (
     LearningPathResponse,
     LessonResponse,
+    LessonSurrenderResponse,
     LessonProgressUpdate,
     CreateSpaceRequest,
     SpaceSummary,
     InstantDiscoveryRequest,
     InstantDiscoveryResponse,
+    VizEnvelope,
 )
+from pydantic import ValidationError
 
 router = APIRouter(prefix="/learning", tags=["learning"])
 
@@ -85,10 +88,10 @@ async def _orchestrate_discovery_background(
                 )
             )
 
-            # 2. Deactivate existing paths for this user
+            # 2. Deactivate existing paths in this learning space
             await db.execute(
                 update(LearningPath)
-                .where(LearningPath.user_id == user_id, LearningPath.is_active == True)
+                .where(LearningPath.learning_space_id == space_id, LearningPath.is_active == True)
                 .values(is_active=False)
             )
 
@@ -183,10 +186,99 @@ async def _build_lesson_content(
             content["animation_frames"] = anim_result["animation_frames"]
         if "deep_dive" in anim_result:
             content["deep_dive"] = anim_result["deep_dive"]
+        if "viz" in anim_result and anim_result["viz"] is not None:
+            content["viz"] = anim_result["viz"]
     elif isinstance(anim_result, list):
         content["animation_frames"] = anim_result
 
+    # Validate the optional `viz` block. If malformed, drop it so the lesson
+    # page can still render without it.
+    if "viz" in content and content["viz"] is not None:
+        try:
+            envelope = VizEnvelope.model_validate({"viz": content["viz"]})
+            walkthrough_len = len(content.get("code_walkthrough") or [])
+            extra_issue = _viz_extra_validation(envelope.viz, walkthrough_len)
+            if extra_issue:
+                raise ValueError(extra_issue)
+            content["viz"] = envelope.viz.model_dump(exclude_none=True)
+        except (ValidationError, ValueError) as exc:
+            logger.warning(
+                "Designer emitted malformed viz for topic=%s; dropping it: %s",
+                topic, exc,
+            )
+            content.pop("viz", None)
+
     return content
+
+
+def _viz_extra_validation(viz, walkthrough_len: int = 0) -> str | None:
+    """Cheap structural checks beyond the Pydantic schema. Returns an error
+    string if invalid, else None.
+
+    Also bounds-checks every ``code_ref.walkthrough_index`` against the
+    provided ``walkthrough_len`` (length of ``code_walkthrough``).
+    """
+    kind = getattr(viz, "kind", None)
+
+    def _check_ref(ref, where: str) -> str | None:
+        if ref is None:
+            return None
+        idx = getattr(ref, "walkthrough_index", None)
+        if idx is None:
+            return None
+        if idx >= walkthrough_len:
+            return (
+                f"{where} code_ref.walkthrough_index {idx} out of range "
+                f"(code_walkthrough length {walkthrough_len})"
+            )
+        return None
+
+    if kind == "tree":
+        node_ids = {n.id for n in viz.nodes}
+        if viz.root_id not in node_ids:
+            return f"tree.root_id '{viz.root_id}' not in nodes"
+        for n in viz.nodes:
+            if n.children:
+                for child_id in n.children:
+                    if child_id not in node_ids:
+                        return f"tree node '{n.id}' references missing child '{child_id}'"
+            issue = _check_ref(n.code_ref, f"tree node '{n.id}'")
+            if issue:
+                return issue
+    elif kind == "graph":
+        node_ids = {n.id for n in viz.nodes}
+        for e in viz.edges:
+            if e.source not in node_ids:
+                return f"graph edge source '{e.source}' not in nodes"
+            if e.target not in node_ids:
+                return f"graph edge target '{e.target}' not in nodes"
+            issue = _check_ref(e.code_ref, f"graph edge '{e.source}->{e.target}'")
+            if issue:
+                return issue
+        for n in viz.nodes:
+            issue = _check_ref(n.code_ref, f"graph node '{n.id}'")
+            if issue:
+                return issue
+    elif kind == "table":
+        col_count = len(viz.columns)
+        for row in viz.rows:
+            if len(row.cells) != col_count:
+                return (
+                    f"table row '{row.label}' has {len(row.cells)} cells, "
+                    f"expected {col_count}"
+                )
+            for ci, cell in enumerate(row.cells):
+                issue = _check_ref(
+                    cell.code_ref, f"table cell row='{row.label}' col={ci}"
+                )
+                if issue:
+                    return issue
+    elif kind == "flow":
+        for s in viz.steps:
+            issue = _check_ref(s.code_ref, f"flow step '{s.id}'")
+            if issue:
+                return issue
+    return None
 
 
 async def _prefill_lesson_content(
@@ -467,9 +559,9 @@ async def generate_learning_path(
         score=score,
     )
 
-    # Deactivate any existing active paths across all spaces
+    # Deactivate any existing active paths in the current learning space
     existing = await db.execute(
-        select(LearningPath).where(LearningPath.user_id == current_user.id, LearningPath.is_active == True)
+        select(LearningPath).where(LearningPath.learning_space_id == active_space.id, LearningPath.is_active == True)
     )
     for old_path in existing.scalars().all():
         old_path.is_active = False
@@ -609,6 +701,93 @@ async def get_lesson(
     space_id = space_lookup.scalar_one_or_none()
 
     return _format_lesson(lesson, space_id=space_id)
+
+
+@router.post("/lesson/{lesson_id}/surrender", response_model=LessonSurrenderResponse)
+async def surrender_lesson(
+    lesson_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Lesson)
+        .options(selectinload(Lesson.progress))
+        .join(LearningPath, Lesson.learning_path_id == LearningPath.id)
+        .where(
+            Lesson.id == lesson_id,
+            LearningPath.user_id == current_user.id,
+        )
+    )
+    lesson = result.scalar_one_or_none()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    path_result = await db.execute(
+        select(LearningPath).where(
+            LearningPath.id == lesson.learning_path_id,
+            LearningPath.user_id == current_user.id,
+        )
+    )
+    path = path_result.scalar_one_or_none()
+    if not path:
+        raise HTTPException(status_code=404, detail="Learning path not found")
+
+    remedial_title = f"Deep Dive: {lesson.title}"
+    remedial_content = await _build_lesson_content(
+        topic=lesson.topic,
+        title=remedial_title,
+        language=path.language,
+        skill_level=path.skill_level,
+        source_code=path.source_code or "",
+        weak_areas=list(dict.fromkeys([lesson.topic, *(current_user.weak_areas or [])])),
+    )
+
+    progress = lesson.progress
+    if not progress:
+        progress = LessonProgress(lesson_id=lesson.id, user_id=current_user.id)
+        db.add(progress)
+        lesson.progress = progress
+
+    if progress.status == "completed" and path.completed_lessons > 0:
+        path.completed_lessons -= 1
+    progress.status = "surrendered"
+    progress.started_at = progress.started_at or datetime.utcnow()
+    progress.completed_at = None
+
+    insert_index = lesson.order_index + 1
+    await db.execute(
+        update(Lesson)
+        .where(
+            Lesson.learning_path_id == path.id,
+            Lesson.order_index > lesson.order_index,
+        )
+        .values(order_index=Lesson.order_index + 1)
+    )
+
+    remedial_lesson = Lesson(
+        learning_path_id=path.id,
+        title=remedial_title,
+        topic=lesson.topic,
+        description=(
+            f"Revisits {lesson.topic.replace('_', ' ')} from another angle after "
+            "the previous lesson was surrendered."
+        ),
+        order_index=insert_index,
+        estimated_minutes=lesson.estimated_minutes,
+        difficulty=lesson.difficulty,
+        content=remedial_content,
+        is_remedial=True,
+    )
+    db.add(remedial_lesson)
+    path.total_lessons += 1
+
+    await db.commit()
+    await db.refresh(remedial_lesson)
+
+    return LessonSurrenderResponse(
+        lesson=_format_lesson(remedial_lesson, space_id=path.learning_space_id),
+        message="A focused deep-dive lesson has been added next.",
+    )
 
 
 @router.patch("/lesson/{lesson_id}/progress")

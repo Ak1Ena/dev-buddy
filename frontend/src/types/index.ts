@@ -32,7 +32,7 @@ export interface AssessmentResult {
 }
 
 export interface LessonProgress {
-  status: "not_started" | "in_progress" | "completed";
+  status: "not_started" | "in_progress" | "completed" | "surrendered";
   hints_used: number;
   workshop_score: number | null;
   time_spent_seconds: number;
@@ -68,9 +68,51 @@ export interface Workshop {
   explanation: string;
 }
 
+/* ── Visualization-first lesson view ── */
+export interface CodeRef {
+  /** index into LessonContent.code_walkthrough */
+  walkthrough_index: number;
+  /** 1-indexed inclusive line range */
+  line_start: number;
+  line_end: number;
+}
+
+export interface VizNode {
+  id: string;
+  label: string;
+  summary: string;
+  code_ref?: CodeRef;
+  /** for tree/flow: ordered children ids */
+  children?: string[];
+}
+
+export interface VizEdge {
+  source: string;
+  target: string;
+  label?: string;
+  code_ref?: CodeRef;
+}
+
+export interface VizTableCell {
+  value: string;
+  code_ref?: CodeRef;
+}
+
+export interface VizTableRow {
+  label: string;
+  cells: VizTableCell[];
+}
+
+export type Viz =
+  | { kind: "tree"; root_id: string; nodes: VizNode[] }
+  | { kind: "graph"; nodes: VizNode[]; edges: VizEdge[] }
+  | { kind: "table"; columns: string[]; rows: VizTableRow[] }
+  | { kind: "flow"; steps: VizNode[] };
+
 export interface LessonContent {
   concept_hook?: string;
   animation_frames?: AnimationFrame[];
+  viz?: Viz;
   deep_dive?: {
     title: string;
     content: string;
@@ -195,6 +237,11 @@ export interface Lesson {
   content: LessonContent | null;
   progress: LessonProgress | null;
   space_id?: string | null;
+}
+
+export interface LessonSurrenderResponse {
+  lesson: Lesson;
+  message?: string | null;
 }
 
 export interface LearningPath {

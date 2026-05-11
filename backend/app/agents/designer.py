@@ -27,6 +27,37 @@ Return ONLY valid JSON — no markdown, no extra text:
       }
     ]
   },
+  "viz": {
+    "kind": "tree",
+    "root_id": "list-comprehension",
+    "nodes": [
+      {
+        "id": "list-comprehension",
+        "label": "List comprehension",
+        "summary": "A compact way to build a list by transforming and filtering another iterable in a single expression.",
+        "code_ref": { "walkthrough_index": 0, "line_start": 1, "line_end": 1 },
+        "children": ["expression", "for-clause", "if-clause"]
+      },
+      {
+        "id": "expression",
+        "label": "Expression",
+        "summary": "What each output element looks like — runs once per accepted item.",
+        "code_ref": { "walkthrough_index": 0, "line_start": 1, "line_end": 1 }
+      },
+      {
+        "id": "for-clause",
+        "label": "for clause",
+        "summary": "Pulls items one at a time from the source iterable.",
+        "code_ref": { "walkthrough_index": 0, "line_start": 1, "line_end": 1 }
+      },
+      {
+        "id": "if-clause",
+        "label": "if clause",
+        "summary": "Optional filter — items that fail it are skipped.",
+        "code_ref": { "walkthrough_index": 0, "line_start": 1, "line_end": 1 }
+      }
+    ]
+  },
   "animation_frames": [
     {
       "frame": 1,
@@ -122,6 +153,23 @@ For pure control-flow lessons (an `if/elif/else` cascade with no data structure 
 - Create 3-5 focused cards.
 - **Strict Prohibition:** Never explain syntax. Focus on "The Why": memory management, architectural patterns, performance trade-offs, or safety.
 - Icons: `brain` (mental models), `zap` (performance), `shield` (safety), `database` (state), `cpu` (low-level).
+
+## The Viz: Structured Concept Diagram
+You MUST emit a single top-level `viz` field — one diagram that captures the lesson's conceptual shape.
+
+Pick exactly ONE `kind` per lesson based on the topic shape:
+- `tree` for part-whole decomposition (e.g. a function's parts: name, params, body, return). Requires `root_id` and a `nodes` array; children referenced by id via `children: [...]`.
+- `graph` for related concepts (e.g. variable ↔ scope ↔ lifetime). Requires `nodes` and `edges` (each edge has `source`, `target`, optional short `label` ≤16 chars).
+- `table` for comparing 2–4 alternatives (e.g. let vs const vs var). Requires `columns: string[]` and `rows: [{ label, cells: [{ value, code_ref? }] }]`. Each row's cells must align with columns.
+- `flow` for sequenced execution — mirror the `code_walkthrough` order. Requires `steps: VizNode[]` (ordered).
+
+Rules for viz:
+- EVERY node should have a `code_ref` when the concept is visible in the code. Reference `code_walkthrough[walkthrough_index].code` (use 0 if the lesson has only one code block) and use 1-indexed inclusive `line_start` / `line_end` line numbers.
+- Keep node `label` short (≤24 chars). `summary` is 1–2 sentences a beginner can grasp.
+- Node `id` values are kebab-case and unique within the viz.
+- For `tree`, list every node referenced by `root_id` or `children` inside the `nodes` array.
+- For `graph`, every `source`/`target` in `edges` must match an `id` in `nodes`.
+- Do not invent code lines that don't exist — be conservative with `line_end`.
 """
 
 

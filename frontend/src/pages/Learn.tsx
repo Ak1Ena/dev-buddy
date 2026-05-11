@@ -18,7 +18,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import AnimationPlayer from "@/components/lesson/AnimationPlayer";
 import CodeWalkthrough from "@/components/lesson/CodeWalkthrough";
+import LessonViz from "@/components/lesson/LessonViz";
+import CodePanel from "@/components/lesson/CodePanel";
+import NodeDetail from "@/components/lesson/NodeDetail";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { useLessonHighlight } from "@/store/lessonHighlight";
 import { topicLabel, cn } from "@/lib/utils";
 
 /* ── Mastery Icon Mapping ── */
@@ -139,6 +143,11 @@ export default function Learn() {
   const [isCheckpoint, setIsCheckpoint] = useState(false);
   const [highlightedNodeIds, setHighlightedNodeIds] = useState<string[]>([]);
   const [chatOpen, setChatOpen] = useState(true);
+  /** Lifted state for the controlled CodeWalkthrough / CodePanel. */
+  const [currentWalkthroughIndex, setCurrentWalkthroughIndex] = useState(0);
+  /** Right-column tab when a viz is present: concept | code | animation. */
+  const [vizTab, setVizTab] = useState<"concept" | "code" | "animation">("concept");
+  const clearHighlight = useLessonHighlight((s) => s.clear);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const contentScrollRef = useRef<HTMLDivElement>(null);
@@ -260,6 +269,27 @@ export default function Learn() {
     setIsCheckpoint(isCp);
   }, []);
 
+  /** Esc clears any pinned viz node globally. */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") clearHighlight();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [clearHighlight]);
+
+  /** Clear highlight state then switch tab — prevents stale pins across tabs. */
+  const handleTabChange = useCallback((tab: typeof vizTab) => {
+    clearHighlight();
+    setVizTab(tab);
+  }, [clearHighlight]);
+
+  /** When a node is jumped-to or a flow step activated, sync code panel + tab. */
+  const handleJumpToCode = useCallback((idx: number) => {
+    setCurrentWalkthroughIndex(idx);
+    handleTabChange("code");
+  }, [handleTabChange]);
+
   if (loadingLesson) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-slate-950 mesh-gradient">
@@ -346,16 +376,39 @@ export default function Learn() {
         </div>
 
         {/* ── TOP: Teaching (left) + Animation (right) ── */}
-        <div className="flex flex-1 min-h-0 overflow-hidden">
+        <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
 
           {/* LEFT: Technical Mastery */}
           <div
             ref={contentScrollRef}
             onScroll={handleContentScroll}
-            className="w-[58%] flex flex-col border-r border-slate-800/60 overflow-y-auto bg-slate-950/20 scroll-smooth"
+            className="lg:w-[58%] w-full flex flex-col border-r border-slate-800/60 overflow-y-auto bg-slate-950/20 scroll-smooth"
           >
             {c ? (
               <div className="px-10 py-12 space-y-16 max-w-4xl mx-auto w-full">
+                {c.concept_hook && (
+                  <Section id="sec-hook">
+                    <div className="rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/10 via-fuchsia-500/5 to-transparent p-6 backdrop-blur-sm relative overflow-hidden">
+                      <div className="absolute -top-8 -right-8 h-32 w-32 rounded-full bg-sky-500/10 blur-3xl pointer-events-none" />
+                      <div className="flex items-start gap-4 relative">
+                        <div className="h-10 w-10 shrink-0 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center">
+                          <Sparkles className="h-5 w-5 text-sky-300" />
+                        </div>
+                        <div className="space-y-2 flex-1">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-400">
+                            Concept Hook
+                          </p>
+                          <div className="prose prose-sm prose-invert max-w-none prose-p:text-slate-200 prose-p:leading-7 prose-strong:text-sky-300">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {c.concept_hook}
+                            </ReactMarkdown>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Section>
+                )}
+
                 {c.key_concepts && (
                   <Section id="sec-concepts">
                     <SectionHeading icon={<Lightbulb />} label="Conceptual Targets" iconClass="text-amber-400" />
@@ -414,7 +467,11 @@ export default function Learn() {
                   <Section id="sec-walkthrough">
                     <SectionHeading icon={<List />} label="Implementation Walkthrough" iconClass="text-fuchsia-400" />
                     <div className="rounded-2xl border border-slate-800/40 bg-slate-900/20 p-1">
-                      <CodeWalkthrough items={c.code_walkthrough} />
+                      <CodeWalkthrough
+                        items={c.code_walkthrough}
+                        current={currentWalkthroughIndex}
+                        onCurrentChange={setCurrentWalkthroughIndex}
+                      />
                     </div>
                   </Section>
                 )}
@@ -424,6 +481,17 @@ export default function Learn() {
                     <SectionHeading icon={<BookOpen />} label="The Breakdown" iconClass="text-sky-400" />
                     <div className="prose prose-sm prose-invert max-w-none text-slate-300 leading-8 text-lg font-medium italic opacity-90">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{c.explanation}</ReactMarkdown>
+                    </div>
+                  </Section>
+                )}
+
+                {c.summary && (
+                  <Section id="sec-summary">
+                    <SectionHeading icon={<BookOpen />} label="Recap" iconClass="text-emerald-400" />
+                    <div className="rounded-2xl border border-slate-800/60 bg-slate-900/30 p-6">
+                      <div className="prose prose-sm prose-invert max-w-none text-slate-300 leading-7 prose-strong:text-emerald-300">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{c.summary}</ReactMarkdown>
+                      </div>
                     </div>
                   </Section>
                 )}
@@ -459,35 +527,123 @@ export default function Learn() {
             )}
           </div>
 
-          {/* RIGHT of top split: Animation panel */}
-          <div className="w-[42%] flex flex-col bg-slate-900/20 overflow-y-auto mesh-gradient">
-            <div className="p-4 min-h-full">
-              {c?.animation_frames && c.animation_frames.length > 0 ? (
-                <AnimationPlayer
-                  frames={c.animation_frames}
-                  activeFrameIndex={currentFrame}
-                  highlightedNodeIds={highlightedNodeIds}
-                  onFrameChange={handleFrameChange}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full min-h-[400px]">
-                  <div className="flex flex-col items-center gap-6 text-center max-w-sm">
-                    <div className="relative">
-                      <Sparkles className="h-12 w-12 text-sky-500/40 animate-pulse" />
-                      <motion.div
-                        animate={{ scale: [1, 1.5, 1], opacity: [0.2, 0.5, 0.2] }}
-                        transition={{ repeat: Infinity, duration: 3 }}
-                        className="absolute inset-0 bg-sky-500/20 blur-xl rounded-full"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-lg font-bold text-slate-300">Synthesizing Logic Topology</p>
-                      <p className="text-xs text-slate-500 leading-relaxed uppercase tracking-widest font-medium">Mapping execution branches and data flows...</p>
-                    </div>
+          {/* RIGHT of top split: Viz tabs (if viz present) OR Animation panel */}
+          <div className="lg:w-[42%] w-full lg:h-auto h-[360px] flex flex-col bg-slate-900/20 overflow-hidden mesh-gradient">
+            {c?.viz ? (
+              <div className="flex h-full flex-col">
+                {/* Tab strip */}
+                <div className="shrink-0 border-b border-slate-800/60 bg-slate-950/40 px-3 py-2">
+                  <div role="tablist" aria-label="Visualization panel tabs" className="flex items-center gap-1.5">
+                    {([
+                      { key: "concept", label: "Concept" },
+                      { key: "code", label: "Code" },
+                      { key: "animation", label: "Animation" },
+                    ] as const)
+                      .filter((t) =>
+                        t.key === "code"
+                          ? !!(c.code_walkthrough && c.code_walkthrough.length > 0)
+                          : t.key === "animation"
+                          ? !!(c.animation_frames && c.animation_frames.length > 0)
+                          : true
+                      )
+                      .map((t) => (
+                        <button
+                          key={t.key}
+                          id={`tab-${t.key}`}
+                          role="tab"
+                          aria-selected={vizTab === t.key}
+                          aria-controls={`panel-${t.key}`}
+                          onClick={() => handleTabChange(t.key)}
+                          className={cn(
+                            "rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all",
+                            vizTab === t.key
+                              ? "bg-sky-500/15 text-sky-300 border border-sky-500/30"
+                              : "text-slate-500 hover:text-slate-200 border border-transparent"
+                          )}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
                   </div>
                 </div>
-              )}
-            </div>
+
+                <div className="flex-1 overflow-hidden p-4">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={vizTab}
+                      id={`panel-${vizTab}`}
+                      role="tabpanel"
+                      aria-labelledby={`tab-${vizTab}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="h-full"
+                    >
+                      {vizTab === "concept" && (
+                        <div className="flex h-full flex-col gap-3 overflow-hidden">
+                          <div className="flex-1 overflow-auto rounded-xl border border-slate-800/60 bg-slate-950/40 p-3">
+                            <LessonViz
+                              viz={c.viz}
+                              onStepActivate={(idx) =>
+                                typeof idx === "number" && handleJumpToCode(idx)
+                              }
+                            />
+                          </div>
+                          <NodeDetail viz={c.viz} onJumpToCode={handleJumpToCode} />
+                        </div>
+                      )}
+
+                      {vizTab === "code" && c.code_walkthrough && (
+                        <CodePanel
+                          items={c.code_walkthrough}
+                          viz={c.viz}
+                          activeIndex={currentWalkthroughIndex}
+                          onActiveIndexChange={setCurrentWalkthroughIndex}
+                        />
+                      )}
+
+                      {vizTab === "animation" && c.animation_frames && (
+                        <AnimationPlayer
+                          frames={c.animation_frames}
+                          activeFrameIndex={currentFrame}
+                          highlightedNodeIds={highlightedNodeIds}
+                          onFrameChange={handleFrameChange}
+                        />
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 min-h-full overflow-y-auto">
+                {c?.animation_frames && c.animation_frames.length > 0 ? (
+                  <AnimationPlayer
+                    frames={c.animation_frames}
+                    activeFrameIndex={currentFrame}
+                    highlightedNodeIds={highlightedNodeIds}
+                    onFrameChange={handleFrameChange}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full min-h-[400px]">
+                    <div className="flex flex-col items-center gap-6 text-center max-w-sm">
+                      <div className="relative">
+                        <Sparkles className="h-12 w-12 text-sky-500/40 animate-pulse" />
+                        <motion.div
+                          animate={{ scale: [1, 1.5, 1], opacity: [0.2, 0.5, 0.2] }}
+                          transition={{ repeat: Infinity, duration: 3 }}
+                          className="absolute inset-0 bg-sky-500/20 blur-xl rounded-full"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-lg font-bold text-slate-300">Synthesizing Logic Topology</p>
+                        <p className="text-xs text-slate-500 leading-relaxed uppercase tracking-widest font-medium">Mapping execution branches and data flows...</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

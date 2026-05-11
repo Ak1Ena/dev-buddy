@@ -1,5 +1,6 @@
 import axios from "axios";
 import Cookies from "js-cookie";
+import type { LessonSurrenderResponse } from "@/types";
 
 const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -93,6 +94,8 @@ export const learningApi = {
     api.post("/learning/generate-path"),
   getActivePath: () => api.get("/learning/path"),
   getLesson: (lessonId: string) => api.get(`/learning/lesson/${lessonId}`),
+  surrenderLesson: (lessonId: string) =>
+    api.post<LessonSurrenderResponse>(`/learning/lesson/${lessonId}/surrender`),
   updateProgress: (
     lessonId: string,
     data: { status?: string; hints_used?: number; workshop_score?: number; time_spent_seconds?: number }

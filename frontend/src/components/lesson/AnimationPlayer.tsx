@@ -23,7 +23,10 @@ const SPEED_OPTIONS: SpeedOption[] = [0.25, 0.5, 1, 2];
 export default function AnimationPlayer({ frames, activeFrameIndex, highlightedNodeIds = [], onFrameChange }: Props) {
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState<"forward" | "backward">("forward");
-  const [autoPlay, setAutoPlay] = useState(false);
+  const [autoPlay, setAutoPlay] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  });
   const [frameProgress, setFrameProgress] = useState(0); // 0–100
   const [speed, setSpeed] = useState<SpeedOption>(1);
   const [checkpointCleared, setCheckpointCleared] = useState<Record<number, boolean>>({});
@@ -37,15 +40,21 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
 
   const isCheckpoint = !!frame?.is_checkpoint && !checkpointCleared[idx];
 
-  // Sync with prop from parent
+  // Sync with prop from parent. Only react when the *prop* changes; do NOT
+  // re-sync when local `idx` advances (that fights local state and freezes
+  // the auto-play loop, because the parent value lags one render behind
+  // every local advance).
+  const lastExternalIdx = useRef<number | undefined>(activeFrameIndex);
   useEffect(() => {
-    if (activeFrameIndex !== undefined && activeFrameIndex !== idx) {
-      // Only sync if not currently in a checkpoint
-      if (!isCheckpoint) {
-        setIdx(activeFrameIndex);
-      }
+    if (activeFrameIndex === undefined) return;
+    if (activeFrameIndex === lastExternalIdx.current) return;
+    lastExternalIdx.current = activeFrameIndex;
+    if (activeFrameIndex !== idx) {
+      setDir(activeFrameIndex > idx ? "forward" : "backward");
+      setIdx(activeFrameIndex);
     }
-  }, [activeFrameIndex, idx, isCheckpoint]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFrameIndex]);
 
   const go = (next: number) => {
     if (next > idx && isCheckpoint) return; // Block forward if checkpoint not cleared
@@ -151,6 +160,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
           <Button
             variant="ghost"
             size="sm"
+            aria-label={autoPlay ? "Pause autoplay" : "Start autoplay"}
             onClick={() => setAutoPlay((v) => !v)}
             disabled={isCheckpoint}
             className={cn(
@@ -295,7 +305,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
                         className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-10 h-14 rounded-xl shadow-lg shadow-amber-500/20 group transition-all"
                         onClick={handleClearCheckpoint}
                       >
-                        REVEAL OUTCOME
+                        I've made my prediction
                         <ChevronRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                       </Button>
                     </div>
@@ -307,22 +317,19 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
               )}
             </AnimatePresence>
 
-            {/* Auto-play progress bar */}
-            {autoPlay && idx < total - 1 && !isCheckpoint && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="absolute bottom-0 left-0 w-full h-1 bg-slate-800"
-              >
-                <div
-                  className="h-full bg-gradient-to-r from-fuchsia-500 via-sky-500 to-emerald-500 transition-none"
-                  style={{ width: `${frameProgress}%` }}
-                />
-              </motion.div>
-            )}
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {/* Auto-play progress bar — between frame content and controls */}
+      {autoPlay && idx < total - 1 && !isCheckpoint && (
+        <div className="h-0.5 bg-slate-800 shrink-0">
+          <div
+            className="h-full bg-gradient-to-r from-fuchsia-500 via-sky-500 to-emerald-500"
+            style={{ width: `${frameProgress}%`, transition: "none" }}
+          />
+        </div>
+      )}
 
       {/* ── Controls ── */}
       <div className="border-t border-slate-700/50 px-5 py-4 flex items-center justify-between bg-slate-900/60 backdrop-blur-sm">
@@ -343,12 +350,14 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
               key={i}
               onClick={() => go(i)}
               disabled={i > idx && isCheckpoint}
+              aria-label={`Frame ${i + 1}${i === idx ? ", current" : ""}`}
+              aria-disabled={i > idx && isCheckpoint}
               className={cn(
                 "h-1.5 rounded-full transition-all duration-300",
                 i === idx
                   ? "w-8 bg-fuchsia-500 shadow-[0_0_12px_rgba(168,85,247,0.6)]"
-                  : i < idx 
-                    ? "w-2 bg-slate-500" 
+                  : i < idx
+                    ? "w-2 bg-slate-500"
                     : "w-2 bg-slate-800 hover:bg-slate-700",
                 i > idx && isCheckpoint && "opacity-30 cursor-not-allowed"
               )}
