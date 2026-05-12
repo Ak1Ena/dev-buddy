@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 interface WorkshopExerciseProps {
   workshop: Workshop;
   onComplete: (score: number) => void;
+  surrendered?: boolean;
 }
 
 const typeLabels: Record<Workshop["type"], string> = {
@@ -16,7 +17,7 @@ const typeLabels: Record<Workshop["type"], string> = {
   multiple_choice: "Multiple Choice",
 };
 
-export default function WorkshopExercise({ workshop, onComplete }: WorkshopExerciseProps) {
+export default function WorkshopExercise({ workshop, onComplete, surrendered = false }: WorkshopExerciseProps) {
   const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
@@ -107,8 +108,15 @@ export default function WorkshopExercise({ workshop, onComplete }: WorkshopExerc
         </div>
       )}
 
+      {/* Surrendered notice */}
+      {surrendered && !submitted && (
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-300">
+          You surrendered this challenge. View the solution in your remedial lesson.
+        </div>
+      )}
+
       {/* Answer input */}
-      {!submitted && (
+      {!submitted && !surrendered && (
         <div>
           <label className="mb-1.5 block text-sm font-medium text-slate-300">
             Your Answer
@@ -124,7 +132,7 @@ export default function WorkshopExercise({ workshop, onComplete }: WorkshopExerc
       )}
 
       {/* Action buttons */}
-      {!submitted && (
+      {!submitted && !surrendered && (
         <div className="flex items-center gap-3">
           <Button onClick={handleSubmit} disabled={!answer.trim()} className="gap-1.5">
             Submit

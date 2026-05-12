@@ -507,7 +507,7 @@ async def generate_learning_path(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Fetch most recent assessment (regardless of completion for Instant Discovery)
+    # Fetch most recent assessment
     result = await db.execute(
         select(AssessmentSession)
         .where(
@@ -516,38 +516,65 @@ async def generate_learning_path(
         )
         .order_by(AssessmentSession.created_at.desc())
     )
-    assessment = result.scalars().first()
-    
-    if not assessment:
-        raise HTTPException(status_code=400, detail="No assessment session found. Please upload code first.")
 
-    # Ensure an active space exists; auto-create one named after the language
-    active_space = await _get_active_space(current_user.id, db)
-    if not active_space:
-        lang_label = (assessment.detected_language or "General").title()
-        # Count how many spaces this user already has for that language
-        count_result = await db.execute(
-            select(LearningSpace).where(
-                LearningSpace.user_id == current_user.id,
-                LearningSpace.name.like(f"{lang_label}%"),
-            )
+    assessment = result.scalars().first()
+
+    if not assessment:
+        raise HTTPException(
+            status_code=400,
+            detail="No assessment session found. Please upload code first.",
         )
-        existing_count = len(count_result.scalars().all())
-        space_name = lang_label if existing_count == 0 else f"{lang_label} {existing_count + 1}"
-        active_space = LearningSpace(
-            user_id=current_user.id,
-            name=space_name,
-            is_active=True,
+
+    # Always create a NEW learning space
+    await _deactivate_all_spaces(current_user.id, db)
+
+    lang_label = (assessment.detected_language or "General").title()
+
+    count_result = await db.execute(
+        select(LearningSpace).where(
+            LearningSpace.user_id == current_user.id,
+            LearningSpace.name.like(f"{lang_label}%"),
         )
-        db.add(active_space)
-        await db.flush()
+    )
+
+    existing_spaces = count_result.scalars().all()
+    existing_count = len(existing_spaces)
+
+    space_name = (
+        lang_label
+        if existing_count == 0
+        else f"{lang_label} {existing_count + 1}"
+    )
+
+    active_space = LearningSpace(
+        user_id=current_user.id,
+        name=space_name,
+        is_active=True,
+    )
+
+    db.add(active_space)
+    await db.flush()
 
     planner = PlannerAgent()
-    
-    # Use user's assessment data if completed, otherwise empty (Instant Discovery)
-    weak_areas = current_user.weak_areas or [] if current_user.assessment_completed else []
-    strong_areas = current_user.strong_areas or [] if current_user.assessment_completed else []
-    score = current_user.assessment_score or 0 if current_user.assessment_completed else 0
+
+    # Use assessment data if completed
+    weak_areas = (
+        current_user.weak_areas or []
+        if current_user.assessment_completed
+        else []
+    )
+
+    strong_areas = (
+        current_user.strong_areas or []
+        if current_user.assessment_completed
+        else []
+    )
+
+    score = (
+        current_user.assessment_score or 0
+        if current_user.assessment_completed
+        else 0
+    )
 
     plan_data = await planner.generate_learning_path(
         code_snippet=assessment.code_snippet,
@@ -559,13 +586,18 @@ async def generate_learning_path(
         score=score,
     )
 
-    # Deactivate any existing active paths in the current learning space
+    # Deactivate old active paths INSIDE THIS SPACE
     existing = await db.execute(
-        select(LearningPath).where(LearningPath.learning_space_id == active_space.id, LearningPath.is_active == True)
+        select(LearningPath).where(
+            LearningPath.learning_space_id == active_space.id,
+            LearningPath.is_active == True,
+        )
     )
+
     for old_path in existing.scalars().all():
         old_path.is_active = False
 
+    # Create new learning path
     path = LearningPath(
         user_id=current_user.id,
         learning_space_id=active_space.id,
@@ -576,10 +608,13 @@ async def generate_learning_path(
         source_code=assessment.code_snippet,
         extracted_concepts=assessment.extracted_concepts,
         total_lessons=len(plan_data["lessons"]),
+        is_active=True,
     )
+
     db.add(path)
     await db.flush()
 
+    # Create lessons
     for lesson_data in plan_data["lessons"]:
         lesson = Lesson(
             learning_path_id=path.id,
@@ -587,20 +622,33 @@ async def generate_learning_path(
             topic=lesson_data["topic"],
             description=lesson_data.get("description", ""),
             order_index=lesson_data["order_index"],
-            estimated_minutes=lesson_data.get("estimated_minutes", 20),
-            difficulty=lesson_data.get("difficulty", "beginner"),
+            estimated_minutes=lesson_data.get(
+                "estimated_minutes",
+                20,
+            ),
+            difficulty=lesson_data.get(
+                "difficulty",
+                "beginner",
+            ),
         )
+
         db.add(lesson)
 
     await db.commit()
 
+    # Reload with relationships
     result2 = await db.execute(
         select(LearningPath)
-        .options(selectinload(LearningPath.lessons).selectinload(Lesson.progress))
+        .options(
+            selectinload(LearningPath.lessons)
+            .selectinload(Lesson.progress)
+        )
         .where(LearningPath.id == path.id)
     )
+
     formatted = _format_path(result2.scalar_one())
 
+    # Background prefill
     background_tasks.add_task(
         _prefill_lesson_content,
         path_id=path.id,
@@ -611,7 +659,6 @@ async def generate_learning_path(
     )
 
     return formatted
-
 
 @router.get("/path", response_model=LearningPathResponse | None)
 async def get_active_path(
@@ -634,16 +681,6 @@ async def get_active_path(
     )
     path = result.scalars().first()
 
-    # Fallback: if space has no path yet, try any active path for this user (legacy data)
-    if not path:
-        result2 = await db.execute(
-            select(LearningPath)
-            .options(selectinload(LearningPath.lessons).selectinload(Lesson.progress))
-            .where(LearningPath.user_id == current_user.id, LearningPath.is_active == True)
-            .order_by(LearningPath.created_at.desc())
-        )
-        path = result2.scalars().first()
-
     return _format_path(path) if path else None
 
 
@@ -657,44 +694,61 @@ async def get_lesson(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(Lesson).options(selectinload(Lesson.progress)).where(Lesson.id == lesson_id)
+    # 1. Base query with eager loading
+    stmt = (
+        select(Lesson)
+        .options(selectinload(Lesson.progress))
+        .join(LearningPath, Lesson.learning_path_id == LearningPath.id)
+        .where(Lesson.id == lesson_id, LearningPath.user_id == current_user.id)
     )
+    result = await db.execute(stmt)
     lesson = result.scalar_one_or_none()
+    
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
 
+    # 2. On-demand content generation if missing (e.g. clicked before background prefill finished)
     if not lesson.content:
         path_result = await db.execute(
             select(LearningPath).where(LearningPath.id == lesson.learning_path_id)
         )
-        path = path_result.scalar_one()
+        path = path_result.scalar_one_or_none()
+        
+        if path:
+            try:
+                content = await _build_lesson_content(
+                    topic=lesson.topic,
+                    title=lesson.title,
+                    language=path.language,
+                    skill_level=path.skill_level,
+                    source_code=path.source_code or "",
+                    weak_areas=current_user.weak_areas or [],
+                )
+                lesson.content = content
+                await db.commit()
+                # Refresh session state after commit
+                result = await db.execute(stmt)
+                lesson = result.scalar_one()
+            except Exception as exc:
+                logger.warning("Lesson content generation failed: %s", exc)
+                await db.rollback()
 
+    # 3. Ensure progress record exists
+    if lesson.progress is None:
         try:
-            content = await _build_lesson_content(
-                topic=lesson.topic,
-                title=lesson.title,
-                language=path.language,
-                skill_level=path.skill_level,
-                source_code=path.source_code or "",
-                weak_areas=current_user.weak_areas or [],
-            )
-            lesson.content = content
+            progress = LessonProgress(lesson_id=lesson.id, user_id=current_user.id)
+            db.add(progress)
             await db.commit()
         except Exception as exc:
-            logger.warning("Lesson content generation failed (will retry later): %s", exc)
+            # Likely a unique constraint race condition from parallel requests
+            logger.info("Progress record might already exist: %s", exc)
+            await db.rollback()
+        
+        # ALWAYS re-fetch to ensure lesson.progress is correctly populated and bound
+        result = await db.execute(stmt)
+        lesson = result.scalar_one()
 
-    existing_progress = await db.execute(
-        select(LessonProgress).where(
-            LessonProgress.lesson_id == lesson.id,
-            LessonProgress.user_id == current_user.id,
-        )
-    )
-    if not existing_progress.scalar_one_or_none():
-        db.add(LessonProgress(lesson_id=lesson.id, user_id=current_user.id))
-        await db.commit()
-        await db.refresh(lesson)
-
+    # 4. Fetch space_id for response context
     space_lookup = await db.execute(
         select(LearningPath.learning_space_id).where(LearningPath.id == lesson.learning_path_id)
     )
@@ -732,6 +786,10 @@ async def surrender_lesson(
     if not path:
         raise HTTPException(status_code=404, detail="Learning path not found")
 
+    progress = lesson.progress
+    if progress and progress.status == "surrendered":
+        raise HTTPException(status_code=409, detail="Lesson already surrendered.")
+
     remedial_title = f"Deep Dive: {lesson.title}"
     remedial_content = await _build_lesson_content(
         topic=lesson.topic,
@@ -742,7 +800,6 @@ async def surrender_lesson(
         weak_areas=list(dict.fromkeys([lesson.topic, *(current_user.weak_areas or [])])),
     )
 
-    progress = lesson.progress
     if not progress:
         progress = LessonProgress(lesson_id=lesson.id, user_id=current_user.id)
         db.add(progress)
@@ -782,10 +839,17 @@ async def surrender_lesson(
     path.total_lessons += 1
 
     await db.commit()
-    await db.refresh(remedial_lesson)
+
+    # Reload with eager progress to avoid async lazy-load (MissingGreenlet)
+    reloaded = await db.execute(
+        select(Lesson)
+        .options(selectinload(Lesson.progress))
+        .where(Lesson.id == remedial_lesson.id)
+    )
+    loaded_lesson = reloaded.scalar_one()
 
     return LessonSurrenderResponse(
-        lesson=_format_lesson(remedial_lesson, space_id=path.learning_space_id),
+        lesson=_format_lesson(loaded_lesson, space_id=path.learning_space_id),
         message="A focused deep-dive lesson has been added next.",
     )
 
@@ -810,6 +874,12 @@ async def update_lesson_progress(
 
     just_completed = False
     lesson = None
+
+    if data.status and progress.status == "surrendered" and data.status != "surrendered":
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot update progress of a surrendered lesson."
+        )
 
     if data.status:
         if data.status == "in_progress" and not progress.started_at:
@@ -885,8 +955,6 @@ def _format_space(space: LearningSpace) -> SpaceSummary:
         active = [p for p in space.learning_paths if p.is_active]
         if active:
             active_path = _format_path(active[0])
-        elif space.learning_paths:
-            active_path = _format_path(sorted(space.learning_paths, key=lambda p: p.created_at, reverse=True)[0])
 
     return SpaceSummary(
         id=space.id,

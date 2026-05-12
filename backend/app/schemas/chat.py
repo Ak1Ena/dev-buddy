@@ -45,3 +45,18 @@ class ChatResponse(BaseModel):
     message: ChatMessageResponse
     hint_level_used: int
     suggested_lesson: SuggestedLesson | None = None
+
+
+class ProposalAcceptRequest(BaseModel):
+    session_id: str
+    topic: str
+    title: str
+    description: str | None = None
+    estimated_minutes: int = 15
+    position: str = "after"  # "before" or "after"
+    reference_lesson_id: str
+
+
+class ProposalRejectRequest(BaseModel):
+    session_id: str
+    topic: str

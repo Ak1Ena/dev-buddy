@@ -18,6 +18,7 @@ export default function Workshop() {
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [surrenderLoading, setSurrenderLoading] = useState(false);
+  const [surrendered, setSurrendered] = useState(false);
 
   useEffect(() => {
     if (!lessonId) return;
@@ -26,6 +27,7 @@ export default function Workshop() {
       try {
         const res = await learningApi.getLesson(lessonId);
         setLesson(res.data);
+        setSurrendered(res.data?.progress?.status === "surrendered");
       } catch {
         toast.error("Failed to load workshop.");
         navigate("/dashboard");
@@ -36,7 +38,7 @@ export default function Workshop() {
   }, [lessonId, navigate]);
 
   const handleComplete = async (score: number) => {
-    if (!lessonId) return;
+    if (!lessonId || surrendered) return;
     try {
       await learningApi.updateProgress(lessonId, {
         workshop_score: score,
@@ -53,6 +55,7 @@ export default function Workshop() {
       const res = await learningApi.surrenderLesson(lessonId);
       const nextLessonId = res.data?.lesson?.id;
       if (!nextLessonId) throw new Error("Missing deep-dive lesson id");
+      setSurrendered(true);
       toast.success(res.data?.message ?? "Deep-dive lesson added.");
       navigate(`/learn/${nextLessonId}`);
     } catch {
@@ -93,7 +96,7 @@ export default function Workshop() {
             <div className="flex items-center gap-2">
               <Button
                 onClick={handleSurrenderLesson}
-                disabled={surrenderLoading}
+                disabled={surrenderLoading || surrendered}
                 loading={surrenderLoading}
                 size="sm"
                 variant="outline"
@@ -135,7 +138,7 @@ export default function Workshop() {
             className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6 md:p-8 shadow-[0_0_40px_rgba(16,185,129,0.05)]"
           >
             {workshop ? (
-              <WorkshopExercise workshop={workshop} onComplete={handleComplete} />
+              <WorkshopExercise workshop={workshop} onComplete={handleComplete} surrendered={surrendered} />
             ) : (
               <div className="text-center py-10 space-y-3">
                 <p className="text-slate-400 font-medium">No workshop is available for this lesson yet.</p>

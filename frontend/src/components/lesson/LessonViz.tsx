@@ -22,7 +22,17 @@ export default function LessonViz({ viz, onStepActivate }: Props) {
       return <ComparisonTable columns={viz.columns} rows={viz.rows} />;
     case "flow":
       return <StepFlow steps={viz.steps} onStepActivate={onStepActivate} />;
-    default:
-      return null;
+    default: {
+      // Fallback: try to render as graph if nodes are present, otherwise tree
+      const v = viz as any;
+      if (v.nodes && v.edges) return <ConceptGraph nodes={v.nodes} edges={v.edges} />;
+      if (v.nodes && v.root_id) return <ConceptTree rootId={v.root_id} nodes={v.nodes} />;
+      if (v.steps) return <StepFlow steps={v.steps} onStepActivate={onStepActivate} />;
+      return (
+        <div className="flex items-center justify-center h-full min-h-[120px] p-6">
+          <p className="text-xs text-slate-600 font-mono">No visualization for this lesson.</p>
+        </div>
+      );
+    }
   }
 }

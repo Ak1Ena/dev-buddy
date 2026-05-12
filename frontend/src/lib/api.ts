@@ -116,4 +116,17 @@ export const chatApi = {
     is_checkpoint?: boolean | null;
   }) => api.post("/chat/send", data),
   getSession: (sessionId: string) => api.get(`/chat/session/${sessionId}`),
+  acceptProposal: (data: {
+    session_id: string;
+    topic: string;
+    title: string;
+    description: string;
+    estimated_minutes: number;
+    position: "before" | "after";
+    reference_lesson_id: string;
+  }) => api.post("/chat/proposal/accept", data),
+  rejectProposal: (data: {
+    session_id: string;
+    topic: string;
+  }) => api.post("/chat/proposal/reject", data),
 };

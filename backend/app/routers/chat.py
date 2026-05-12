@@ -12,7 +12,10 @@ from app.models.user import User
 from app.models.chat import ChatSession, ChatMessage
 from app.models.learning import Lesson, LearningPath
 from app.models.analytics import HintUsageEvent
-from app.schemas.chat import ChatRequest, ChatResponse, ChatSessionResponse, ChatMessageResponse, SuggestedLesson
+from app.schemas.chat import (
+    ChatRequest, ChatResponse, ChatSessionResponse, ChatMessageResponse, SuggestedLesson,
+    ProposalAcceptRequest, ProposalRejectRequest
+)
 from app.agents.socratic_mentor import SocraticMentorAgent
 from app.agents.lesson_suggester import LessonSuggesterAgent
 from app.agents.planner import PlannerAgent
@@ -223,7 +226,13 @@ async def send_message(
         weak_areas=current_user.weak_areas,
         current_frame=data.current_frame,
         is_checkpoint=data.is_checkpoint,
+        suggestion_count=session.suggestion_count,
+        rejected_topics=session.rejected_topics,
     )
+
+    # Check if a proposal was made and increment count
+    if "```proposal" in response_text:
+        session.suggestion_count += 1
 
     # Save messages
     user_msg = ChatMessage(
@@ -369,6 +378,8 @@ async def stream_message(
                 hint_level=hint_level,
                 skill_level=current_user.skill_level,
                 weak_areas=current_user.weak_areas,
+                suggestion_count=session.suggestion_count,
+                rejected_topics=session.rejected_topics,
             ):
                 full_response += chunk
                 yield f"data: {json.dumps({'chunk': chunk, 'session_id': session_id})}\n\n"
@@ -387,6 +398,14 @@ async def stream_message(
                             extra={"hint_level": hint_level},
                         )
                         bdb.add(ai_msg)
+
+                        # Update suggestion count if proposal made
+                        if "```proposal" in full_response:
+                            # We need to fetch the session again in this new session
+                            ses_res = await bdb.execute(select(ChatSession).where(ChatSession.id == session_id))
+                            ses = ses_res.scalar_one_or_none()
+                            if ses:
+                                ses.suggestion_count += 1
 
                         stream_topic: str | None = None
                         if lesson_id:
@@ -421,6 +440,106 @@ async def stream_message(
             yield f"data: {json.dumps({'done': True})}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@router.post("/proposal/accept", response_model=SuggestedLesson)
+async def accept_proposal(
+    data: ProposalAcceptRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ChatSession).where(ChatSession.id == data.session_id, ChatSession.user_id == current_user.id)
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Find the reference lesson and its path
+    ref_lesson_id = data.reference_lesson_id
+    if ref_lesson_id == "current":
+        ref_lesson_id = session.lesson_id
+    
+    if not ref_lesson_id:
+        # Fallback to last lesson in user's first path if not in a lesson context
+        path_res = await db.execute(select(LearningPath).where(LearningPath.user_id == current_user.id))
+        path = path_res.scalars().first()
+        if not path:
+            raise HTTPException(status_code=400, detail="No learning path found")
+    else:
+        lesson_res = await db.execute(select(Lesson).where(Lesson.id == ref_lesson_id))
+        ref_lesson = lesson_res.scalar_one_or_none()
+        if not ref_lesson:
+            raise HTTPException(status_code=404, detail="Reference lesson not found")
+        path_res = await db.execute(select(LearningPath).where(LearningPath.id == ref_lesson.learning_path_id))
+        path = path_res.scalar_one_or_none()
+
+    if not path:
+        raise HTTPException(status_code=404, detail="Learning path not found")
+
+    # Shift existing lessons if inserting "before"
+    # For now, let's just append at the end for simplicity, or find the right index
+    max_idx_res = await db.execute(
+        select(func.max(Lesson.order_index)).where(Lesson.learning_path_id == path.id)
+    )
+    max_idx = max_idx_res.scalar() or 0
+
+    planner = PlannerAgent()
+    content = await planner.generate_lesson_content(
+        topic=data.topic,
+        title=data.title,
+        language=path.language,
+        skill_level=current_user.skill_level,
+        code_snippet=(path.source_code or "")[:1000],
+        weak_areas=[data.topic],
+    )
+
+    new_lesson = Lesson(
+        learning_path_id=path.id,
+        title=data.title,
+        topic=data.topic,
+        description=data.description,
+        order_index=max_idx + 1,
+        estimated_minutes=data.estimated_minutes,
+        difficulty=current_user.skill_level,
+        content=content,
+    )
+    db.add(new_lesson)
+    path.total_lessons = max_idx + 1
+    await db.commit()
+    await db.refresh(new_lesson)
+
+    return SuggestedLesson(
+        id=new_lesson.id,
+        title=new_lesson.title,
+        topic=new_lesson.topic,
+        description=new_lesson.description,
+        why=data.description, # Using description as why for now
+        learning_path_id=path.id
+    )
+
+
+@router.post("/proposal/reject")
+async def reject_proposal(
+    data: ProposalRejectRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ChatSession).where(ChatSession.id == data.session_id, ChatSession.user_id == current_user.id)
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if data.topic not in session.rejected_topics:
+        # Use a list since Mapped[list[str]] is used
+        current_rejected = list(session.rejected_topics)
+        current_rejected.append(data.topic)
+        session.rejected_topics = current_rejected
+        await db.commit()
+    
+    return {"status": "ok"}
 
 
 @router.get("/session/{session_id}", response_model=ChatSessionResponse)

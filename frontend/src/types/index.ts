@@ -211,7 +211,8 @@ export type DataView =
   | { kind: "vars"; label: string; rows: VarRow[]; note?: string }
   | { kind: "object"; label: string; rows: VarRow[]; note?: string }
   | { kind: "stack"; label: string; items: ListItem[]; note?: string }
-  | { kind: "queue"; label: string; items: ListItem[]; note?: string };
+  | { kind: "queue"; label: string; items: ListItem[]; note?: string }
+  | { kind: "branch"; label: string; condition: string; true_path?: string[]; false_path?: string[]; active_path?: "true" | "false" | null; note?: string };
 
 export interface AnimationFrame {
   frame: number;
@@ -271,4 +272,15 @@ export interface ChatMessage {
   content: string;
   metadata: Record<string, unknown> | null;
   created_at: string;
+}
+
+export interface LessonProposal {
+  topic: string;
+  title: string;
+  description: string;
+  estimated_minutes: number;
+  position: "before" | "after";
+  reference_lesson_id: string;
+  rationale: string;
+  evidence: string;
 }

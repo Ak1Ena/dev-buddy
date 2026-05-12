@@ -9,7 +9,7 @@ _ENV_FILE = Path(__file__).resolve().parent.parent.parent / ".env"
 class Settings(BaseSettings):
     app_env: str = "development"
     secret_key: str = "dev-secret-change-in-production"
-    allowed_origins: str = "http://localhost:3000"
+    allowed_origins: str = "http://localhost:5173,http://localhost:3000"
 
     database_url: str = "sqlite+aiosqlite:///./devbuddy.db"
 

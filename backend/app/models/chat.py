@@ -12,6 +12,8 @@ class ChatSession(Base):
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
     lesson_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("lessons.id"))
     context: Mapped[str] = mapped_column(String(50), default="general")  # general/lesson/assessment
+    suggestion_count: Mapped[int] = mapped_column(default=0)
+    rejected_topics: Mapped[list[str]] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="chat_sessions")

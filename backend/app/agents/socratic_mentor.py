@@ -63,41 +63,38 @@ Rules for feedback:
 - Only emit a feedback block if the student clearly attempted an answer.
 
 ## Animation Mode (optional)
-When a concept would be clearer as a visual "Logic Map" (flowchart, state machine, or data flow), 
-attach an inline animation. Focus on visualizing the control flow (how the program 
-decides what to do next) rather than just listing variable values.
+... (existing rules) ...
 
-Emit the animation as a fenced code block tagged `animation`. The contents must
-be a JSON array of frame objects matching this shape:
+## Lesson Proposal (optional)
+As a Senior Lead, you must proactively identify when a student has a deep
+misunderstanding or a significant knowledge gap that would be better addressed
+by a dedicated, focused mini-lesson rather than just continuing the current chat.
 
-```animation
-[
-  {
-    "frame": 1,
-    "title": "The Decision",
-    "code_state": "if count > 5:",
-    "canvas_scene": {
-      "nodes": [
-        { "id": "q", "type": "decision", "label": "count > 5?", "value": "True",
-          "color": "fuchsia", "highlight": true }
-      ],
-      "edges": [
-        { "from": "q", "to": "a", "label": "Yes", "style": "arrow" }
-      ]
-    },
-    "effects": [
-      { "effect": "burst", "target": "q", "color": "fuchsia" }
-    ],
-    "narration": "Since count is 6, the condition is true and we enter the block."
-  }
-]
+When you detect such a gap, pause the conversation flow and propose a new lesson.
+Explain what gap you noticed and why this specific lesson will help them.
+
+Emit the proposal as a fenced code block tagged `proposal`:
+
+```proposal
+{
+  "topic": "loops",
+  "title": "Following a loop step by step",
+  "description": "A short lesson to walk through what happens each iteration, using your own code",
+  "estimated_minutes": 15,
+  "position": "after",
+  "reference_lesson_id": "current",
+  "rationale": "You seem to be struggling with how the loop counter changes each time — this lesson will build that mental model",
+  "evidence": "You mentioned 'wait, why did it skip the last one?' and 'I don't see where i changes.'"
+}
 ```
 
-Rules for animations:
-- 1-3 frames per chat message.
-- Use "Logic Topology": Decision Nodes (fuchsia), Action Nodes (sky), Outcomes (emerald).
-- Represent the "Execution Path" using edges and highlight the active node.
-- Keep the question (rule 2) AFTER the animation block.
+Rules for proposals:
+- `topic`: must be one of the standard topic keys (variables, loops, etc.).
+- `position`: "before" or "after".
+- `reference_lesson_id`: "current" (the lesson you are in).
+- `evidence`: Be specific about what the student said or did that showed the gap.
+- Throttling: Do not suggest more than 1 lesson per turn.
+- Only propose if it feels natural and high-value. Don't be pushy.
 """
 
 
@@ -114,6 +111,8 @@ class SocraticMentorAgent:
         weak_areas: list[str] | None,
         current_frame: int | None = None,
         is_checkpoint: bool | None = None,
+        suggestion_count: int = 0,
+        rejected_topics: list[str] | None = None,
     ) -> str:
         parts = [SYSTEM, "\n\n## Current Situation"]
         if lesson_context:
@@ -134,6 +133,14 @@ class SocraticMentorAgent:
         
         if code_context:
             parts.append(f"Snippet under discussion:\n```\n{code_context}\n```")
+
+        # Throttling and guardrails for proposals
+        parts.append(f"\n## Suggestion Guardrails")
+        parts.append(f"Current session suggestion count: {suggestion_count}")
+        if suggestion_count >= 3:
+            parts.append("CRITICAL: You have reached the suggestion limit for this session. DO NOT propose any more lessons.")
+        if rejected_topics:
+            parts.append(f"Rejected topics in this session (DO NOT suggest these again): {', '.join(rejected_topics)}")
         
         return "\n".join(parts)
 
@@ -148,10 +155,13 @@ class SocraticMentorAgent:
         weak_areas: list[str] | None = None,
         current_frame: int | None = None,
         is_checkpoint: bool | None = None,
+        suggestion_count: int = 0,
+        rejected_topics: list[str] | None = None,
     ) -> str:
         system = self._build_system(
             lesson_context, code_context, hint_level, skill_level, weak_areas,
-            current_frame=current_frame, is_checkpoint=is_checkpoint
+            current_frame=current_frame, is_checkpoint=is_checkpoint,
+            suggestion_count=suggestion_count, rejected_topics=rejected_topics
         )
         messages = conversation_history[-20:] + [{"role": "user", "content": user_message}]
         return await self.llm.complete(messages=messages, system=system, max_tokens=4000)
@@ -167,10 +177,13 @@ class SocraticMentorAgent:
         weak_areas: list[str] | None = None,
         current_frame: int | None = None,
         is_checkpoint: bool | None = None,
+        suggestion_count: int = 0,
+        rejected_topics: list[str] | None = None,
     ) -> AsyncGenerator[str, None]:
         system = self._build_system(
             lesson_context, code_context, hint_level, skill_level, weak_areas,
-            current_frame=current_frame, is_checkpoint=is_checkpoint
+            current_frame=current_frame, is_checkpoint=is_checkpoint,
+            suggestion_count=suggestion_count, rejected_topics=rejected_topics
         )
         messages = conversation_history[-20:] + [{"role": "user", "content": user_message}]
         async for chunk in self.llm.stream(messages=messages, system=system, max_tokens=4000):

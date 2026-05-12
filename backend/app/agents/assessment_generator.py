@@ -238,7 +238,7 @@ Use the actual function names and variable names from the code. Ensure the quest
                     system=SYSTEM.format(count=question_count),
                     max_tokens=16000,
                 ),
-                timeout=10.0, # Bumped to 10s for more stability
+                timeout=60.0,
             )
             if raw and raw.strip():
                 data = extract_json(raw)

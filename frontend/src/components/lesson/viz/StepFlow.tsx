@@ -45,7 +45,7 @@ export default function StepFlow({ steps, onStepActivate, completedUpTo }: Props
   return (
     <div
       ref={containerRef}
-      className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 overflow-x-auto py-2"
+      className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-4 overflow-x-auto p-8 h-full"
     >
       {steps.map((step, i) => {
         const isHovered = hoveredNodeId === step.id;
@@ -67,21 +67,17 @@ export default function StepFlow({ steps, onStepActivate, completedUpTo }: Props
           .filter(Boolean)
           .join(", ");
         return (
-          <div key={step.id} className="flex flex-col sm:flex-row items-center gap-2">
+          <div key={step.id} className="flex flex-col sm:flex-row items-center gap-4">
             <button
               type="button"
               data-step-id={step.id}
               aria-label={aria}
               aria-pressed={isPinned}
               aria-current={isCurrent ? "step" : undefined}
-              onMouseEnter={() => setHovered(step.id)}
-              onMouseLeave={() => setHovered(null)}
               onClick={() => {
                 togglePinned(step.id);
                 if (step.code_ref) onStepActivate?.(step.code_ref.walkthrough_index);
               }}
-              onFocus={() => setHovered(step.id)}
-              onBlur={() => setHovered(null)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
@@ -90,27 +86,27 @@ export default function StepFlow({ steps, onStepActivate, completedUpTo }: Props
                 }
               }}
               className={cn(
-                "group relative flex min-h-[32px] min-w-[44px] w-full sm:w-auto items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-[120ms] ease-out motion-reduce:transition-none",
+                "group relative flex min-h-[44px] min-w-[120px] w-full sm:w-auto items-center gap-3 rounded-2xl border px-5 py-3 text-sm font-bold transition-all duration-200 shadow-xl",
                 active
-                  ? "border-sky-400 bg-sky-500/15 text-sky-200 -translate-y-[2px] shadow-lg shadow-sky-900/30"
+                  ? "border-sky-400 bg-sky-500/20 text-white -translate-y-1 shadow-sky-900/40"
                   : isCompleted
                   ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-                  : "border-slate-700/60 bg-slate-900/40 text-slate-300 hover:-translate-y-[2px] hover:border-slate-500 hover:bg-slate-800/60"
+                  : "border-slate-700/80 bg-slate-900/60 text-slate-200 hover:-translate-y-1 hover:border-slate-500 hover:bg-slate-800"
               )}
             >
               <span className={cn(
-                "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold tabular-nums",
-                active ? "bg-sky-400 text-slate-950" : isCompleted ? "bg-emerald-400 text-slate-950" : "bg-slate-800 text-slate-400"
+                "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[11px] font-black tabular-nums shadow-inner",
+                active ? "bg-sky-400 text-slate-950" : isCompleted ? "bg-emerald-400 text-slate-950" : "bg-slate-800 text-slate-400 border border-slate-700"
               )}>
                 {i + 1}
               </span>
-              <span className="whitespace-nowrap">{step.label}</span>
-              {isPinned && <Pin className="h-3 w-3 text-sky-300" />}
+              <span className="whitespace-nowrap tracking-tight">{step.label}</span>
+              {isPinned && <Pin className="h-4 w-4 text-sky-300" />}
             </button>
             {i < steps.length - 1 && (
               <>
-                <ChevronRight className="hidden sm:block h-4 w-4 shrink-0 text-slate-700" aria-hidden />
-                <ChevronDown className="block sm:hidden h-4 w-4 shrink-0 text-slate-700 self-center" aria-hidden />
+                <ChevronRight className="hidden sm:block h-5 w-5 shrink-0 text-slate-700" aria-hidden />
+                <ChevronDown className="block sm:hidden h-5 w-5 shrink-0 text-slate-700 self-center" aria-hidden />
               </>
             )}
           </div>

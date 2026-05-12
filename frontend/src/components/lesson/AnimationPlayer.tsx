@@ -114,7 +114,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
   const isForward = dir === "forward";
 
   return (
-    <div className="rounded-2xl border border-slate-700/60 bg-slate-950/80 backdrop-blur-md overflow-hidden select-none shadow-2xl ring-1 ring-slate-700/30">
+    <div className="h-full flex flex-col rounded-2xl border border-slate-700/60 bg-slate-950/80 backdrop-blur-md overflow-hidden select-none shadow-2xl ring-1 ring-slate-700/30">
       {/* ── Header ── */}
       <div className="flex items-center justify-between border-b border-slate-700/50 bg-slate-900/40 px-5 py-3">
         <div className="flex items-center gap-3">
@@ -178,7 +178,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
       </div>
 
       {/* ── Frame content ── */}
-      <div className="relative mesh-gradient">
+      <div className="relative flex-1 min-h-0 overflow-y-auto mesh-gradient">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={idx}
@@ -190,29 +190,29 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
           >
             {/* Frame Title & Progress */}
             <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <h3 className="text-lg font-bold text-white tracking-tight">
+              <div className="space-y-2">
+                <h3 className="text-xl font-black text-white tracking-tight">
                   {frame?.title}
                 </h3>
-                <p className="text-sm font-medium text-slate-400 leading-relaxed">
+                <p className="text-base font-medium text-slate-300 leading-relaxed max-w-3xl">
                   {frame?.narration}
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-6">
               {/* Code State */}
               <div className="group">
-                <div className="rounded-xl overflow-hidden border border-slate-700/40 bg-slate-950/40 glass-panel shadow-lg transition-all duration-300 group-hover:border-sky-500/30">
-                  <div className="flex items-center justify-between bg-slate-900/60 px-4 py-2 border-b border-slate-700/40">
-                    <div className="flex gap-1.5">
-                      <div className="h-2 w-2 rounded-full bg-slate-700" />
-                      <div className="h-2 w-2 rounded-full bg-slate-700" />
-                      <div className="h-2 w-2 rounded-full bg-slate-700" />
+                <div className="rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-950/60 glass-panel shadow-2xl transition-all duration-500 group-hover:border-sky-500/40">
+                  <div className="flex items-center justify-between bg-slate-900/80 px-5 py-2.5 border-b border-slate-700/50">
+                    <div className="flex gap-2">
+                      <div className="h-2.5 w-2.5 rounded-full bg-slate-800" />
+                      <div className="h-2.5 w-2.5 rounded-full bg-slate-800" />
+                      <div className="h-2.5 w-2.5 rounded-full bg-slate-800" />
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Live State</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Execution State</span>
                   </div>
-                  <pre className="px-5 py-4 font-mono text-xs leading-relaxed text-sky-300 overflow-x-auto selection:bg-sky-500/30">
+                  <pre className="px-6 py-5 font-mono text-sm leading-relaxed text-sky-300 overflow-x-auto selection:bg-sky-500/40">
                     {frame?.code_state}
                   </pre>
                 </div>

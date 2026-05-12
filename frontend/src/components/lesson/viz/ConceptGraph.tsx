@@ -14,8 +14,8 @@ interface PlacedNode extends VizNode {
   y: number;
 }
 
-const NODE_W = 168;
-const NODE_H = 60;
+const NODE_W = 200;
+const NODE_H = 72;
 
 function place(nodes: VizNode[], edges: VizEdge[]): PlacedNode[] {
   if (nodes.length === 0) return [];
@@ -43,8 +43,8 @@ function place(nodes: VizNode[], edges: VizEdge[]): PlacedNode[] {
   });
 
   const placed: PlacedNode[] = [];
-  const colW = NODE_W + 80;
-  const rowH = NODE_H + 56;
+  const colW = NODE_W + 100;
+  const rowH = NODE_H + 64;
   Array.from(byDepth.keys())
     .sort((a, b) => a - b)
     .forEach((d) => {
@@ -80,31 +80,37 @@ export default function ConceptGraph({ nodes, edges }: Props) {
     const maxX = Math.max(...placed.map((n) => n.x));
     const minY = Math.min(...placed.map((n) => n.y));
     const maxY = Math.max(...placed.map((n) => n.y));
-    return { w: maxX - minX + NODE_W + 60, h: maxY - minY + NODE_H + 60, minX: minX - 30, minY: minY - 30 };
+    return { w: maxX - minX + NODE_W + 80, h: maxY - minY + NODE_H + 80, minX: minX - 40, minY: minY - 40 };
   }, [placed]);
 
   const idToPlaced = useMemo(() => new Map(placed.map((p) => [p.id, p])), [placed]);
 
+  const clearHighlight = useLessonHighlight((s) => s.clear);
+
   const activeEdges = useMemo(() => {
-    const id = pinnedNodeId ?? hoveredNodeId;
+    const id = pinnedNodeId;
     if (!id) return new Set<number>();
     return new Set(
       edges
         .map((e, i) => (e.source === id || e.target === id ? i : -1))
         .filter((i) => i >= 0)
     );
-  }, [edges, hoveredNodeId, pinnedNodeId]);
+  }, [edges, pinnedNodeId]);
 
   return (
-    <div ref={containerRef} className="relative w-full overflow-auto">
-      {/* Right-edge overflow hint */}
-      <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-slate-950/80 to-transparent z-10" aria-hidden />
-      <svg
-        width={bounds.w}
-        height={bounds.h}
-        viewBox={`${bounds.minX} ${bounds.minY} ${bounds.w} ${bounds.h}`}
-        className="block"
-      >
+    <div 
+      ref={containerRef} 
+      className="h-full w-full overflow-auto custom-scrollbar bg-slate-950/20"
+      onClick={() => clearHighlight()}
+    >
+      <div className="flex items-center justify-center p-20 min-w-max min-h-full">
+        <svg
+          width={bounds.w}
+          height={bounds.h}
+          viewBox={`${bounds.minX} ${bounds.minY} ${bounds.w} ${bounds.h}`}
+          className="block shrink-0 drop-shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
         <defs>
           <marker
             id="graph-arrow"
@@ -154,19 +160,20 @@ export default function ConceptGraph({ nodes, edges }: Props) {
               <path
                 d={d}
                 fill="none"
-                stroke={isActive ? "rgb(56 189 248)" : "rgb(71 85 105 / 0.7)"}
-                strokeWidth={isActive ? 2 : 1.5}
+                stroke={isActive ? "rgb(56 189 248)" : "rgb(71 85 105 / 0.5)"}
+                strokeWidth={isActive ? 2.5 : 2}
                 markerEnd={isActive ? "url(#graph-arrow-active)" : "url(#graph-arrow)"}
                 className="transition-all duration-[120ms]"
               />
               {e.label && (
                 <text
                   x={mx}
-                  y={(y1 + y2) / 2 - 6}
+                  y={(y1 + y2) / 2 - 8}
                   textAnchor="middle"
-                  fontSize="10"
-                  fill="rgb(100 116 139)"
-                  fontWeight="500"
+                  fontSize="11"
+                  fill="rgb(148 163 184)"
+                  fontWeight="600"
+                  className="font-mono tracking-tighter"
                 >
                   {e.label}
                 </text>
@@ -177,10 +184,9 @@ export default function ConceptGraph({ nodes, edges }: Props) {
 
         {/* Nodes */}
         {placed.map((n, ni) => {
-          const isHovered = hoveredNodeId === n.id;
           const isPinned = pinnedNodeId === n.id;
           const linked = codeRefOverlaps(hoveredCodeRef, n.code_ref);
-          const active = isHovered || isPinned || linked;
+          const active = isPinned || linked;
           const aria = [n.label, n.summary, n.code_ref ? `lines ${n.code_ref.line_start}-${n.code_ref.line_end}` : ""]
             .filter(Boolean)
             .join(", ");
@@ -196,11 +202,12 @@ export default function ConceptGraph({ nodes, edges }: Props) {
                 if (el) nodeRefs.current.set(n.id, el);
                 else nodeRefs.current.delete(n.id);
               }}
-              transform={`translate(${n.x}, ${n.y + (active ? -2 : 0)})`}
-              className="group cursor-pointer outline-none transition-transform duration-[120ms] ease-out motion-reduce:transition-none"
-              onMouseEnter={() => setHovered(n.id)}
-              onMouseLeave={() => setHovered(null)}
-              onClick={() => togglePinned(n.id)}
+              transform={`translate(${n.x}, ${n.y})`}
+              className="group cursor-pointer outline-none transition-all duration-[120ms] ease-out motion-reduce:transition-none"
+              onClick={(e) => {
+                e.stopPropagation();
+                togglePinned(n.id);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
@@ -216,43 +223,43 @@ export default function ConceptGraph({ nodes, edges }: Props) {
             >
               {/* Keyboard focus ring */}
               <rect
-                width={NODE_W + 4}
-                height={NODE_H + 4}
-                x={-2}
-                y={-2}
-                rx={14}
-                ry={14}
+                width={NODE_W + 6}
+                height={NODE_H + 6}
+                x={-3}
+                y={-3}
+                rx={18}
+                ry={18}
                 fill="none"
                 stroke="rgb(56 189 248)"
-                strokeWidth={2}
+                strokeWidth={3}
                 className="opacity-0 group-focus-visible:opacity-100 transition-opacity duration-100"
               />
               <rect
                 width={NODE_W}
                 height={NODE_H}
-                rx={12}
-                ry={12}
+                rx={16}
+                ry={16}
                 className={cn(
-                  "transition-all duration-150",
+                  "transition-all duration-200 shadow-xl",
                   active
-                    ? "fill-sky-500/15 stroke-sky-400"
-                    : "fill-slate-900/70 stroke-slate-700/60"
+                    ? "fill-sky-500/20 stroke-sky-400"
+                    : "fill-slate-900/90 stroke-slate-700/80"
                 )}
-                strokeWidth={isPinned ? 2 : 1}
+                strokeWidth={active ? 2.5 : 1.5}
                 filter={active ? "url(#graph-glow)" : undefined}
               />
               {isPinned && (
-                <foreignObject x={NODE_W - 22} y={6} width={16} height={16}>
-                  <Pin className="h-3.5 w-3.5 text-sky-300" />
+                <foreignObject x={NODE_W - 28} y={8} width={20} height={20}>
+                  <Pin className="h-4 w-4 text-sky-300 fill-sky-300/20" />
                 </foreignObject>
               )}
-              <foreignObject x={10} y={8} width={NODE_W - 20} height={NODE_H - 16}>
+              <foreignObject x={14} y={10} width={NODE_W - 28} height={NODE_H - 20}>
                 <div className="flex h-full flex-col justify-center">
-                  <div className={cn("text-sm font-semibold leading-tight truncate", active ? "text-sky-200" : "text-slate-200")}>
+                  <div className={cn("text-[13px] font-bold leading-tight line-clamp-1", active ? "text-white" : "text-slate-100")}>
                     {n.label}
                   </div>
                   {n.summary && (
-                    <div className="text-[10px] text-slate-400 leading-snug line-clamp-2 mt-0.5">
+                    <div className={cn("text-[10px] leading-snug line-clamp-2 mt-1 font-medium", active ? "text-sky-200/80" : "text-slate-400")}>
                       {n.summary}
                     </div>
                   )}
@@ -262,6 +269,7 @@ export default function ConceptGraph({ nodes, edges }: Props) {
           );
         })}
       </svg>
+      </div>
     </div>
   );
 }
