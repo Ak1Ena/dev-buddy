@@ -225,6 +225,7 @@ export interface AnimationFrame {
   narration: string;
   is_checkpoint?: boolean;
   checkpoint_question?: string;
+  sub_frames?: AnimationFrame[];
 }
 
 export interface Lesson {

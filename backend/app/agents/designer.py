@@ -140,7 +140,8 @@ Return ONLY valid JSON — no markdown, no extra text:
 Cursor `color`: `"sky"`, `"emerald"`, `"fuchsia"` (default), `"amber"`, `"red"`, `"slate"`.
 
 ## Rules for frames
-- **4-7 frames total.** Each frame should advance the data state by ONE meaningful step.
+- **4-7 main frames total.** Each frame should advance the data state by ONE meaningful step.
+- **Micro-animations (sub_frames)**: Use the optional `sub_frames` list within a frame to show granular transitions that should play automatically (e.g., a cursor moving through an array, or a value being compared across multiple indices). Each sub-frame follows the same structure as a regular frame.
 - **At least 2 frames MUST have `is_checkpoint: true`** with a Socratic `checkpoint_question` that asks the user to predict the next state.
 - **`code_state`**: 1-3 lines of the actual code being executed at this step (with the relevant line highlighted in a comment if helpful).
 - **`narration`**: 1 sentence. Point out what just happened or what's about to happen — never restate what the diagram already shows.

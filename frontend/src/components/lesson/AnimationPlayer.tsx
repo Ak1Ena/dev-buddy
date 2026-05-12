@@ -22,23 +22,27 @@ const SPEED_OPTIONS: SpeedOption[] = [0.25, 0.5, 1, 2];
 
 export default function AnimationPlayer({ frames, activeFrameIndex, highlightedNodeIds = [], onFrameChange }: Props) {
   const [idx, setIdx] = useState(0);
+  const [subIdx, setSubIdx] = useState(0);
   const [dir, setDir] = useState<"forward" | "backward">("forward");
   const [autoPlay, setAutoPlay] = useState(() => {
     if (typeof window === "undefined") return false;
     return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   });
   const [frameProgress, setFrameProgress] = useState(0); // 0–100
-  const [speed, setSpeed] = useState<SpeedOption>(1);
+  const [speed, setSpeed] = useState<SpeedOption>(0.25);
   const [checkpointCleared, setCheckpointCleared] = useState<Record<number, boolean>>({});
 
   const frameDuration = BASE_FRAME_DURATION / speed;
 
-  const frame = frames[idx];
+  const mainFrame = frames[idx];
   const total = frames.length;
 
   if (total === 0) return null;
 
-  const isCheckpoint = !!frame?.is_checkpoint && !checkpointCleared[idx];
+  const subFrames = mainFrame?.sub_frames ?? [];
+  const displayFrame = subFrames.length > 0 ? (subFrames[subIdx] ?? mainFrame) : mainFrame;
+
+  const isCheckpoint = !!mainFrame?.is_checkpoint && !checkpointCleared[idx];
 
   // Sync with prop from parent. Only react when the *prop* changes; do NOT
   // re-sync when local `idx` advances (that fights local state and freezes
@@ -52,6 +56,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
     if (activeFrameIndex !== idx) {
       setDir(activeFrameIndex > idx ? "forward" : "backward");
       setIdx(activeFrameIndex);
+      setSubIdx(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFrameIndex]);
@@ -60,14 +65,35 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
     if (next > idx && isCheckpoint) return; // Block forward if checkpoint not cleared
     setDir(next > idx ? "forward" : "backward");
     setIdx(next);
+    setSubIdx(0);
   };
 
   useEffect(() => {
     onFrameChange?.(idx, isCheckpoint);
   }, [idx, isCheckpoint, onFrameChange]);
 
-  const prev = () => { if (idx > 0) go(idx - 1); };
-  const next = () => { if (idx < total - 1) go(idx + 1); };
+  const prev = () => {
+    if (subIdx > 0) {
+      setSubIdx(subIdx - 1);
+    } else if (idx > 0) {
+      const prevFrame = frames[idx - 1];
+      const prevSubFramesCount = prevFrame?.sub_frames?.length ?? 0;
+      setDir("backward");
+      setIdx(idx - 1);
+      setSubIdx(prevSubFramesCount > 0 ? prevSubFramesCount - 1 : 0);
+    }
+  };
+
+  const next = () => {
+    if (subIdx < subFrames.length - 1) {
+      setSubIdx(subIdx + 1);
+    } else if (idx < total - 1) {
+      if (isCheckpoint) return;
+      setDir("forward");
+      setIdx(idx + 1);
+      setSubIdx(0);
+    }
+  };
 
   const handleClearCheckpoint = () => {
     setCheckpointCleared((prev) => ({ ...prev, [idx]: true }));
@@ -77,14 +103,19 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
   useEffect(() => {
     if (!autoPlay || isCheckpoint) return;
     const t = setInterval(() => {
-      setIdx((i) => {
-        if (i >= total - 1) { setAutoPlay(false); return i; }
-        setDir("forward");
-        return i + 1;
-      });
+      if (subIdx < subFrames.length - 1) {
+        setSubIdx((s) => s + 1);
+      } else {
+        setIdx((i) => {
+          if (i >= total - 1) { setAutoPlay(false); return i; }
+          setDir("forward");
+          setSubIdx(0);
+          return i + 1;
+        });
+      }
     }, frameDuration);
     return () => clearInterval(t);
-  }, [autoPlay, total, frameDuration, isCheckpoint]);
+  }, [autoPlay, total, frameDuration, isCheckpoint, subIdx, subFrames.length]);
 
   // Progress-within-frame ticker
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -109,7 +140,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
     };
-  }, [autoPlay, idx, frameDuration, isCheckpoint]);
+  }, [autoPlay, idx, subIdx, frameDuration, isCheckpoint]);
 
   const isForward = dir === "forward";
 
@@ -134,7 +165,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
               Logic Stream
             </span>
             <span className="text-xs font-medium text-slate-300">
-              Frame {idx + 1} of {total}
+              Frame {idx + 1} of {total} {subFrames.length > 0 && `(${idx + 1}.${subIdx + 1})`}
             </span>
           </div>
         </div>
@@ -181,7 +212,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
       <div className="relative flex-1 min-h-0 overflow-y-auto mesh-gradient">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            key={idx}
+            key={`${idx}-${subIdx}`}
             initial={{ opacity: 0, x: isForward ? 20 : -20, filter: "blur(10px)" }}
             animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, x: isForward ? -20 : 20, filter: "blur(10px)" }}
@@ -192,10 +223,10 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-2">
                 <h3 className="text-xl font-black text-white tracking-tight">
-                  {frame?.title}
+                  {displayFrame?.title}
                 </h3>
                 <p className="text-base font-medium text-slate-300 leading-relaxed max-w-3xl">
-                  {frame?.narration}
+                  {displayFrame?.narration}
                 </p>
               </div>
             </div>
@@ -213,23 +244,23 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Execution State</span>
                   </div>
                   <pre className="px-6 py-5 font-mono text-sm leading-relaxed text-sky-300 overflow-x-auto selection:bg-sky-500/40">
-                    {frame?.code_state}
+                    {displayFrame?.code_state}
                   </pre>
                 </div>
               </div>
 
               {/* Data Views (preferred) or Canvas Scene (fallback) */}
               <div>
-                {frame?.data_views && frame.data_views.length > 0 ? (
+                {displayFrame?.data_views && displayFrame.data_views.length > 0 ? (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.1, duration: 0.4 }}
                     className="relative"
                   >
-                    <DataViewRenderer views={frame.data_views} />
+                    <DataViewRenderer views={displayFrame.data_views} />
                   </motion.div>
-                ) : frame?.canvas_scene && (
+                ) : displayFrame?.canvas_scene && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -237,14 +268,14 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
                     className="relative"
                   >
                     <CanvasScene
-                      scene={frame.canvas_scene}
+                      scene={displayFrame.canvas_scene}
                       highlightedNodeIds={highlightedNodeIds}
                     />
                     
                     {/* Effects Overlay */}
-                    {frame.effects && frame.effects.length > 0 && (
+                    {displayFrame.effects && displayFrame.effects.length > 0 && (
                       <div className="absolute top-4 right-4 flex flex-col gap-2">
-                        {frame.effects.map((e, i) => (
+                        {displayFrame.effects.map((e, i) => (
                           e.why && (
                             <motion.div
                               key={i}
@@ -290,7 +321,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
                       </div>
                       
                       <p className="text-lg font-medium text-slate-200 leading-relaxed">
-                        {frame?.checkpoint_question ?? "Analyze the current state. What do you think happens next in the logic?"}
+                        {mainFrame?.checkpoint_question ?? "Analyze the current state. What do you think happens next in the logic?"}
                       </p>
                       
                       <div className="flex items-center gap-2 text-amber-400/80">
@@ -322,7 +353,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
       </div>
 
       {/* Auto-play progress bar — between frame content and controls */}
-      {autoPlay && idx < total - 1 && !isCheckpoint && (
+      {autoPlay && (idx < total - 1 || subIdx < subFrames.length - 1) && !isCheckpoint && (
         <div className="h-0.5 bg-slate-800 shrink-0">
           <div
             className="h-full bg-gradient-to-r from-fuchsia-500 via-sky-500 to-emerald-500"
@@ -337,7 +368,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
           variant="outline"
           size="sm"
           onClick={prev}
-          disabled={idx === 0}
+          disabled={idx === 0 && subIdx === 0}
           className="h-9 gap-1.5 border-slate-700/60 bg-slate-800/40 text-slate-400 hover:text-slate-200 hover:border-slate-500 disabled:opacity-30 uppercase tracking-tighter font-bold text-[10px]"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
@@ -369,7 +400,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
           variant="outline"
           size="sm"
           onClick={next}
-          disabled={idx === total - 1 || isCheckpoint}
+          disabled={(idx === total - 1 && subIdx === subFrames.length - 1) || isCheckpoint}
           className={cn(
             "h-9 gap-1.5 border-slate-700/60 bg-slate-800/40 text-slate-400 hover:text-slate-200 hover:border-slate-500 disabled:opacity-30 uppercase tracking-tighter font-bold text-[10px]",
             isCheckpoint && "border-amber-500/50 text-amber-500/50"
