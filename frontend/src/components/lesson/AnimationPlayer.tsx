@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import type { AnimationFrame } from "@/types";
 import CanvasScene from "./CanvasScene";
 import DataViewRenderer from "./DataView";
+import EffectLayer from "./EffectLayer";
 import { Button } from "@/components/ui/button";
 
 interface Props {
@@ -14,7 +15,7 @@ interface Props {
   onFrameChange?: (idx: number, isCheckpoint: boolean) => void;
 }
 
-const BASE_FRAME_DURATION = 2800;
+export const BASE_FRAME_DURATION = 2800;
 const TICK_MS = 60;
 
 type SpeedOption = 0.25 | 0.5 | 1 | 2;
@@ -29,7 +30,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
     return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   });
   const [frameProgress, setFrameProgress] = useState(0); // 0–100
-  const [speed, setSpeed] = useState<SpeedOption>(0.25);
+  const [speed, setSpeed] = useState<SpeedOption>(1);
   const [checkpointCleared, setCheckpointCleared] = useState<Record<number, boolean>>({});
 
   const frameDuration = BASE_FRAME_DURATION / speed;
@@ -250,46 +251,37 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
               </div>
 
               {/* Data Views (preferred) or Canvas Scene (fallback) */}
-              <div>
+              <div className="relative">
                 {displayFrame?.data_views && displayFrame.data_views.length > 0 ? (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.1, duration: 0.4 }}
-                    className="relative"
                   >
-                    <DataViewRenderer views={displayFrame.data_views} />
+                    <DataViewRenderer views={displayFrame.data_views} speed={speed} />
                   </motion.div>
                 ) : displayFrame?.canvas_scene && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.1, duration: 0.4 }}
-                    className="relative"
                   >
                     <CanvasScene
                       scene={displayFrame.canvas_scene}
                       highlightedNodeIds={highlightedNodeIds}
                     />
-                    
-                    {/* Effects Overlay */}
-                    {displayFrame.effects && displayFrame.effects.length > 0 && (
-                      <div className="absolute top-4 right-4 flex flex-col gap-2">
-                        {displayFrame.effects.map((e, i) => (
-                          e.why && (
-                            <motion.div
-                              key={i}
-                              initial={{ opacity: 0, x: 10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              className="bg-slate-900/80 backdrop-blur-md border border-slate-700/50 px-3 py-1.5 rounded-lg text-[10px] font-medium text-slate-300 shadow-xl"
-                            >
-                              <span className="text-sky-400 font-bold mr-2">{e.target}:</span>
-                              {e.why}
-                            </motion.div>
-                          )
-                        ))}
-                      </div>
-                    )}
+                  </motion.div>
+                )}
+
+                {/* Effects Overlay — Unified for both DataView and Canvas */}
+                {displayFrame.effects && displayFrame.effects.length > 0 && (
+                  <motion.div 
+                    className="absolute top-4 right-4 z-50 w-72 pointer-events-none"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <EffectLayer effects={displayFrame.effects} />
                   </motion.div>
                 )}
               </div>

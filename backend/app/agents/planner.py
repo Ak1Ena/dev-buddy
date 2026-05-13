@@ -3,6 +3,7 @@ Planner Agent — generates a personalized learning path and lesson content
 grounded in the user's submitted code.
 """
 import logging
+import asyncio
 from app.services.llm import get_llm_provider
 from app.agents.utils import extract_json
 from app.agents.code_analyzer import CodeAnalyzerAgent
@@ -131,6 +132,47 @@ Rules for code_walkthrough:
 - why: explain the programmer's intention — WHY they wrote this line"""
 
 
+def _fallback_lesson_content(topic: str, language: str, code_snippet: str = "") -> dict:
+    topic_label = topic.replace("_", " ")
+    sample_lines = [
+        line.rstrip()
+        for line in code_snippet.splitlines()
+        if line.strip()
+    ][:5]
+    if not sample_lines:
+        sample_lines = [f"// {topic_label} example"]
+    walkthrough = [
+        {
+            "code": line,
+            "plain_english": f"This line participates in the {topic_label} logic.",
+            "why": "The programmer wrote it so later steps have a value or action to work with.",
+        }
+        for line in sample_lines[:4]
+    ]
+    workshop_code = "\n".join(sample_lines[:4])
+    return {
+        "concept_hook": f"Think of {topic_label} as a foundational block in your {language} code.",
+        "code_walkthrough": walkthrough,
+        "key_concepts": [topic_label],
+        "workshops": [
+            {
+                "type": "predict_output",
+                "title": f"Trace the {topic_label}",
+                "description": "Read the snippet and identify which value changes first.",
+                "code": workshop_code,
+                "answer": "Trace the first assignment or update in order.",
+                "hints": [
+                    "Start at the first non-empty line.",
+                    "Look for the first value that is created or changed.",
+                    "Follow the code from top to bottom.",
+                ],
+                "explanation": f"The important move is to track how {topic_label} affects the next line of execution.",
+            }
+        ],
+        "summary": "This concept is key to understanding the logic in your code.",
+    }
+
+
 TOPIC_PLANNER_SYSTEM = """You are a curriculum design expert for beginner programming education.
 Create a structured learning path for a specific programming topic or goal.
 
@@ -177,6 +219,11 @@ class PlannerAgent:
         strong_areas: list[str],
         score: int,
     ) -> dict:
+        # For path generation, focus on the first 6000 chars of the code
+        path_code = code_snippet
+        if len(code_snippet) > 6000:
+            path_code = code_snippet[:6000] + "\n\n# ... [code truncated for analysis] ..."
+
         # Detect code-level misconceptions before building the prompt (AC-GAP-001)
         try:
             misconceptions = await self.code_analyzer.detect_misconceptions(code_snippet)
@@ -184,7 +231,7 @@ class PlannerAgent:
             logger.warning("Misconception detection raised unexpectedly: %s", exc)
             misconceptions = []
 
-        # Handle missing or empty assessment data (Instant Discovery)
+        # ... (rest of the setup logic remains same)
         weak_areas = weak_areas or []
         strong_areas = strong_areas or []
         concepts = concepts or []
@@ -225,7 +272,7 @@ class PlannerAgent:
 
 Their submitted code:
 ```{language}
-{code_snippet}
+{path_code}
 ```
 
 Concepts detected in their code: {', '.join(concepts) if concepts else 'general'}
@@ -240,10 +287,13 @@ Rules for this path:
 
         for attempt, max_tok in enumerate([4000, 2000], start=1):
             try:
-                raw = await self.llm.complete(
-                    messages=[{"role": "user", "content": prompt}],
-                    system=PLANNER_SYSTEM,
-                    max_tokens=max_tok,
+                raw = await asyncio.wait_for(
+                    self.llm.complete(
+                        messages=[{"role": "user", "content": prompt}],
+                        system=PLANNER_SYSTEM,
+                        max_tokens=max_tok,
+                    ),
+                    timeout=30.0,
                 )
                 if not raw or not raw.strip():
                     raise ValueError("empty response")
@@ -276,10 +326,13 @@ Design a clear progression of lessons that teaches this topic starting from the 
 
         for attempt, max_tok in enumerate([3000, 1500], start=1):
             try:
-                raw = await self.llm.complete(
-                    messages=[{"role": "user", "content": prompt}],
-                    system=TOPIC_PLANNER_SYSTEM,
-                    max_tokens=max_tok,
+                raw = await asyncio.wait_for(
+                    self.llm.complete(
+                        messages=[{"role": "user", "content": prompt}],
+                        system=TOPIC_PLANNER_SYSTEM,
+                        max_tokens=max_tok,
+                    ),
+                    timeout=30.0,
                 )
                 if not raw or not raw.strip():
                     raise ValueError("empty response")
@@ -319,6 +372,11 @@ Design a clear progression of lessons that teaches this topic starting from the 
         code_snippet: str,
         weak_areas: list[str],
     ) -> dict:
+        # Focus on the relevant 5000 chars for content generation
+        content_code = code_snippet
+        if len(code_snippet) > 5000:
+            content_code = code_snippet[:5000] + "\n\n# ... [code truncated for brevity] ..."
+
         prompt = f"""Generate lesson content for:
 Topic: {topic}
 Title: {title}
@@ -327,26 +385,39 @@ Student level: {skill_level}
 
 The student's original code that motivated this lesson:
 ```{language}
-{code_snippet}
+{content_code}
 ```
 
 Focus on the {topic} concept as it appears in their code. Reference their actual variable
 names, function names, and line numbers."""
 
-        raw = await self.llm.complete(
-            messages=[{"role": "user", "content": prompt}],
-            system=CONTENT_SYSTEM,
-            max_tokens=3500,
-        )
-        if not raw or not raw.strip():
-            raise ValueError("LLM returned empty response for lesson content")
-        result = extract_json(raw)
-        if isinstance(result, list):
-            # Sibling objects — pick the one that looks like lesson content
-            for item in result:
-                if isinstance(item, dict) and any(k in item for k in ("concept_hook", "key_concepts", "explanation")):
-                    return item
-            if result and isinstance(result[0], dict):
-                return result[0]
-            raise ValueError("LLM returned a list with no valid lesson content object")
-        return result
+        try:
+            raw = await asyncio.wait_for(
+                self.llm.complete(
+                    messages=[{"role": "user", "content": prompt}],
+                    system=CONTENT_SYSTEM,
+                    max_tokens=6000,
+                ),
+                timeout=60.0,
+            )
+            if not raw or not raw.strip():
+                raise ValueError("LLM returned empty response for lesson content")
+            result = extract_json(raw)
+            if isinstance(result, list):
+                # Sibling objects — pick the one that looks like lesson content
+                for item in result:
+                    if isinstance(item, dict) and any(k in item for k in ("concept_hook", "key_concepts", "explanation")):
+                        return item
+                if result and isinstance(result[0], dict):
+                    return result[0]
+                raise ValueError("LLM returned a list with no valid lesson content object")
+            return result
+        except asyncio.TimeoutError:
+            logger.warning("Lesson content generation timed out after 60s for topic=%s", topic)
+            return _fallback_lesson_content(topic, language, code_snippet)
+        except ValueError:
+            logger.info("Lesson content generation returned non-JSON for topic=%s; using fallback", topic)
+            return _fallback_lesson_content(topic, language, code_snippet)
+        except Exception as exc:
+            logger.warning("Lesson content generation failed for topic=%s: %s", topic, exc)
+            return _fallback_lesson_content(topic, language, code_snippet)

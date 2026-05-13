@@ -159,43 +159,105 @@ function hLayout(nodes: CanvasNode[], sz: Map<string, Sz>): Map<string, Pos> {
   return pos;
 }
 
-function drawArrow(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, col: string, dashed: boolean) {
+function drawGrid(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.save();
+  ctx.strokeStyle = "rgba(56, 189, 248, 0.04)";
+  ctx.lineWidth = 1;
+
+  // Major grid
+  const step = 40;
+  ctx.beginPath();
+  for (let x = 0; x <= w; x += step) {
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+  }
+  for (let y = 0; y <= h; y += step) {
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+  }
+  ctx.stroke();
+
+  // Minor grid
+  ctx.strokeStyle = "rgba(56, 189, 248, 0.02)";
+  const smallStep = 10;
+  ctx.beginPath();
+  for (let x = 0; x <= w; x += smallStep) {
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+  }
+  for (let y = 0; y <= h; y += smallStep) {
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawArrow(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, col: string, dashed: boolean, progress: number = 1) {
   const angle = Math.atan2(y2 - y1, x2 - x1);
   const TIP = 8;
+  const length = Math.hypot(x2 - x1, y2 - y1);
+  const drawLen = length * progress;
+
   ctx.globalAlpha = 0.65;
   ctx.strokeStyle = col;
   ctx.lineWidth   = 1.5;
-  ctx.setLineDash(dashed ? [5, 4] : []);
+  
+  if (progress < 1) {
+    ctx.setLineDash([drawLen, length]);
+  } else {
+    ctx.setLineDash(dashed ? [5, 4] : []);
+  }
+
   ctx.beginPath();
   ctx.moveTo(x1, y1);
-  ctx.lineTo(x2 - TIP * Math.cos(angle), y2 - TIP * Math.sin(angle));
+  ctx.lineTo(x2, y2);
   ctx.stroke();
   ctx.setLineDash([]);
+  
+  if (progress > 0.95) {
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - TIP * Math.cos(angle - Math.PI / 6), y2 - TIP * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(x2 - TIP * Math.cos(angle + Math.PI / 6), y2 - TIP * Math.sin(angle + Math.PI / 6));
+    ctx.closePath();
+    ctx.fill();
+  }
   ctx.globalAlpha = 1;
-  ctx.fillStyle = col;
-  ctx.beginPath();
-  ctx.moveTo(x2, y2);
-  ctx.lineTo(x2 - TIP * Math.cos(angle - Math.PI / 6), y2 - TIP * Math.sin(angle - Math.PI / 6));
-  ctx.lineTo(x2 - TIP * Math.cos(angle + Math.PI / 6), y2 - TIP * Math.sin(angle + Math.PI / 6));
-  ctx.closePath();
-  ctx.fill();
 }
 
-function drawCurve(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, col: string) {
+function drawCurve(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, col: string, progress: number = 1) {
   const mid = (y1 + y2) / 2;
   ctx.globalAlpha = 0.45;
   ctx.strokeStyle = col;
   ctx.lineWidth   = 1.5;
-  ctx.setLineDash([]);
+  
+  // Bezier length approximation
+  const length = Math.hypot(x2 - x1, y2 - y1) * 1.2; 
+  const drawLen = length * progress;
+
+  if (progress < 1) {
+    ctx.setLineDash([drawLen, length]);
+  } else {
+    ctx.setLineDash([]);
+  }
+
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.bezierCurveTo(x1, mid, x2, mid, x2, y2);
   ctx.stroke();
+  ctx.setLineDash([]);
+
+  if (progress > 0.95) {
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(x2, y2, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.globalAlpha = 1;
-  ctx.fillStyle = col;
-  ctx.beginPath();
-  ctx.arc(x2, y2, 3, 0, Math.PI * 2);
-  ctx.fill();
 }
 
 const PARTICLE_VELOCITY = 0.09;
@@ -340,8 +402,15 @@ export default function CanvasScene({ scene, highlightedNodeIds = [] }: { scene:
       // background
       ctx.fillStyle = "#020617";
       ctx.fillRect(0, 0, CW, CH);
+      
+      // Blueprint grid
+      drawGrid(ctx, CW, CH);
+
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
+
+      // Animation progress for drawing lines (1.2s duration)
+      const drawProgress = Math.min(1, elapsed / 1200);
 
       // Parent→child curves
       for (const node of nodes) {
@@ -357,8 +426,10 @@ export default function CanvasScene({ scene, highlightedNodeIds = [] }: { scene:
         const y1 = pp.y + ps.h;
         const x2 = np.x + ns.w / 2;
         const y2 = np.y;
-        drawCurve(ctx, x1, y1, x2, y2, col);
-        drawParticlesOnBezier(ctx, x1, y1, x2, y2, col, elapsed);
+        drawCurve(ctx, x1, y1, x2, y2, col, drawProgress);
+        if (drawProgress > 0.8) {
+           drawParticlesOnBezier(ctx, x1, y1, x2, y2, col, elapsed);
+        }
       }
 
       const edgeList = edges as CanvasEdge[];
@@ -392,9 +463,11 @@ export default function CanvasScene({ scene, highlightedNodeIds = [] }: { scene:
         const x2 = tp.x;
         const y2 = tp.y + ts.h * ((ii + 1) / (ic + 1));
 
-        drawArrow(ctx, x1, y1, x2, y2, col, edge.style === "dashed");
-        drawParticlesOnLine(ctx, x1, y1, x2, y2, col, elapsed);
-        if (edge.label) {
+        drawArrow(ctx, x1, y1, x2, y2, col, edge.style === "dashed", drawProgress);
+        if (drawProgress > 0.8) {
+          drawParticlesOnLine(ctx, x1, y1, x2, y2, col, elapsed);
+        }
+        if (edge.label && drawProgress > 0.9) {
           ctx.fillStyle  = "#64748b";
           ctx.font       = "600 10px ui-monospace, SFMono-Regular, monospace";
           ctx.textAlign  = "center";

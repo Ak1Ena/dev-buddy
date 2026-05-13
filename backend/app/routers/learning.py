@@ -5,8 +5,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 logger = logging.getLogger(__name__)
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
-from sqlalchemy.orm import selectinload
+from sqlalchemy import select, update, func, and_
+from sqlalchemy.orm import selectinload, joinedload, contains_eager
 
 from app.database import get_db, AsyncSessionLocal
 from app.models.user import User
@@ -32,6 +32,7 @@ from app.schemas.learning import (
 from pydantic import ValidationError
 
 router = APIRouter(prefix="/learning", tags=["learning"])
+_lesson_generation_locks: dict[str, asyncio.Lock] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -44,16 +45,18 @@ async def _orchestrate_discovery_background(
     session_id: str,
     code_snippet: str,
     language: str,
-    analysis: dict,
     skill_level: str,
 ):
-    """Background task to generate 3 questions, a learning path, and the hero map in parallel."""
+    """Background task to perform LLM analysis, generate 3 questions, a learning path, and the hero map."""
+    analyzer = CodeAnalyzerAgent()
     planner = PlannerAgent()
     designer = DesignerAgent()
     assessment_gen = AssessmentGeneratorAgent()
 
-    # Trigger Planner, Designer, and Assessment in parallel
-    # Designer generates the "Hero Map" for the overall code logic
+    # Step 1: Perform deeper LLM analysis in background
+    analysis = await analyzer.analyze(code_snippet)
+    
+    # Trigger Planner, Designer, and Assessment in parallel using the refined analysis
     tasks = [
         assessment_gen.generate_questions(code_snippet, analysis["concepts"], language, question_count=3),
         planner.generate_learning_path(
@@ -77,11 +80,15 @@ async def _orchestrate_discovery_background(
         questions, plan_data, hero_anim = await asyncio.gather(*tasks)
 
         async with AsyncSessionLocal() as db:
-            # 1. Update Assessment Session with 3 questions
+            # 1. Update Assessment Session with 3 questions AND refined analysis
             await db.execute(
                 update(AssessmentSession)
                 .where(AssessmentSession.id == session_id)
                 .values(
+                    detected_language=analysis["language"],
+                    code_summary=analysis.get("summary", ""),
+                    extracted_concepts=analysis["concepts"],
+                    concept_locations=analysis.get("concept_locations"),
                     generated_questions=questions,
                     total_questions=len(questions),
                     status="ready",
@@ -123,8 +130,8 @@ async def _orchestrate_discovery_background(
                     difficulty=lesson_data.get("difficulty", "beginner"),
                 )
                 
-                # Attach Hero Map to the first lesson if it's an overview
-                if i == 0 and hero_anim:
+                # Attach Hero Map to the first lesson if it's an overview and we got a valid one
+                if i == 0 and hero_anim and hero_anim.get("animation_frames"):
                     lesson.content = hero_anim
                 
                 db.add(lesson)
@@ -209,6 +216,18 @@ async def _build_lesson_content(
             content.pop("viz", None)
 
     return content
+
+
+def _lesson_content_needs_generation(content) -> bool:
+    """Return True until the full lesson page contract is available."""
+    if not isinstance(content, dict):
+        return True
+    required_lists = ("code_walkthrough", "key_concepts", "workshops", "animation_frames")
+    required_values = ("concept_hook", "summary", "deep_dive", "viz")
+    return (
+        any(not content.get(key) for key in required_values)
+        or any(not isinstance(content.get(key), list) or not content.get(key) for key in required_lists)
+    )
 
 
 def _viz_extra_validation(viz, walkthrough_len: int = 0) -> str | None:
@@ -300,7 +319,7 @@ async def _prefill_lesson_content(
     if not lessons:
         return
 
-    sem = asyncio.Semaphore(3)
+    sem = asyncio.Semaphore(1)
 
     async def generate_one(lesson_id: str, topic: str, title: str, order: int):
         async with sem:
@@ -359,14 +378,14 @@ async def instant_discovery(
 ):
     """
     Primary orchestration for the 'Instant Discovery' flow.
-    1. Analyzes code immediately (SLA < 3s).
+    1. Analyzes code immediately using FAST STATIC regex (SLA < 100ms).
     2. Creates a Space and an AssessmentSession.
-    3. Triggers Path, Hero Map, and Questions in parallel background.
+    3. Triggers DEEP LLM analysis, Path, Hero Map, and Questions in background.
     4. Returns early to allow frontend to show the Logic Map.
     """
-    # Step 1: Analyze Code
+    # Step 1: Fast Static Analysis (Immediate Response)
     analyzer = CodeAnalyzerAgent()
-    analysis = await analyzer.analyze(body.code_snippet)
+    analysis = analyzer.static_analyze(body.code_snippet)
     
     language = body.language or analysis["language"]
     
@@ -407,7 +426,7 @@ async def instant_discovery(
     await db.refresh(space)
     await db.refresh(session)
     
-    # Step 4: Trigger Parallel Discovery Tasks
+    # Step 4: Trigger Parallel Discovery Tasks (including deep analysis)
     background_tasks.add_task(
         _orchestrate_discovery_background,
         user_id=current_user.id,
@@ -415,7 +434,6 @@ async def instant_discovery(
         session_id=session.id,
         code_snippet=body.code_snippet,
         language=language,
-        analysis=analysis,
         skill_level=current_user.skill_level or "beginner",
     )
     
@@ -694,44 +712,60 @@ async def get_lesson(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # 1. Base query with eager loading
+    # 1. Base query with eager loading for EVERYTHING needed
     stmt = (
         select(Lesson)
-        .options(selectinload(Lesson.progress))
+        .options(
+            selectinload(Lesson.progress),
+            contains_eager(Lesson.learning_path)
+        )
         .join(LearningPath, Lesson.learning_path_id == LearningPath.id)
         .where(Lesson.id == lesson_id, LearningPath.user_id == current_user.id)
     )
     result = await db.execute(stmt)
     lesson = result.scalar_one_or_none()
-    
+
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
 
-    # 2. On-demand content generation if missing (e.g. clicked before background prefill finished)
-    if not lesson.content:
-        path_result = await db.execute(
-            select(LearningPath).where(LearningPath.id == lesson.learning_path_id)
-        )
-        path = path_result.scalar_one_or_none()
-        
-        if path:
-            try:
-                content = await _build_lesson_content(
-                    topic=lesson.topic,
-                    title=lesson.title,
-                    language=path.language,
-                    skill_level=path.skill_level,
-                    source_code=path.source_code or "",
-                    weak_areas=current_user.weak_areas or [],
-                )
-                lesson.content = content
-                await db.commit()
-                # Refresh session state after commit
-                result = await db.execute(stmt)
-                lesson = result.scalar_one()
-            except Exception as exc:
-                logger.warning("Lesson content generation failed: %s", exc)
-                await db.rollback()
+    # 2. On-demand content generation if missing or incomplete
+    if _lesson_content_needs_generation(lesson.content):
+        lock = _lesson_generation_locks.setdefault(lesson_id, asyncio.Lock())
+        async with lock:
+            result = await db.execute(stmt)
+            lesson = result.scalar_one()
+
+            if _lesson_content_needs_generation(lesson.content):
+                try:
+                    # We already have lesson.learning_path loaded via contains_eager.
+                    # Preserve existing hero map data if new content does not replace it.
+                    existing_content = lesson.content or {}
+
+                    new_content = await _build_lesson_content(
+                        topic=lesson.topic,
+                        title=lesson.title,
+                        language=lesson.learning_path.language,
+                        skill_level=lesson.learning_path.skill_level,
+                        source_code=lesson.learning_path.source_code or "",
+                        weak_areas=current_user.weak_areas or [],
+                    )
+
+                    if "animation_frames" in existing_content and (not new_content.get("animation_frames")):
+                        new_content["animation_frames"] = existing_content["animation_frames"]
+                    if "viz" in existing_content and (not new_content.get("viz")):
+                        new_content["viz"] = existing_content["viz"]
+
+                    lesson.content = new_content
+                    await db.commit()
+
+                    # Re-fetch to ensure all relationships are fresh and bound.
+                    result = await db.execute(stmt)
+                    lesson = result.scalar_one()
+                except Exception as exc:
+                    logger.warning("Lesson content generation failed: %s", exc)
+                    await db.rollback()
+                    result = await db.execute(stmt)
+                    lesson = result.scalar_one()
 
     # 3. Ensure progress record exists
     if lesson.progress is None:
@@ -740,22 +774,15 @@ async def get_lesson(
             db.add(progress)
             await db.commit()
         except Exception as exc:
-            # Likely a unique constraint race condition from parallel requests
             logger.info("Progress record might already exist: %s", exc)
             await db.rollback()
-        
+
         # ALWAYS re-fetch to ensure lesson.progress is correctly populated and bound
         result = await db.execute(stmt)
         lesson = result.scalar_one()
 
-    # 4. Fetch space_id for response context
-    space_lookup = await db.execute(
-        select(LearningPath.learning_space_id).where(LearningPath.id == lesson.learning_path_id)
-    )
-    space_id = space_lookup.scalar_one_or_none()
-
-    return _format_lesson(lesson, space_id=space_id)
-
+    # We can now just use lesson.learning_path.learning_space_id without extra query
+    return _format_lesson(lesson, space_id=lesson.learning_path.learning_space_id)
 
 @router.post("/lesson/{lesson_id}/surrender", response_model=LessonSurrenderResponse)
 async def surrender_lesson(
@@ -840,16 +867,19 @@ async def surrender_lesson(
 
     await db.commit()
 
-    # Reload with eager progress to avoid async lazy-load (MissingGreenlet)
+    # Reload everything with eager progress/path to avoid async lazy-load (MissingGreenlet)
     reloaded = await db.execute(
         select(Lesson)
-        .options(selectinload(Lesson.progress))
+        .options(
+            selectinload(Lesson.progress),
+            joinedload(Lesson.learning_path)
+        )
         .where(Lesson.id == remedial_lesson.id)
     )
     loaded_lesson = reloaded.scalar_one()
 
     return LessonSurrenderResponse(
-        lesson=_format_lesson(loaded_lesson, space_id=path.learning_space_id),
+        lesson=_format_lesson(loaded_lesson, space_id=loaded_lesson.learning_path.learning_space_id),
         message="A focused deep-dive lesson has been added next.",
     )
 

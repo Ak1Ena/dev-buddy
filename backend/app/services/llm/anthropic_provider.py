@@ -1,7 +1,13 @@
+import asyncio
 from typing import AsyncGenerator
 import anthropic
 
 from app.services.llm.base import LLMProvider
+
+# Global rate limiter — caps concurrent requests to Anthropic to prevent 429s.
+# Each lesson generation fires 2 concurrent LLM calls (planner + designer),
+# so this semaphore also limits background prefill + on-demand generation.
+_anthropic_semaphore = asyncio.Semaphore(2)
 
 
 class AnthropicProvider(LLMProvider):
@@ -18,7 +24,8 @@ class AnthropicProvider(LLMProvider):
         kwargs = dict(model=self.model, max_tokens=max_tokens, messages=messages)
         if system:
             kwargs["system"] = system
-        response = await self.client.messages.create(**kwargs)
+        async with _anthropic_semaphore:
+            response = await self.client.messages.create(**kwargs)
         return response.content[0].text
 
     async def stream(

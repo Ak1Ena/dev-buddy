@@ -1,9 +1,13 @@
+import asyncio
 import json
 import re
 from typing import AsyncGenerator
 from openai import AsyncOpenAI
 
 from app.services.llm.base import LLMProvider
+
+# Global rate limiter — caps concurrent requests to the API to prevent 429s.
+_openai_semaphore = asyncio.Semaphore(2)
 
 
 # Strip inline reasoning that some models (Gemini 2.5, DeepSeek-R1, etc.) emit
@@ -67,12 +71,13 @@ class OpenAIProvider(LLMProvider):
         system: str = "",
         max_tokens: int = 1000,
     ) -> str:
-        response = await self.client.chat.completions.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            messages=self._build_messages(messages, system),
-            extra_headers=self.extra_headers,
-        )
+        async with _openai_semaphore:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                max_tokens=max_tokens,
+                messages=self._build_messages(messages, system),
+                extra_headers=self.extra_headers,
+            )
         msg = response.choices[0].message
         content = msg.content
         if not content:

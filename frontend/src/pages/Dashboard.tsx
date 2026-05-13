@@ -76,7 +76,7 @@ function SpaceCard({ space, onClick }: { space: SpaceSummary; onClick: () => voi
 }
 
 export default function Dashboard() {
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
 
   const [spaces, setSpaces] = useState<SpaceSummary[]>([]);
@@ -94,8 +94,10 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    fetchSpaces();
-  }, [user, fetchSpaces]);
+    if (user?.id) {
+      fetchSpaces();
+    }
+  }, [user?.id, fetchSpaces]);
 
   const totalCompleted = spaces.reduce((sum, s) => sum + (s.path?.completed_lessons ?? 0), 0);
 

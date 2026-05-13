@@ -84,7 +84,7 @@ export default function Assessment() {
     let attempts = 0;
     const interval = setInterval(async () => {
       attempts++;
-      if (attempts > 30) { // 30 seconds timeout
+      if (attempts > 90) { // 90 seconds timeout to accommodate deep AI analysis + 10 questions
         clearInterval(interval);
         toast.error("Analysis is taking too long. Please try again.");
         setPageState("code_input");

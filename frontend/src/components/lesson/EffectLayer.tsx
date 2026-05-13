@@ -14,12 +14,12 @@ export interface AnimationEffect {
 }
 
 const C = {
-  sky:     { bg: "bg-sky-500/10",     border: "border-sky-500/30",     text: "text-sky-300",     dot: "bg-sky-400" },
-  amber:   { bg: "bg-amber-500/10",   border: "border-amber-500/30",   text: "text-amber-300",   dot: "bg-amber-400" },
-  emerald: { bg: "bg-emerald-500/10", border: "border-emerald-500/30", text: "text-emerald-300", dot: "bg-emerald-400" },
-  fuchsia: { bg: "bg-fuchsia-500/10", border: "border-fuchsia-500/30", text: "text-fuchsia-300", dot: "bg-fuchsia-400" },
-  red:     { bg: "bg-red-500/10",     border: "border-red-500/30",     text: "text-red-300",     dot: "bg-red-400" },
-  slate:   { bg: "bg-slate-500/10",   border: "border-slate-500/30",   text: "text-slate-300",   dot: "bg-slate-400" },
+  sky:     { bg: "bg-sky-500/10",     border: "border-sky-500/30",     text: "text-sky-300",     dot: "bg-sky-400",     hex: "#38bdf8" },
+  amber:   { bg: "bg-amber-500/10",   border: "border-amber-500/30",   text: "text-amber-300",   dot: "bg-amber-400",   hex: "#fbbf24" },
+  emerald: { bg: "bg-emerald-500/10", border: "border-emerald-500/30", text: "text-emerald-300", dot: "bg-emerald-400", hex: "#34d399" },
+  fuchsia: { bg: "bg-fuchsia-500/10", border: "border-fuchsia-500/30", text: "text-fuchsia-300", dot: "bg-fuchsia-400", hex: "#f0abfc" },
+  red:     { bg: "bg-red-500/10",     border: "border-red-500/30",     text: "text-red-300",     dot: "bg-red-400",     hex: "#f87171" },
+  slate:   { bg: "bg-slate-500/10",   border: "border-slate-500/30",   text: "text-slate-300",   dot: "bg-slate-400",   hex: "#94a3b8" },
 } as const;
 
 type ColorKey = keyof typeof C;
@@ -36,25 +36,30 @@ function Pulse({ e, i }: { e: AnimationEffect; i: number }) {
   if (!hasFlow) {
     return (
       <motion.div
-        className={cn("flex items-center gap-3 rounded-xl border px-4 py-2.5", c.bg, c.border)}
-        initial={{ opacity: 0, scale: 0.88 }}
-        animate={{ opacity: 1, scale: 1 }}
+        className={cn("flex items-center gap-3 rounded-xl border px-4 py-2.5 bg-slate-950/40 backdrop-blur-sm shadow-xl", c.border)}
+        initial={{ opacity: 0, scale: 0.88, x: -10 }}
+        animate={{ opacity: 1, scale: 1, x: 0 }}
         transition={{ delay: i * 0.11, type: "spring", stiffness: 380, damping: 22 }}
       >
-        <div className="relative flex h-6 w-6 shrink-0 items-center justify-center">
+        <div className="relative flex h-8 w-8 shrink-0 items-center justify-center">
           <motion.div
-            className={cn("absolute h-6 w-6 rounded-full", c.dot)}
-            animate={{ scale: [1, 2, 1], opacity: [0.35, 0, 0.35] }}
+            className={cn("absolute inset-0 rounded-full blur-md opacity-20", c.dot)}
+            animate={{ scale: [1, 2.2, 1], opacity: [0.2, 0.4, 0.2] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className={cn("absolute h-full w-full rounded-full border-2", c.border)}
+            animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
           />
-          <div className={cn("h-2.5 w-2.5 rounded-full", c.dot)} />
+          <div className={cn("h-3 w-3 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]", c.dot)} />
         </div>
         <div>
           <p className="text-xs">
-            {e.target && <span className={cn("font-mono font-bold", c.text)}>{e.target}</span>}
-            {e.label && <span className="ml-1.5 text-slate-400">{e.label}</span>}
+            {e.target && <span className={cn("font-mono font-bold tracking-tight", c.text)}>{e.target}</span>}
+            {e.label && <span className="ml-2 text-slate-300 font-medium">{e.label}</span>}
           </p>
-          <p className="mt-0.5 text-[10px] uppercase tracking-widest text-slate-600">pulse · value changed</p>
+          <p className="mt-0.5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Signal Detection · update</p>
         </div>
       </motion.div>
     );
@@ -62,39 +67,42 @@ function Pulse({ e, i }: { e: AnimationEffect; i: number }) {
 
   return (
     <motion.div
-      className="px-1 py-2"
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: i * 0.11, duration: 0.3 }}
+      className="px-2 py-3 bg-slate-900/40 rounded-xl border border-slate-800/50 backdrop-blur-sm"
+      initial={{ opacity: 0, x: -15 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: i * 0.11, duration: 0.4, ease: "easeOut" }}
     >
       {/* why — sits above the line, no box */}
       {(e.why || e.label || e.target) && (
         <motion.div
-          className="mb-1.5 flex items-baseline gap-2 pl-0.5"
+          className="mb-2 flex items-baseline gap-2 pl-0.5"
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.11 + 0.05, duration: 0.25 }}
+          transition={{ delay: i * 0.11 + 0.1, duration: 0.3 }}
         >
           {e.target && (
-            <span className={cn("font-mono text-xs font-bold", c.text)}>{e.target}</span>
+            <span className={cn("font-mono text-[11px] font-black uppercase tracking-wider", c.text)}>{e.target}</span>
           )}
           {(e.why || e.label) && (
-            <span className="text-[11px] leading-snug text-slate-400">{e.why ?? e.label}</span>
+            <span className="text-xs font-medium leading-snug text-slate-200">{e.why ?? e.label}</span>
           )}
         </motion.div>
       )}
 
       {/* the line: from_value ──●──●──●──→ to_value */}
       <div className="flex items-center gap-3">
-        <span className="shrink-0 font-mono text-xs font-semibold text-slate-500 line-through decoration-slate-600/70">
-          {fromVal}
-        </span>
+        <div className="flex flex-col items-center">
+          <span className="text-[8px] font-black uppercase tracking-tighter text-slate-600 mb-0.5">Old</span>
+          <span className="shrink-0 font-mono text-xs font-semibold text-slate-500 line-through decoration-slate-500/50">
+            {fromVal}
+          </span>
+        </div>
 
         {/* track + particles riding on it */}
-        <div className="relative flex h-4 flex-1 items-center">
+        <div className="relative flex h-6 flex-1 items-center">
           <div
             className={cn(
-              "absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 border-t border-dashed",
+              "absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 border-t border-dashed opacity-30",
               c.border
             )}
           />
@@ -102,33 +110,36 @@ function Pulse({ e, i }: { e: AnimationEffect; i: number }) {
             <motion.div
               key={d}
               className={cn(
-                "absolute top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-[0_0_6px_currentColor]",
-                c.dot,
-                c.text
+                "absolute top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full",
+                c.dot
               )}
               initial={{ left: "0%", opacity: 0 }}
-              animate={{ left: ["0%", "100%"], opacity: [0, 1, 1, 0] }}
+              animate={{ left: ["0%", "100%"], opacity: [0, 1, 1, 0], scale: [1, 1.4, 1] }}
               transition={{
-                duration: 1.3,
-                delay: i * 0.11 + d * 0.22,
+                duration: 1.5,
+                delay: i * 0.11 + d * 0.25,
                 repeat: Infinity,
-                ease: "linear",
-                times: [0, 0.12, 0.88, 1],
+                ease: "easeInOut",
+                times: [0, 0.15, 0.85, 1],
               }}
+              style={{ boxShadow: `0 0 8px ${C[color(e.color)].hex}` }}
             />
           ))}
         </div>
 
-        <span className={cn("shrink-0 font-mono text-xs", c.text)}>→</span>
+        <span className={cn("shrink-0 font-mono text-sm font-black", c.text)}>→</span>
 
-        <motion.span
-          className={cn("shrink-0 font-mono text-xs font-bold", c.text)}
-          initial={{ scale: 0.85, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: i * 0.11 + 0.45, type: "spring", stiffness: 360, damping: 18 }}
-        >
-          {toVal}
-        </motion.span>
+        <div className="flex flex-col items-center">
+          <span className="text-[8px] font-black uppercase tracking-tighter text-slate-600 mb-0.5">New</span>
+          <motion.span
+            className={cn("shrink-0 font-mono text-sm font-black px-2 py-0.5 rounded border bg-slate-950/80 shadow-inner", c.text, c.border)}
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: i * 0.11 + 0.5, type: "spring", stiffness: 400, damping: 15 }}
+          >
+            {toVal}
+          </motion.span>
+        </div>
       </div>
     </motion.div>
   );
@@ -139,27 +150,46 @@ function Flow({ e, i }: { e: AnimationEffect; i: number }) {
   const c = C[color(e.color)];
   return (
     <motion.div
-      className={cn("flex items-center gap-3 rounded-xl border px-4 py-2.5", c.bg, c.border)}
-      initial={{ opacity: 0, x: -12 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: i * 0.11, duration: 0.3 }}
+      className={cn("flex items-center gap-4 rounded-xl border p-3 bg-slate-950/60 backdrop-blur-md shadow-2xl", c.border)}
+      initial={{ opacity: 0, y: 12, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ delay: i * 0.11, type: "spring", stiffness: 300, damping: 25 }}
     >
-      <span className={cn("shrink-0 font-mono text-xs font-bold", c.text)}>{e.from ?? "src"}</span>
-      <div className="relative flex h-4 flex-1 items-center overflow-hidden">
-        {[0, 1, 2, 3, 4].map((d) => (
+      <div className="flex flex-col items-center min-w-[50px]">
+        <span className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-1">Source</span>
+        <span className={cn("font-mono text-xs font-bold px-2 py-1 rounded bg-slate-900 border border-slate-800", c.text)}>{e.from ?? "src"}</span>
+      </div>
+      
+      <div className="relative flex h-6 flex-1 items-center overflow-hidden bg-slate-900/50 rounded-full px-4 border border-slate-800/40">
+        {[0, 1, 2, 3, 4, 5].map((d) => (
           <motion.div
             key={d}
             className={cn("absolute h-1.5 w-1.5 rounded-full", c.dot)}
-            style={{ left: 0 }}
-            animate={{ left: ["0%", "100%"] }}
-            transition={{ duration: 1.1, delay: d * 0.2, repeat: Infinity, ease: "linear" }}
+            style={{ left: 0, boxShadow: `0 0 10px ${C[color(e.color)].hex}` }}
+            animate={{ left: ["0%", "100%"], opacity: [0, 1, 1, 0] }}
+            transition={{ 
+              duration: 1.8, 
+              delay: d * 0.3, 
+              repeat: Infinity, 
+              ease: "linear",
+              times: [0, 0.1, 0.9, 1]
+            }}
           />
         ))}
+        <div className="w-full h-[1px] bg-slate-800 absolute top-1/2 -translate-y-1/2" />
       </div>
-      <div className="shrink-0 text-right">
-        <span className={cn("font-mono text-xs font-bold", c.text)}>{e.to ?? "dst"}</span>
-        {e.label && <p className="text-[10px] text-slate-500">{e.label}</p>}
+
+      <div className="flex flex-col items-center min-w-[50px]">
+        <span className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-1">Target</span>
+        <span className={cn("font-mono text-xs font-bold px-2 py-1 rounded bg-slate-900 border border-slate-800", c.text)}>{e.to ?? "dst"}</span>
       </div>
+      
+      {e.label && (
+        <div className="ml-1 border-l border-slate-800 pl-3">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 mb-0.5">Operation</p>
+          <p className="text-[10px] font-bold text-slate-300 whitespace-nowrap">{e.label}</p>
+        </div>
+      )}
     </motion.div>
   );
 }

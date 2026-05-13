@@ -177,6 +177,44 @@ def _static_detect_misconceptions(code: str) -> list[dict]:
     return results
 
 
+def _valid_misconceptions(value) -> list[dict]:
+    """Normalize and filter LLM misconception output."""
+    if isinstance(value, dict):
+        value = value.get("misconceptions", [])
+    if not isinstance(value, list):
+        return []
+
+    valid_categories = {
+        "logic_error",
+        "scope_error",
+        "type_error",
+        "syntax_misunderstanding",
+        "algorithm_error",
+        "naming_error",
+    }
+    normalized: list[dict] = []
+    for item in value[:5]:
+        if not isinstance(item, dict):
+            continue
+        try:
+            confidence = float(item.get("confidence_score", 0))
+        except (TypeError, ValueError):
+            confidence = 0
+        if confidence < 0.5:
+            continue
+        category = item.get("error_category")
+        if category not in valid_categories:
+            category = "logic_error"
+        normalized.append({
+            "error_category": category,
+            "misconception_type": str(item.get("misconception_type") or "unknown_error"),
+            "confidence_score": confidence,
+            "description": str(item.get("description") or ""),
+            "location": str(item.get("location") or "unknown"),
+        })
+    return normalized
+
+
 def _static_analyze(code: str) -> dict:
     lines = code.splitlines()
     line_count = len(lines)
@@ -238,23 +276,36 @@ class CodeAnalyzerAgent:
     def __init__(self):
         self.llm = get_llm_provider()
 
+    def static_analyze(self, code: str) -> dict:
+        """Fast, non-LLM analysis using regex."""
+        return _static_analyze(code)
+
     async def analyze(self, code_snippet: str) -> dict:
+        # For large snippets, chunk the analysis to avoid context timeouts and improve resolution
+        # We'll take the first 4000 chars as the primary logic chunk
+        primary_chunk = code_snippet[:4000]
+        
         try:
             raw = await asyncio.wait_for(
                 self.llm.complete(
-                    messages=[{"role": "user", "content": f"Analyze this code:\n```\n{code_snippet}\n```"}],
+                    messages=[{"role": "user", "content": f"Analyze this code:\n```\n{primary_chunk}\n```"}],
                     system=SYSTEM,
-                    max_tokens=8000,
+                    max_tokens=4000,
                 ),
-                timeout=3.0,
+                timeout=10.0,
             )
             logger.debug("CodeAnalyzer raw LLM response: %r", raw[:500] if raw else "<empty>")
             if raw and raw.strip():
                 result = extract_json(raw)
                 if result.get("language") and result.get("concepts"):
+                    # If snippet was truncated, merge with static results for the rest
+                    if len(code_snippet) > 4000:
+                        static_rest = _static_analyze(code_snippet[4000:])
+                        result["concepts"] = list(set(result["concepts"] + static_rest["concepts"]))
+                        result["line_count"] = code_snippet.count("\n") + 1
                     return result
         except asyncio.TimeoutError:
-            logger.warning("Code analysis exceeded 3s SLA — using static fallback")
+            logger.warning("Code analysis exceeded 10s SLA — using static fallback")
         except Exception as exc:
             logger.warning("LLM code analysis failed, using static fallback: %s", exc)
 
@@ -265,30 +316,38 @@ class CodeAnalyzerAgent:
         """Detect programming misconceptions in the given code (AC-GAP-001).
 
         Returns a list of dicts with keys: error_category, misconception_type,
-        confidence_score, description, location.  Enforces the 3-second SLA
-        from AC-GAP-001 by falling back to static regex analysis on timeout.
+        confidence_score, description, location.  Enforces a 10-second SLA
+        by falling back to static regex analysis on timeout.
         """
+        # For misconceptions, focus on the first 5000 chars where the core logic usually sits
+        detect_chunk = code_snippet[:5000]
+        raw = ""
+        
         try:
             raw = await asyncio.wait_for(
                 self.llm.complete(
                     messages=[{
                         "role": "user",
-                        "content": f"Detect misconceptions in this code:\n```\n{code_snippet}\n```",
+                        "content": (
+                            "Detect misconceptions in this code. Respond with ONLY the JSON array. "
+                            "If you find none, respond exactly with [].\n"
+                            f"```\n{detect_chunk}\n```"
+                        ),
                     }],
                     system=MISCONCEPTION_SYSTEM,
                     max_tokens=1500,
                 ),
-                timeout=3.0,
+                timeout=10.0,
             )
             logger.debug("MisconceptionDetector raw LLM response: %r", raw[:300] if raw else "<empty>")
             if raw and raw.strip():
                 result = extract_json(raw)
-                if isinstance(result, list):
-                    return result
-                if isinstance(result, dict) and "misconceptions" in result:
-                    return result["misconceptions"]
+                return _valid_misconceptions(result)
         except asyncio.TimeoutError:
-            logger.warning("Misconception detection exceeded 3 s SLA — using static fallback")
+            logger.warning("Misconception detection exceeded 10s SLA — using static fallback")
+        except ValueError as exc:
+            logger.info("LLM misconception detector returned non-JSON; using static fallback")
+            logger.debug("MisconceptionDetector non-JSON response: %r", raw[:600] if raw else "<empty>")
         except Exception as exc:
             logger.warning("LLM misconception detection failed, using static fallback: %s", exc)
 

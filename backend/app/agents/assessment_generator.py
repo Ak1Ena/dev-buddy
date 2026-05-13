@@ -4,6 +4,7 @@ Assessment Generator Agent — creates 10 targeted questions from the user's cod
 import logging
 import re
 import asyncio
+import json
 from app.services.llm import get_llm_provider
 from app.agents.utils import extract_json
 
@@ -208,16 +209,80 @@ def _generate_fallback_questions(code_snippet: str, concepts: list[str], languag
     return [{"id": f"q{i+1}", **q} for i, q in enumerate(questions[:question_count])]
 
 
+def _normalize_questions(value, question_count: int) -> list[dict]:
+    if isinstance(value, dict):
+        value = value.get("questions", [])
+    if not isinstance(value, list):
+        return []
+
+    normalized: list[dict] = []
+    for idx, item in enumerate(value):
+        if not isinstance(item, dict):
+            continue
+        options = item.get("options")
+        if not isinstance(options, list) or len(options) != 4:
+            continue
+        option_keys = {str(opt.get("key")) for opt in options if isinstance(opt, dict)}
+        correct = str(item.get("correct") or "")
+        if correct not in option_keys:
+            continue
+        normalized.append({
+            "id": str(item.get("id") or f"q{idx + 1}"),
+            "question": str(item.get("question") or ""),
+            "options": [
+                {"key": str(opt.get("key")), "text": str(opt.get("text") or "")}
+                for opt in options
+                if isinstance(opt, dict)
+            ],
+            "correct": correct,
+            "topic": str(item.get("topic") or "variables"),
+            "difficulty": str(item.get("difficulty") or "beginner"),
+            "code_reference": item.get("code_reference"),
+            "explanation": str(item.get("explanation") or ""),
+        })
+        if len(normalized) >= question_count:
+            break
+    return normalized
+
+
+def _salvage_questions_from_text(text: str, question_count: int) -> list[dict]:
+    """Extract complete question objects from a malformed/truncated LLM response."""
+    decoder = json.JSONDecoder()
+    questions: list[dict] = []
+    pos = 0
+    while pos < len(text) and len(questions) < question_count:
+        start = text.find("{", pos)
+        if start == -1:
+            break
+        try:
+            obj, end = decoder.raw_decode(text[start:])
+        except json.JSONDecodeError:
+            pos = start + 1
+            continue
+        if isinstance(obj, dict) and {"question", "options", "correct"}.issubset(obj):
+            questions.append(obj)
+        elif isinstance(obj, dict) and isinstance(obj.get("questions"), list):
+            questions.extend(obj["questions"])
+        pos = start + end
+    return _normalize_questions(questions, question_count)
+
+
 class AssessmentGeneratorAgent:
     def __init__(self):
         self.llm = get_llm_provider()
 
     async def generate_questions(self, code_snippet: str, concepts: list[str], language: str, question_count: int = 10) -> list[dict]:
+        # For assessment, focus on the first 8000 chars of the code
+        # Assessments usually need more context than a simple analysis, but still need bounds.
+        assessment_code = code_snippet
+        if len(code_snippet) > 8000:
+            assessment_code = code_snippet[:8000] + "\n\n# ... [code truncated for brevity] ..."
+
         prompt = f"""Generate {question_count} assessment questions focusing on the logic and behavior of this {language} code.
 
 The code:
 ```{language}
-{code_snippet}
+{assessment_code}
 ```
 
 Concepts present: {', '.join(concepts)}
@@ -231,23 +296,34 @@ INSTEAD, ask about:
 
 Use the actual function names and variable names from the code. Ensure the questions progress from simple data checks to complex logical flow analysis."""
 
+        raw = ""
         try:
             raw = await asyncio.wait_for(
                 self.llm.complete(
                     messages=[{"role": "user", "content": prompt}],
                     system=SYSTEM.format(count=question_count),
-                    max_tokens=16000,
+                    max_tokens=6000,
                 ),
                 timeout=60.0,
             )
             if raw and raw.strip():
                 data = extract_json(raw)
-                questions = data if isinstance(data, list) else data.get("questions", [])
+                questions = _normalize_questions(data, question_count)
                 if len(questions) >= (question_count // 2 + 1): # Expect at least half
                     return questions[:question_count]
                 logger.warning("LLM returned only %d questions, using static fallback", len(questions))
         except asyncio.TimeoutError:
             logger.warning("Question generation exceeded timeout — using static fallback")
+        except ValueError:
+            salvaged = _salvage_questions_from_text(raw, question_count)
+            if len(salvaged) >= (question_count // 2 + 1):
+                logger.info(
+                    "Question generation returned malformed JSON; salvaged %d questions",
+                    len(salvaged),
+                )
+                return salvaged[:question_count]
+            logger.info("Question generation returned malformed JSON; using static fallback")
+            logger.debug("QuestionGenerator malformed response: %r", raw[:1000] if raw else "<empty>")
         except Exception as exc:
             logger.warning("LLM question generation failed, using static fallback: %s", exc)
 

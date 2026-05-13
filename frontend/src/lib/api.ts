@@ -116,6 +116,25 @@ export const chatApi = {
     is_checkpoint?: boolean | null;
   }) => api.post("/chat/send", data),
   getSession: (sessionId: string) => api.get(`/chat/session/${sessionId}`),
+  stream: (data: {
+    message: string;
+    session_id?: string;
+    lesson_id?: string;
+    code_context?: string;
+    hint_level?: number;
+    current_frame?: number | null;
+    is_checkpoint?: boolean | null;
+  }, onChunk: (chunk: string, sessionId: string) => void) => {
+    const token = Cookies.get("access_token");
+    return fetch(`${BASE}/api/v1/chat/stream`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(data),
+    });
+  },
   acceptProposal: (data: {
     session_id: string;
     topic: string;

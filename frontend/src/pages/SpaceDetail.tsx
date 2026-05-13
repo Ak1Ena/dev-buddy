@@ -41,13 +41,16 @@ export default function SpaceDetail() {
 
   useEffect(() => {
     fetchSpace();
+  }, [fetchSpace]);
+
+  useEffect(() => {
     // Poll every 3s if there's no path yet (for Instant Discovery background tasks)
     let interval: any;
     if (!loading && space && !space.path) {
       interval = setInterval(fetchSpace, 3000);
     }
     return () => clearInterval(interval);
-  }, [fetchSpace, loading, space?.path]);
+  }, [fetchSpace, loading, !!space, !!space?.path]);
 
   const handleActivateAndGenerate = async () => {
     if (!space) return;

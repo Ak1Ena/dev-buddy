@@ -47,6 +47,7 @@ async def run_assessment_generation_task(session_id: str, code_snippet: str):
                 code_snippet=code_snippet,
                 concepts=analysis["concepts"],
                 language=analysis["language"],
+                question_count=10,
             )
 
             # Update session

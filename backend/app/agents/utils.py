@@ -90,6 +90,44 @@ def extract_json(text: str) -> dict | list:
         if all_objects:
             return all_objects  # caller handles list vs dict
 
+    # Last resort: try to fix truncated JSON by closing unclosed strings / braces / brackets
+    if first_brace != -1:
+        fragment = text[first_brace:]
+        stack: list[str] = []
+        in_str = False
+        escaped = False
+        for ch in fragment:
+            if escaped:
+                escaped = False
+                continue
+            if ch == "\\" and in_str:
+                escaped = True
+                continue
+            if ch == '"':
+                in_str = not in_str
+                continue
+            if in_str:
+                continue
+            if ch in "{[":
+                stack.append(ch)
+            elif ch == "}":
+                if stack and stack[-1] == "{":
+                    stack.pop()
+            elif ch == "]":
+                if stack and stack[-1] == "[":
+                    stack.pop()
+        if in_str or stack:
+            fix = fragment
+            if in_str:
+                fix += '"'
+            closers = {"{": "}", "[": "]"}
+            for opener in reversed(stack):
+                fix += closers[opener]
+            try:
+                return json.loads(fix)
+            except (json.JSONDecodeError, ValueError):
+                pass
+
     raise ValueError(
         f"No valid JSON found in LLM response.\nRaw (first 600 chars): {text[:600]}"
     )

@@ -4,6 +4,7 @@ particle effects for a lesson. Separated from the Planner so visual design has
 its own model, prompt, and token budget.
 """
 import logging
+import asyncio
 from app.services.llm import get_llm_provider
 from app.agents.utils import extract_json
 
@@ -141,11 +142,17 @@ Cursor `color`: `"sky"`, `"emerald"`, `"fuchsia"` (default), `"amber"`, `"red"`,
 
 ## Rules for frames
 - **4-7 main frames total.** Each frame should advance the data state by ONE meaningful step.
-- **Micro-animations (sub_frames)**: Use the optional `sub_frames` list within a frame to show granular transitions that should play automatically (e.g., a cursor moving through an array, or a value being compared across multiple indices). Each sub-frame follows the same structure as a regular frame.
+- **Cinematic Continuity (sub_frames)**: Use the `sub_frames` list within a frame to show granular transitions (e.g., a cursor moving through an array, or a value being compared across multiple indices). Each sub-frame follows the same structure as a regular frame. Sub-frames should play automatically to create a smooth, cinematic experience.
+- **Visual Effects**: Use the `effects` array to highlight logic events.
+  - `flow`: Use for assignments (e.g., `numbers[i] -> total`). Required: `from`, `to`, `label`.
+  - `pulse`: Use when a value is updated. Required: `target`, `from_value`, `to_value`, `why`.
+  - `highlight`: Use for condition checks (e.g., `if (x > 0) is true`). Required: `target`, `label`.
+  - `spawn`: Use when a new variable/item is created.
+- **Color Palette**: Use Fuchsia for decisions, Sky for actions/assignments, Emerald for outcomes, and Amber for active/checkpoints.
 - **At least 2 frames MUST have `is_checkpoint: true`** with a Socratic `checkpoint_question` that asks the user to predict the next state.
-- **`code_state`**: 1-3 lines of the actual code being executed at this step (with the relevant line highlighted in a comment if helpful).
-- **`narration`**: 1 sentence. Point out what just happened or what's about to happen — never restate what the diagram already shows.
-- **State continuity**: each frame's `data_views` must include the SAME keys/structures as the previous frame so transitions look smooth. Don't drop or rename a variable mid-walkthrough.
+- **`code_state`**: 1-3 lines of the actual code being executed at this step.
+- **`narration`**: 1 sentence. Point out the logic's "Senior Lead" insight (the 'why'), not just the 'what'.
+- **State continuity**: each frame's `data_views` must include the SAME keys/structures as the previous frame.
 
 ## When to use canvas_scene instead
 For pure control-flow lessons (an `if/elif/else` cascade with no data structure to track), you may emit `canvas_scene` with decision/action/outcome nodes. But if there is ANY data structure (variable, list, dict, string), prefer `data_views`.
@@ -186,6 +193,12 @@ class DesignerAgent:
         code_snippet: str,
         concept_hook: str = "",
     ) -> dict:
+        # For animations, if the code is massive, we focus on the first 5000 chars 
+        # to ensure the LLM doesn't timeout or lose focus on the core logic.
+        display_code = code_snippet
+        if len(code_snippet) > 5000:
+            display_code = code_snippet[:5000] + "\n\n# ... [code truncated for analysis] ..."
+
         hook_line = f"\nConcept hook (already written): {concept_hook}" if concept_hook else ""
         prompt = f"""Design a cinematic animation walkthrough for this lesson.
 
@@ -195,17 +208,20 @@ Language: {language}{hook_line}
 
 Student's code:
 ```{language}
-{code_snippet}
+{display_code}
 ```
 
 Create 4-7 animation frames that walk through this code step by step.
 Focus on the {topic} concept. Use the student's actual variable names."""
 
         try:
-            raw = await self.llm.complete(
-                messages=[{"role": "user", "content": prompt}],
-                system=DESIGNER_SYSTEM,
-                max_tokens=4000,
+            raw = await asyncio.wait_for(
+                self.llm.complete(
+                    messages=[{"role": "user", "content": prompt}],
+                    system=DESIGNER_SYSTEM,
+                    max_tokens=8000,
+                ),
+                timeout=60.0,
             )
             if not raw or not raw.strip():
                 raise ValueError("empty response")
@@ -215,6 +231,73 @@ Focus on the {topic} concept. Use the student's actual variable names."""
             if isinstance(result, list):
                 return {"animation_frames": result}
             raise ValueError(f"unexpected structure: {type(result)}")
+        except asyncio.TimeoutError:
+            logger.warning("Designer agent timed out after 60s for topic=%s", topic)
+            return _fallback_animation(topic, title, language, code_snippet)
+        except ValueError:
+            logger.info("Designer agent returned non-JSON for topic=%s; using fallback animation", topic)
+            return _fallback_animation(topic, title, language, code_snippet)
         except Exception as exc:
             logger.warning("Designer agent failed for topic=%s: %s", topic, exc)
-            return {"animation_frames": [], "deep_dive": None}
+            return _fallback_animation(topic, title, language, code_snippet)
+
+
+def _fallback_animation(topic: str, title: str, language: str, code_snippet: str) -> dict:
+    topic_label = topic.replace("_", " ")
+    sample_lines = [
+        line.rstrip()
+        for line in code_snippet.splitlines()
+        if line.strip()
+    ][:3]
+    code_state = "\n".join(sample_lines) if sample_lines else f"// {title}"
+
+    return {
+        "deep_dive": {
+            "title": "Mental Model",
+            "cards": [
+                {
+                    "title": f"Track {topic_label}",
+                    "content": f"Watch where {topic_label} appears, how values change, and which later lines depend on those values.",
+                    "icon": "database",
+                    "related_nodes": ["concept"],
+                }
+            ],
+        },
+        "viz": {
+            "kind": "flow",
+            "steps": [
+                {
+                    "id": "concept",
+                    "label": topic_label.title()[:24],
+                    "summary": f"This lesson focuses on how {topic_label} works in the {language} code.",
+                },
+                {
+                    "id": "execution",
+                    "label": "Execution",
+                    "summary": "Read the code in order and track each value as it is created or updated.",
+                },
+            ],
+        },
+        "animation_frames": [
+            {
+                "frame": 1,
+                "title": f"Locate {topic_label}",
+                "code_state": code_state,
+                "is_checkpoint": False,
+                "data_views": [
+                    {
+                        "kind": "vars",
+                        "label": "Focus",
+                        "rows": [
+                            {
+                                "name": "topic",
+                                "value": topic_label,
+                                "status": "active",
+                            }
+                        ],
+                    }
+                ],
+                "narration": f"Start by locating where {topic_label} shows up in the code.",
+            }
+        ],
+    }

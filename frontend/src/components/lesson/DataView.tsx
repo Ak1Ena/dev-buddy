@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { DataView, DataStatus, ArrayCell, ArrayCursor, VarRow, ListItem } from "@/types";
 import { cn } from "@/lib/utils";
+import { BASE_FRAME_DURATION } from "./AnimationPlayer";
 
 const STATUS_STYLES: Record<DataStatus, { cell: string; text: string; ring: string }> = {
   filled:  { cell: "bg-sky-500/10  border-sky-500/40",       text: "text-sky-200",       ring: "ring-sky-500/30" },
@@ -34,6 +35,30 @@ function cellStyle(status: DataStatus | undefined) {
 function ArrayView({ label, cells, cursors, note }: { label: string; cells: ArrayCell[]; cursors?: ArrayCursor[]; note?: string }) {
   const safeCells = cells ?? [];
 
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05,
+      },
+    },
+  };
+
+  const item = {
+    hidden: { opacity: 0, scale: 0.9, y: 4 },
+    show: { 
+      opacity: 1, 
+      scale: 1, 
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 24,
+      }
+    },
+  };
+
   return (
     <div className="rounded-xl border border-slate-700/50 bg-slate-950/60 backdrop-blur-sm shadow-lg overflow-hidden">
       <div className="flex items-baseline justify-between px-4 py-2 border-b border-slate-800/60 bg-slate-900/40">
@@ -42,16 +67,22 @@ function ArrayView({ label, cells, cursors, note }: { label: string; cells: Arra
       </div>
 
       <div className="p-4 overflow-x-auto">
-        <div className="inline-flex flex-col gap-1">
+        <motion.div 
+          className="inline-flex flex-col gap-1"
+          variants={container}
+          initial="hidden"
+          animate="show"
+        >
           {/* keys row */}
           <div className="flex gap-1">
             {safeCells.map((c, i) => (
-              <div
+              <motion.div
                 key={`k-${i}`}
+                variants={item}
                 className="min-w-[44px] h-6 rounded-md border border-slate-800/60 bg-slate-900/40 flex items-center justify-center font-mono text-[10px] font-bold text-slate-500"
               >
                 {c.key}
-              </div>
+              </motion.div>
             ))}
           </div>
 
@@ -62,11 +93,13 @@ function ArrayView({ label, cells, cursors, note }: { label: string; cells: Arra
                 const styles = cellStyle(c.status);
                 const isEmpty = c.value == null || c.value === "" || c.status === "empty";
                 const glowKf = ACTIVE_GLOW[c.status ?? "filled"];
+                const isScanning = c.status === "active" || c.status === "compare";
+                
                 return (
                   <motion.div
                     key={`v-${c.key}-${i}`}
                     layout
-                    initial={{ opacity: 0, scale: 0.9 }}
+                    variants={item}
                     animate={{
                       opacity: 1,
                       scale: 1,
@@ -80,13 +113,22 @@ function ArrayView({ label, cells, cursors, note }: { label: string; cells: Arra
                       ...(glowKf ? { boxShadow: { repeat: Infinity, duration: 1.2, ease: "easeInOut" } } : {}),
                     }}
                     className={cn(
-                      "min-w-[44px] h-12 rounded-md border flex items-center justify-center font-mono text-base font-bold ring-1",
+                      "relative min-w-[44px] h-12 rounded-md border flex items-center justify-center font-mono text-base font-bold ring-1 overflow-hidden",
                       styles.cell,
                       styles.text,
                       styles.ring
                     )}
                   >
-                    {isEmpty ? <span className="opacity-40">·</span> : <span>{c.value}</span>}
+                    {isScanning && (
+                      <motion.div
+                        className="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-white/10 to-transparent h-1/2 w-full"
+                        animate={{ top: ["-50%", "100%"] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                      />
+                    )}
+                    <span className="relative z-10">
+                      {isEmpty ? <span className="opacity-40">·</span> : <span>{c.value}</span>}
+                    </span>
                   </motion.div>
                 );
               })}
@@ -119,44 +161,52 @@ function ArrayView({ label, cells, cursors, note }: { label: string; cells: Arra
               })}
             </div>
           )}
-        </div>
+        </motion.div>
       </div>
     </div>
   );
 }
 
-function VarRowItem({ row, kind }: { row: VarRow; kind: "vars" | "object" }) {
+function VarRowItem({ row, kind, variants, speed = 1 }: { row: VarRow; kind: "vars" | "object"; variants?: any; speed?: number }) {
   const prevValueRef = useRef(row.value);
   const [flashing, setFlashing] = useState(false);
   const styles = cellStyle(row.status);
+  const isScanning = row.status === "active" || row.status === "compare";
 
   useEffect(() => {
     if (prevValueRef.current !== row.value) {
       prevValueRef.current = row.value;
       setFlashing(true);
-      const t = setTimeout(() => setFlashing(false), 600);
+      const flashDuration = (BASE_FRAME_DURATION / speed) * 0.22;
+      const t = setTimeout(() => setFlashing(false), flashDuration);
       return () => clearTimeout(t);
     }
-  }, [row.value]);
+  }, [row.value, speed]);
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, x: -6 }}
-      animate={{ opacity: 1, x: 0 }}
+      variants={variants}
       exit={{ opacity: 0, x: 6 }}
       transition={{ type: "spring", stiffness: 320, damping: 24 }}
       className={cn(
-        "flex items-center justify-between gap-3 rounded-lg border px-3 py-2 ring-1",
+        "relative flex items-center justify-between gap-3 rounded-lg border px-3 py-2 ring-1 overflow-hidden",
         styles.cell,
         styles.ring
       )}
     >
-      <div className="flex items-center gap-2">
+      {isScanning && (
+        <motion.div
+          className="absolute inset-0 z-0 bg-gradient-to-r from-transparent via-white/5 to-transparent w-1/2 h-full"
+          animate={{ left: ["-50%", "100%"] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        />
+      )}
+      <div className="relative z-10 flex items-center gap-2">
         <span className="font-mono text-xs text-slate-400">{row.name}</span>
         <span className="text-slate-600 text-xs">{kind === "object" ? ":" : "="}</span>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="relative z-10 flex items-center gap-3">
         <span className={cn(
           "font-mono text-sm font-bold transition-colors duration-300",
           flashing ? "text-amber-300" : styles.text
@@ -169,27 +219,63 @@ function VarRowItem({ row, kind }: { row: VarRow; kind: "vars" | "object" }) {
   );
 }
 
-function VarsView({ label, rows, kind, note }: { label: string; rows: VarRow[]; kind: "vars" | "object"; note?: string }) {
+function VarsView({ label, rows, kind, note, speed = 1 }: { label: string; rows: VarRow[]; kind: "vars" | "object"; note?: string; speed?: number }) {
   const safeRows = rows ?? [];
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.08 }
+    }
+  };
+  const item = {
+    hidden: { opacity: 0, x: -10 },
+    show: { opacity: 1, x: 0 }
+  };
+
   return (
     <div className="rounded-xl border border-slate-700/50 bg-slate-950/60 backdrop-blur-sm shadow-lg overflow-hidden">
       <div className="flex items-baseline justify-between px-4 py-2 border-b border-slate-800/60 bg-slate-900/40">
         <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{label}</span>
         {note ? <span className="text-[10px] font-mono text-slate-500">{note}</span> : null}
       </div>
-      <div className="p-3 space-y-1.5">
+      <motion.div 
+        className="p-3 space-y-1.5"
+        variants={container}
+        initial="hidden"
+        animate="show"
+      >
         <AnimatePresence initial={false}>
           {safeRows.map((row, i) => (
-            <VarRowItem key={`${row.name}-${i}`} row={row} kind={kind} />
+            <VarRowItem key={`${row.name}-${i}`} row={row} kind={kind} variants={item} speed={speed} />
           ))}
         </AnimatePresence>
-      </div>
+      </motion.div>
     </div>
   );
 }
 
 function ListView({ label, items, kind, note }: { label: string; items: ListItem[]; kind: "stack" | "queue"; note?: string }) {
   const safeItems = items ?? [];
+
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.06 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: (kind === "stack" ? { opacity: 0, y: -24, scale: 0.88 } : { opacity: 0, x: 32, scale: 0.85 }),
+    show: { 
+      opacity: 1, 
+      y: 0, 
+      x: 0, 
+      scale: 1,
+      transition: { type: "spring", stiffness: 320, damping: 24 }
+    }
+  };
 
   if (kind === "stack") {
     const reversed = [...safeItems].reverse();
@@ -201,33 +287,46 @@ function ListView({ label, items, kind, note }: { label: string; items: ListItem
           </span>
           {note ? <span className="text-[10px] font-mono text-slate-500">{note}</span> : null}
         </div>
-        <div className="p-4 flex flex-col items-center gap-1.5">
+        <motion.div 
+          className="p-4 flex flex-col items-center gap-1.5"
+          variants={container}
+          initial="hidden"
+          animate="show"
+        >
           <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-1">↑ top</span>
           <AnimatePresence initial={false}>
             {reversed.map((it, depth) => {
               const styles = cellStyle(it.status);
               const isTos = depth === 0;
               const opacity = Math.max(0.45, 1 - depth * 0.18);
+              const isScanning = it.status === "active" || it.status === "compare";
+              
               return (
                 <motion.div
                   key={it.value}
                   layout
-                  initial={{ opacity: 0, y: -24, scale: 0.88 }}
+                  variants={itemVariants}
                   animate={{ opacity, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -20, scale: 0.88 }}
-                  transition={{ type: "spring", stiffness: 320, damping: 24 }}
                   className={cn(
-                    "relative min-w-[120px] h-9 rounded-md border ring-1 flex items-center justify-center font-mono text-sm font-bold",
+                    "relative min-w-[120px] h-9 rounded-md border ring-1 flex items-center justify-center font-mono text-sm font-bold overflow-hidden",
                     styles.cell, styles.text, styles.ring,
                     isTos && "shadow-[0_0_8px_rgba(56,189,248,0.25)]"
                   )}
                 >
+                  {isScanning && (
+                    <motion.div
+                      className="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-white/10 to-transparent h-1/2 w-full"
+                      animate={{ top: ["-50%", "100%"] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                    />
+                  )}
                   {isTos && (
-                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-sky-500/20 border border-sky-400/40 text-sky-300 text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 whitespace-nowrap">
+                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 z-20 rounded-full bg-sky-500/20 border border-sky-400/40 text-sky-300 text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 whitespace-nowrap">
                       TOS
                     </span>
                   )}
-                  {it.value}
+                  <span className="relative z-10">{it.value}</span>
                 </motion.div>
               );
             })}
@@ -235,7 +334,7 @@ function ListView({ label, items, kind, note }: { label: string; items: ListItem
           {safeItems.length === 0 && (
             <span className="text-[10px] text-slate-700 italic py-2">empty stack</span>
           )}
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -250,24 +349,37 @@ function ListView({ label, items, kind, note }: { label: string; items: ListItem
       </div>
       <div className="flex items-center px-4 py-3 gap-2">
         <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-600 shrink-0">FRONT</span>
-        <div className="flex items-center gap-1 overflow-x-auto flex-1">
+        <motion.div 
+          className="flex items-center gap-1 overflow-x-auto flex-1"
+          variants={container}
+          initial="hidden"
+          animate="show"
+        >
           <AnimatePresence mode="popLayout" initial={false}>
             {safeItems.map((it) => {
               const styles = cellStyle(it.status);
+              const isScanning = it.status === "active" || it.status === "compare";
+              
               return (
                 <motion.div
                   key={it.value}
                   layout
-                  initial={{ opacity: 0, x: 32, scale: 0.85 }}
+                  variants={itemVariants}
                   animate={{ opacity: 1, x: 0, scale: 1 }}
                   exit={{ opacity: 0, x: -28, scale: 0.9 }}
-                  transition={{ type: "spring", stiffness: 360, damping: 28 }}
                   className={cn(
-                    "min-w-[60px] h-9 rounded-md border ring-1 flex items-center justify-center font-mono text-sm font-bold shrink-0",
+                    "relative min-w-[60px] h-9 rounded-md border ring-1 flex items-center justify-center font-mono text-sm font-bold shrink-0 overflow-hidden",
                     styles.cell, styles.text, styles.ring
                   )}
                 >
-                  {it.value}
+                  {isScanning && (
+                    <motion.div
+                      className="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-white/10 to-transparent h-1/2 w-full"
+                      animate={{ top: ["-50%", "100%"] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                    />
+                  )}
+                  <span className="relative z-10">{it.value}</span>
                 </motion.div>
               );
             })}
@@ -275,7 +387,7 @@ function ListView({ label, items, kind, note }: { label: string; items: ListItem
           {safeItems.length === 0 && (
             <span className="text-[10px] text-slate-700 italic">empty queue</span>
           )}
-        </div>
+        </motion.div>
         <span className="text-[9px] font-bold uppercase tracking-widest text-fuchsia-600 shrink-0">BACK</span>
       </div>
     </div>
@@ -386,7 +498,7 @@ function BranchView({
   );
 }
 
-export default function DataViewRenderer({ views }: { views: DataView[] }) {
+export default function DataViewRenderer({ views, speed = 1 }: { views: DataView[]; speed?: number }) {
   if (!views || views.length === 0) return null;
   return (
     <div className="space-y-4">
@@ -395,7 +507,7 @@ export default function DataViewRenderer({ views }: { views: DataView[] }) {
           return <ArrayView key={i} label={v.label} cells={v.cells} cursors={v.cursors} note={v.note} />;
         }
         if (v.kind === "vars" || v.kind === "object") {
-          return <VarsView key={i} label={v.label} rows={v.rows} kind={v.kind} note={v.note} />;
+          return <VarsView key={i} label={v.label} rows={v.rows} kind={v.kind} note={v.note} speed={speed} />;
         }
         if (v.kind === "stack" || v.kind === "queue") {
           return <ListView key={i} label={v.label} items={v.items} kind={v.kind} note={v.note} />;

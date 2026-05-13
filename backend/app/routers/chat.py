@@ -311,19 +311,16 @@ async def send_message(
     )
 
 
-@router.get("/stream")
+@router.post("/stream")
 async def stream_message(
-    message: str,
+    data: ChatRequest,
     background_tasks: BackgroundTasks,
-    session_id: str | None = None,
-    lesson_id: str | None = None,
-    hint_level: int = 0,
-    code_context: str | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     history = []
     lesson_context = None
+    session_id = data.session_id
 
     # Ensure we have a session
     if session_id:
@@ -336,8 +333,8 @@ async def stream_message(
         if not session:
             session = ChatSession(
                 user_id=current_user.id,
-                lesson_id=lesson_id,
-                context="lesson" if lesson_id else "general",
+                lesson_id=data.lesson_id,
+                context="lesson" if data.lesson_id else "general",
             )
             db.add(session)
             await db.flush()
@@ -347,20 +344,20 @@ async def stream_message(
     else:
         session = ChatSession(
             user_id=current_user.id,
-            lesson_id=lesson_id,
-            context="lesson" if lesson_id else "general",
+            lesson_id=data.lesson_id,
+            context="lesson" if data.lesson_id else "general",
         )
         db.add(session)
         await db.flush()
         session_id = session.id
 
     # Save user message immediately
-    user_msg = ChatMessage(session_id=session_id, role="user", content=message)
+    user_msg = ChatMessage(session_id=session_id, role="user", content=data.message)
     db.add(user_msg)
     await db.commit()
 
-    if lesson_id:
-        lesson_result = await db.execute(select(Lesson).where(Lesson.id == lesson_id))
+    if data.lesson_id:
+        lesson_result = await db.execute(select(Lesson).where(Lesson.id == data.lesson_id))
         lesson = lesson_result.scalar_one_or_none()
         if lesson:
             lesson_context = f"{lesson.title} ({lesson.topic})"
@@ -371,11 +368,11 @@ async def stream_message(
         
         try:
             async for chunk in mentor.stream_chat(
-                user_message=message,
+                user_message=data.message,
                 conversation_history=history,
                 lesson_context=lesson_context,
-                code_context=code_context,
-                hint_level=hint_level,
+                code_context=data.code_context,
+                hint_level=data.hint_level,
                 skill_level=current_user.skill_level,
                 weak_areas=current_user.weak_areas,
                 suggestion_count=session.suggestion_count,
@@ -395,7 +392,7 @@ async def stream_message(
                             session_id=session_id,
                             role="assistant",
                             content=full_response,
-                            extra={"hint_level": hint_level},
+                            extra={"hint_level": data.hint_level},
                         )
                         bdb.add(ai_msg)
 
@@ -408,29 +405,27 @@ async def stream_message(
                                 ses.suggestion_count += 1
 
                         stream_topic: str | None = None
-                        if lesson_id:
-                            lesson_res = await bdb.execute(select(Lesson).where(Lesson.id == lesson_id))
+                        if data.lesson_id:
+                            lesson_res = await bdb.execute(select(Lesson).where(Lesson.id == data.lesson_id))
                             _lesson = lesson_res.scalar_one_or_none()
                             if _lesson:
                                 stream_topic = _lesson.topic
                         
                         bdb.add(HintUsageEvent(
                             user_id=current_user.id,
-                            lesson_id=lesson_id,
+                            lesson_id=data.lesson_id,
                             session_id=session_id,
-                            hint_level=hint_level,
+                            hint_level=data.hint_level,
                             topic=stream_topic,
                         ))
                         await bdb.commit()
                         
                         # Trigger background tasks for stream as well
-                        if (hint_level or 0) >= 2 and stream_topic and lesson_id:
-                            # We can't easily check the count here without another query, 
-                            # but let's just trigger it and let the task handle the logic.
+                        if (data.hint_level or 0) >= 2 and stream_topic and data.lesson_id:
                             background_tasks.add_task(
                                 create_remedial_lesson_task,
                                 user_id=current_user.id,
-                                lesson_id=lesson_id,
+                                lesson_id=data.lesson_id,
                                 topic=stream_topic,
                                 skill_level=current_user.skill_level,
                             )

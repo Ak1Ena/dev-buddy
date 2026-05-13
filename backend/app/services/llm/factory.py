@@ -10,7 +10,8 @@ def get_llm_provider() -> LLMProvider:
     """
     from app.config import get_settings
     settings = get_settings()
-    provider = settings.llm_provider.lower()
+    provider = settings.llm_provider.lower().strip()
+    print(f"DEBUG: Using LLM Provider: '{provider}', Model: '{settings.llm_model}'")
 
     if provider == "anthropic":
         if not settings.anthropic_api_key:

@@ -4,6 +4,7 @@ from pathlib import Path
 
 # Resolve .env from repo root regardless of where uvicorn is launched from
 _ENV_FILE = Path(__file__).resolve().parent.parent.parent / ".env"
+print(f"DEBUG: Loading .env from: {_ENV_FILE}")
 
 
 class Settings(BaseSettings):

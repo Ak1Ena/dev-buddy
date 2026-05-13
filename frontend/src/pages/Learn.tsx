@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
-  Send, Loader2, ChevronLeft, X, MessageSquare,
+  Send, ChevronLeft, X, MessageSquare,
   BookOpen, Lightbulb, Wrench, Sparkles,
   Brain, List, Zap, Shield,
   Activity, Cpu, Globe, Database, Lock, Settings
@@ -16,6 +16,7 @@ import type { Lesson, ChatMessage, AnimationFrame, LessonProposal } from "@/type
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import AnalyzingBridge from "@/components/layout/AnalyzingBridge";
 import AnimationPlayer from "@/components/lesson/AnimationPlayer";
 import CodeWalkthrough from "@/components/lesson/CodeWalkthrough";
 import LessonViz from "@/components/lesson/LessonViz";
@@ -131,6 +132,21 @@ const HINT_LEVELS = [
   { level: 3, label: "Example" },
 ];
 
+function hasCompleteLessonContent(content: Lesson["content"] | null | undefined) {
+  if (!content) return false;
+  return Boolean(
+    content.concept_hook &&
+    content.summary
+  ) && Boolean(
+    content.key_concepts?.length &&
+    content.code_walkthrough?.length &&
+    content.workshops?.length &&
+    content.animation_frames?.length &&
+    content.deep_dive &&
+    content.viz
+  );
+}
+
 export default function Learn() {
   const { lessonId } = useParams<{ lessonId: string }>();
   const navigate = useNavigate();
@@ -151,6 +167,8 @@ export default function Learn() {
   const [currentWalkthroughIndex, setCurrentWalkthroughIndex] = useState(0);
   
   const clearHighlight = useLessonHighlight((s) => s.clear);
+  const c = lesson?.content;
+  const lessonContentReady = hasCompleteLessonContent(c);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const contentScrollRef = useRef<HTMLDivElement>(null);
@@ -209,22 +227,43 @@ export default function Learn() {
   }, [lessonId, navigate, clearHighlight]);
 
   useEffect(() => {
-    if (!lessonId || lesson?.content) return;
-    const t = setInterval(async () => {
+    if (!lessonId || lessonContentReady) {
+      return;
+    }
+
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof window.setTimeout> | undefined;
+
+    const poll = async () => {
       try {
         const res = await learningApi.getLesson(lessonId);
-        if (res.data.content) {
+        if (cancelled) return;
+
+        if (hasCompleteLessonContent(res.data.content)) {
           setLesson(res.data);
-          clearInterval(t);
+          return;
         }
+
+        setLesson(res.data);
       } catch { /* silent */ }
-    }, 4000);
-    return () => clearInterval(t);
-  }, [lessonId, lesson?.content]);
+
+      if (!cancelled) {
+        timeoutId = window.setTimeout(poll, 4000);
+      }
+    };
+
+    timeoutId = window.setTimeout(poll, 4000);
+    return () => {
+      cancelled = true;
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, [lessonId, lessonContentReady]);
+
 
   const handleSendMessage = async () => {
     const trimmed = chatInput.trim();
     if (!trimmed || chatLoading) return;
+    
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: "user",
@@ -232,33 +271,69 @@ export default function Learn() {
       metadata: null,
       created_at: new Date().toISOString(),
     };
+    
     setMessages((p) => [...p, userMsg]);
     setChatInput("");
     setChatLoading(true);
+
+    const assistantMsgId = (Date.now() + 1).toString();
+    const assistantMsg: ChatMessage = {
+      id: assistantMsgId,
+      role: "assistant",
+      content: "",
+      metadata: null,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((p) => [...p, assistantMsg]);
+
     try {
-      const res = await chatApi.send({
+      const response = await chatApi.stream({
         message: trimmed,
         session_id: chatSessionId,
         lesson_id: lessonId,
         hint_level: hintLevel,
         current_frame: currentFrame,
         is_checkpoint: isCheckpoint,
-      });
-      const data = res.data;
-      if (!chatSessionId && data.session_id) setChatSessionId(data.session_id);
-      setMessages((p) => [
-        ...p,
-        {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: data.response ?? data.message?.content ?? "I'm here to help!",
-          metadata: null,
-          created_at: new Date().toISOString(),
-        },
-      ]);
-    } catch {
-      toast.error("Failed to send message.");
-      setMessages((p) => p.slice(0, -1));
+      }, () => {});
+
+      if (!response.body) throw new Error("No response body");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value);
+        const lines = chunk.split("\n");
+        
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.chunk) {
+                fullContent += data.chunk;
+                setMessages((p) => p.map(m => 
+                  m.id === assistantMsgId ? { ...m, content: fullContent } : m
+                ));
+              }
+              if (data.session_id && !chatSessionId) {
+                setChatSessionId(data.session_id);
+              }
+              if (data.error) {
+                toast.error(`AI Error: ${data.error}`);
+              }
+            } catch (e) {
+              // partial json or heartbeats
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Streaming error:", err);
+      toast.error("Failed to connect to AI mentor.");
+      setMessages((p) => p.filter(m => m.id !== assistantMsgId));
       setChatInput(trimmed);
     } finally {
       setChatLoading(false);
@@ -317,20 +392,20 @@ export default function Learn() {
   };
 
   const stepToFrame = useCallback((stepIdx: number) => {
-    const steps = lesson?.content?.code_walkthrough?.length ?? 0;
-    const frames = lesson?.content?.animation_frames?.length ?? 0;
+    const steps = c?.code_walkthrough?.length ?? 0;
+    const frames = c?.animation_frames?.length ?? 0;
     if (frames === 0 || steps === 0) return 0;
     if (steps === 1) return 0;
     return Math.round((stepIdx / (steps - 1)) * (frames - 1));
-  }, [lesson?.content?.code_walkthrough?.length, lesson?.content?.animation_frames?.length]);
+  }, [c?.code_walkthrough?.length, c?.animation_frames?.length]);
 
   const frameToStep = useCallback((frameIdx: number) => {
-    const steps = lesson?.content?.code_walkthrough?.length ?? 0;
-    const frames = lesson?.content?.animation_frames?.length ?? 0;
+    const steps = c?.code_walkthrough?.length ?? 0;
+    const frames = c?.animation_frames?.length ?? 0;
     if (steps === 0 || frames === 0) return 0;
     if (frames === 1) return 0;
     return Math.round((frameIdx / (frames - 1)) * (steps - 1));
-  }, [lesson?.content?.code_walkthrough?.length, lesson?.content?.animation_frames?.length]);
+  }, [c?.code_walkthrough?.length, c?.animation_frames?.length]);
 
   const handleFrameChange = useCallback((idx: number, isCp: boolean) => {
     setCurrentFrame(idx);
@@ -342,11 +417,11 @@ export default function Learn() {
   }, [frameToStep]);
 
   useEffect(() => {
-    const frames = lesson?.content?.animation_frames;
+    const frames = c?.animation_frames;
     if (!frames?.length) return;
     const next = stepToFrame(currentWalkthroughIndex);
     if (next !== currentFrame) setCurrentFrame(next);
-  }, [currentWalkthroughIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentWalkthroughIndex, c?.animation_frames, stepToFrame, currentFrame]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -367,31 +442,23 @@ export default function Learn() {
 
   if (loadingLesson) {
     return (
-      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-slate-950 mesh-gradient">
-        <div className="flex flex-col items-center gap-6">
-          <motion.div 
-            animate={{ rotate: 360, scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }} 
-            transition={{ rotate: { repeat: Infinity, duration: 2, ease: "linear" }, scale: { repeat: Infinity, duration: 2 }, opacity: { repeat: Infinity, duration: 2 } }}
-            className="relative"
-          >
-            <div className="absolute inset-0 blur-2xl bg-sky-500/30 rounded-full" />
-            <Loader2 className="h-12 w-12 text-sky-400 relative z-10" />
-          </motion.div>
-          <div className="text-center space-y-2">
-            <h2 className="text-xl font-bold text-white tracking-tight">Initiating Logic Bridge</h2>
-            <p className="text-slate-500 text-sm font-medium">Preparing technical mastery session…</p>
-          </div>
-        </div>
+      <div className="min-h-[calc(100vh-4rem)] bg-slate-950">
+        <AnalyzingBridge isVisible />
       </div>
     );
   }
 
-  if (!lesson) return null;
-  const c = lesson.content;
-  if (!c) return null;
+  if (!lesson) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] bg-slate-950">
+        <AnalyzingBridge isVisible />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col overflow-hidden bg-slate-950">
+      <AnalyzingBridge isVisible={!lessonContentReady} />
       <ErrorBoundary>
         {/* ── HEADER ── */}
         <div className="relative shrink-0 border-b border-slate-800/60 bg-slate-900/20">
@@ -449,7 +516,7 @@ export default function Learn() {
             <div className="px-10 py-12 space-y-24 max-w-5xl mx-auto w-full">
               
               {/* 1. Hook & Context */}
-              {c.concept_hook && (
+              {c?.concept_hook && (
                 <Section id="sec-hook">
                   <div className="rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/10 via-fuchsia-500/5 to-transparent p-8 backdrop-blur-sm relative overflow-hidden">
                     <div className="absolute -top-8 -right-8 h-32 w-32 rounded-full bg-sky-500/10 blur-3xl pointer-events-none" />
@@ -462,7 +529,7 @@ export default function Learn() {
                           Logic Foundation
                         </p>
                         <div className="prose prose-lg prose-invert max-w-none prose-p:text-slate-200 prose-p:leading-relaxed prose-strong:text-sky-300">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{c.concept_hook}</ReactMarkdown>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{c?.concept_hook}</ReactMarkdown>
                         </div>
                       </div>
                     </div>
@@ -471,7 +538,7 @@ export default function Learn() {
               )}
 
               {/* 2. Logic Topology (Hero Visualization) */}
-              {c.viz && (
+              {c?.viz && (
                 <Section id="sec-topology">
                   <SectionHeading icon={<Activity />} label="Logic Topology" iconClass="text-emerald-400" />
                   <div className="relative h-[640px] w-full rounded-3xl border border-slate-800/60 bg-slate-950/60 shadow-2xl overflow-hidden group">
@@ -480,7 +547,7 @@ export default function Learn() {
                     {/* The Visualization Area (internal LessonViz handles scrolling) */}
                     <div className="h-full w-full relative">
                       <LessonViz
-                        viz={c.viz}
+                        viz={c?.viz}
                         onStepActivate={(idx) => typeof idx === "number" && handleJumpToCode(idx)}
                       />
                     </div>
@@ -488,7 +555,7 @@ export default function Learn() {
                     {/* Docked Detail Panel (Bottom) */}
                     <div className="absolute bottom-6 left-6 right-6 pointer-events-none z-20">
                       <div className="pointer-events-auto max-w-4xl mx-auto">
-                        <NodeDetail viz={c.viz} onJumpToCode={handleJumpToCode} />
+                        <NodeDetail viz={c?.viz} onJumpToCode={handleJumpToCode} />
                       </div>
                     </div>
 
@@ -508,11 +575,11 @@ export default function Learn() {
 
               {/* 3. Deep Dive & Concepts */}
               <div className="space-y-12">
-                {c.key_concepts && (
+                {c?.key_concepts && (
                   <Section id="sec-concepts">
                     <SectionHeading icon={<Lightbulb />} label="Architectural Targets" iconClass="text-amber-400" />
                     <div className="flex flex-wrap gap-3">
-                      {c.key_concepts.map((concept: string) => (
+                      {c?.key_concepts?.map((concept: string) => (
                         <Badge key={concept} variant="secondary" className="bg-slate-900/60 backdrop-blur-sm text-slate-300 border-slate-800 px-4 py-1.5 text-sm font-medium hover:border-sky-500/40 transition-all hover:scale-105">
                           {concept}
                         </Badge>
@@ -521,12 +588,12 @@ export default function Learn() {
                   </Section>
                 )}
 
-                {c.deep_dive && (
+                {c?.deep_dive && (
                   <Section id="sec-deep-dive">
-                    <SectionHeading icon={<Brain />} label={c.deep_dive.title || "The Mental Model"} iconClass="text-sky-400" />
-                    {c.deep_dive.cards && c.deep_dive.cards.length > 0 ? (
+                    <SectionHeading icon={<Brain />} label={c?.deep_dive?.title || "The Mental Model"} iconClass="text-sky-400" />
+                    {c?.deep_dive?.cards && c.deep_dive.cards.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {c.deep_dive.cards.map((card, idx) => (
+                        {c?.deep_dive?.cards?.map((card, idx) => (
                           <Card 
                             key={idx}
                             onMouseEnter={() => setHighlightedNodeIds(card.related_nodes || [])}
@@ -554,7 +621,7 @@ export default function Learn() {
                           <Brain className="h-32 w-32 text-sky-400" />
                         </div>
                         <div className="prose prose-lg prose-invert max-w-none prose-p:leading-relaxed prose-p:text-slate-300 prose-headings:text-white prose-strong:text-sky-300">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{c.deep_dive.content || ""}</ReactMarkdown>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{c?.deep_dive?.content || ""}</ReactMarkdown>
                         </div>
                       </div>
                     )}
@@ -563,7 +630,7 @@ export default function Learn() {
               </div>
 
               {/* 4. Interactive Execution (The "Code" Section) */}
-              {c.code_walkthrough && c.code_walkthrough.length > 0 && (
+              {c?.code_walkthrough && c.code_walkthrough.length > 0 && (
                 <Section id="sec-execution">
                   <SectionHeading icon={<Zap />} label="Live Execution Analysis" iconClass="text-fuchsia-400" />
                   <div className="h-[640px] flex flex-col lg:flex-row overflow-hidden rounded-3xl border border-slate-800/60 bg-slate-900/20 shadow-2xl">
@@ -572,11 +639,11 @@ export default function Learn() {
                     <div className="lg:w-[40%] w-full h-1/2 lg:h-full border-b lg:border-b-0 lg:border-r border-slate-800/60 bg-slate-950/40 overflow-hidden flex flex-col">
                       <div className="shrink-0 px-4 py-3 bg-slate-950/60 border-b border-slate-800/60 flex items-center justify-between">
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Logic Steps</span>
-                        <span className="text-[10px] font-mono text-sky-500/60">{currentWalkthroughIndex + 1} / {c.code_walkthrough.length}</span>
+                        <span className="text-[10px] font-mono text-sky-500/60">{currentWalkthroughIndex + 1} / {c?.code_walkthrough?.length || 0}</span>
                       </div>
                       <div className="flex-1 overflow-hidden">
                         <CodeStepGraph
-                          items={c.code_walkthrough}
+                          items={c?.code_walkthrough || []}
                           activeIndex={currentWalkthroughIndex}
                           onActiveIndexChange={setCurrentWalkthroughIndex}
                         />
@@ -588,9 +655,9 @@ export default function Learn() {
                       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(232,121,249,0.03),transparent)] pointer-events-none" />
                       
                       <div className="flex-1 min-h-0 overflow-hidden relative">
-                        {c.animation_frames && c.animation_frames.length > 0 ? (
+                        {c?.animation_frames && c.animation_frames.length > 0 ? (
                           <AnimationPlayer
-                            frames={c.animation_frames}
+                            frames={c?.animation_frames}
                             activeFrameIndex={currentFrame}
                             highlightedNodeIds={highlightedNodeIds}
                             onFrameChange={handleFrameChange}
@@ -603,7 +670,7 @@ export default function Learn() {
                       </div>
 
                       {/* WHY Footer */}
-                      {c.code_walkthrough[currentWalkthroughIndex] && (
+                      {c?.code_walkthrough?.[currentWalkthroughIndex] && (
                         <div className="shrink-0 border-t border-slate-800/60 bg-slate-950/60 backdrop-blur-md px-6 py-5 max-h-[200px] overflow-y-auto">
                           <AnimatePresence mode="wait">
                             <motion.div
@@ -618,13 +685,13 @@ export default function Learn() {
                                 <span className="text-[10px] font-black uppercase tracking-widest text-sky-400">Interpretation</span>
                               </div>
                               <p className="text-sm leading-relaxed text-slate-200 font-medium">
-                                {c.code_walkthrough[currentWalkthroughIndex].plain_english}
+                                {c?.code_walkthrough?.[currentWalkthroughIndex]?.plain_english}
                               </p>
-                              {c.code_walkthrough[currentWalkthroughIndex].why && (
+                              {c?.code_walkthrough?.[currentWalkthroughIndex]?.why && (
                                 <div className="flex gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 shadow-inner">
                                   <Zap className="h-4 w-4 shrink-0 text-amber-400 mt-0.5" />
                                   <p className="text-xs leading-relaxed text-slate-300 italic">
-                                    {c.code_walkthrough[currentWalkthroughIndex].why}
+                                    {c?.code_walkthrough?.[currentWalkthroughIndex]?.why}
                                   </p>
                                 </div>
                               )}
@@ -639,7 +706,7 @@ export default function Learn() {
 
               {/* 5. Summary & Practice */}
               <div className="space-y-16">
-                {c.summary && (
+                {c?.summary && (
                   <Section id="sec-summary">
                     <SectionHeading icon={<Shield />} label="Consolidation" iconClass="text-emerald-400" />
                     <div className="rounded-3xl border border-slate-800/60 bg-slate-900/30 p-10 relative overflow-hidden">
@@ -647,13 +714,13 @@ export default function Learn() {
                         <Globe className="h-48 w-48 text-emerald-500" />
                       </div>
                       <div className="prose prose-lg prose-invert max-w-none text-slate-300 leading-relaxed prose-strong:text-emerald-400">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{c.summary}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{c?.summary}</ReactMarkdown>
                       </div>
                     </div>
                   </Section>
                 )}
 
-                {c.workshops && c.workshops.length > 0 && (
+                {c?.workshops && c.workshops.length > 0 && (
                   <Section id="sec-practice">
                     <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/5 p-10 shadow-2xl flex flex-col md:flex-row md:items-center md:justify-between gap-8 relative overflow-hidden group">
                       <div className="absolute top-0 right-0 p-10 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity">
@@ -663,7 +730,7 @@ export default function Learn() {
                         <SectionHeading icon={<Wrench />} label="Mastery Checkpoint" iconClass="text-emerald-400" />
                         <h3 className="text-2xl font-black text-white tracking-tight">Prove your understanding.</h3>
                         <p className="text-slate-400 leading-relaxed text-lg">
-                          {c.workshops[0].description ?? "Test your intuition with a focused architectural challenge."}
+                          {c?.workshops?.[0]?.description ?? "Test your intuition with a focused architectural challenge."}
                         </p>
                       </div>
                       <Button
