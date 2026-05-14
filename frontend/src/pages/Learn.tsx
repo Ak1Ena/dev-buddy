@@ -134,17 +134,24 @@ const HINT_LEVELS = [
 
 function hasCompleteLessonContent(content: Lesson["content"] | null | undefined) {
   if (!content) return false;
-  return Boolean(
+  
+  // Mandatory narrative fields
+  const hasNarrative = Boolean(
     content.concept_hook &&
-    content.summary
-  ) && Boolean(
+    content.summary &&
     content.key_concepts?.length &&
     content.code_walkthrough?.length &&
-    content.workshops?.length &&
+    content.workshops?.length
+  );
+
+  // Mandatory cinematic/visual fields
+  const hasCinematic = Boolean(
     content.animation_frames?.length &&
     content.deep_dive &&
     content.viz
   );
+
+  return hasNarrative && hasCinematic;
 }
 
 export default function Learn() {
