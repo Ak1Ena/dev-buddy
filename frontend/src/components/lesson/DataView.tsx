@@ -78,6 +78,7 @@ function ArrayView({ label, cells, cursors, note }: { label: string; cells: Arra
             const isEmpty = c.value == null || c.value === "" || c.status === "empty";
             const glowKf = ACTIVE_GLOW[c.status ?? "filled"];
             const isScanning = c.status === "active" || c.status === "compare";
+            const cellCursors = (cursors ?? []).filter((cur) => String(cur.key) === String(c.key));
 
             return (
               <div key={`cell-group-${i}`} className="flex flex-col gap-1 min-w-[44px]">
@@ -123,47 +124,34 @@ function ArrayView({ label, cells, cursors, note }: { label: string; cells: Arra
                   </span>
                 </motion.div>
                 
-                {/* Cursor Anchor Point */}
-                <div id={`cursor-anchor-${c.key}`} className="h-0 w-full relative" />
+                {/* Cursors Area */}
+                <div className="relative h-8 mt-1 flex justify-center">
+                  <AnimatePresence>
+                    {cellCursors.map((cur) => (
+                      <motion.div
+                        key={`cursor-${cur.label}`}
+                        layoutId={`cursor-${cur.label}`}
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 6 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                        className="absolute top-0 flex flex-col items-center"
+                      >
+                        <div className="text-amber-300 text-xs leading-none">▲</div>
+                        <div className={cn(
+                          "rounded-full px-2 py-0.5 border text-[10px] font-mono font-bold whitespace-nowrap shadow-lg",
+                          CURSOR_PALETTE[cur.color ?? "fuchsia"]
+                        )}>
+                          {cur.label}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
               </div>
             );
           })}
         </motion.div>
-
-        {/* Cursors Container - Absolute overlay linked to anchors */}
-        {cursors && cursors.length > 0 && (
-          <div className="relative h-8 mt-1">
-            {cursors.map((cur, i) => {
-              const idx = safeCells.findIndex((c) => String(c.key) === String(cur.key));
-              if (idx < 0) return null;
-              const palette = CURSOR_PALETTE[cur.color ?? "fuchsia"];
-              
-              // We'll use a simplified absolute positioning for now, but in a real-world
-              // scenario with variable widths, we'd use a ResizeObserver or Ref-based calc.
-              // For now, flex-basis with same distribution works.
-              return (
-                <motion.div
-                  key={`cur-${i}`}
-                  layout
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 28 }}
-                  className="absolute top-0 flex flex-col items-center"
-                  style={{ 
-                    left: `calc(${idx} * (100% / ${safeCells.length}))`, 
-                    width: `calc(100% / ${safeCells.length})`,
-                    minWidth: "44px"
-                  }}
-                >
-                  <div className="text-amber-300 text-xs leading-none">▲</div>
-                  <div className={cn("rounded-full px-2 py-0.5 border text-[10px] font-mono font-bold whitespace-nowrap", palette)}>
-                    {cur.label}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
       </div>
     </div>
   );
