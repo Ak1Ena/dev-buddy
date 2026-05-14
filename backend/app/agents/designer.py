@@ -284,7 +284,7 @@ Focus on the {topic} concept. Use the student's actual variable names."""
                     system=DESIGNER_SYSTEM,
                     max_tokens=8000,
                 ),
-                timeout=180.0,
+                timeout=300.0,
             )
             if not raw or not raw.strip():
                 raise ValueError("empty response")
@@ -295,7 +295,7 @@ Focus on the {topic} concept. Use the student's actual variable names."""
                 return {"animation_frames": result}
             raise ValueError(f"unexpected structure: {type(result)}")
         except asyncio.TimeoutError:
-            logger.warning("Designer agent timed out after 90s for topic=%s", topic)
+            logger.warning("Designer agent timed out after 300s for topic=%s", topic)
             return _fallback_animation(topic, title, language, code_snippet)
         except ValueError:
             logger.info("Designer agent returned non-JSON for topic=%s; using fallback animation", topic)

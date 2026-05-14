@@ -398,7 +398,7 @@ names, function names, and line numbers."""
                     system=CONTENT_SYSTEM,
                     max_tokens=6000,
                 ),
-                timeout=180.0,
+                timeout=300.0,
             )
             if not raw or not raw.strip():
                 raise ValueError("LLM returned empty response for lesson content")
@@ -413,7 +413,7 @@ names, function names, and line numbers."""
                 raise ValueError("LLM returned a list with no valid lesson content object")
             return result
         except asyncio.TimeoutError:
-            logger.warning("Lesson content generation timed out after 60s for topic=%s", topic)
+            logger.warning("Lesson content generation timed out after 300s for topic=%s", topic)
             return _fallback_lesson_content(topic, language, code_snippet)
         except ValueError:
             logger.info("Lesson content generation returned non-JSON for topic=%s; using fallback", topic)
