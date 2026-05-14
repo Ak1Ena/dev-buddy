@@ -1,3 +1,6 @@
+import type { SceneJSON } from "@/engine/types";
+export type { SceneJSON };
+
 export interface User {
   id: string;
   email: string;
@@ -112,6 +115,7 @@ export type Viz =
 export interface LessonContent {
   concept_hook?: string;
   animation_frames?: AnimationFrame[];
+  scene?: SceneJSON;
   viz?: Viz;
   deep_dive?: {
     title: string;

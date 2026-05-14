@@ -149,3 +149,8 @@ export const chatApi = {
     topic: string;
   }) => api.post("/chat/proposal/reject", data),
 };
+
+export const sceneApi = {
+  analyze: (code: string) => api.post<{ session_id: string }>("/scenes/analyze", { code }),
+  getScene: (sessionId: string) => api.get(`/scenes/scene/${sessionId}`),
+};

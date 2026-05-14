@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import AnalyzingBridge from "@/components/layout/AnalyzingBridge";
-import AnimationPlayer from "@/components/lesson/AnimationPlayer";
+import CinematicView from "@/components/lesson/CinematicView";
 import CodeWalkthrough from "@/components/lesson/CodeWalkthrough";
 import LessonViz from "@/components/lesson/LessonViz";
 import CodePanel from "@/components/lesson/CodePanel";
@@ -655,18 +655,13 @@ export default function Learn() {
                       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(232,121,249,0.03),transparent)] pointer-events-none" />
                       
                       <div className="flex-1 min-h-0 overflow-hidden relative">
-                        {c?.animation_frames && c.animation_frames.length > 0 ? (
-                          <AnimationPlayer
-                            frames={c?.animation_frames}
-                            activeFrameIndex={currentFrame}
-                            highlightedNodeIds={highlightedNodeIds}
-                            onFrameChange={handleFrameChange}
-                          />
-                        ) : (
-                          <div className="h-full flex items-center justify-center opacity-40">
-                            <Cpu className="h-12 w-12 text-slate-700" />
-                          </div>
-                        )}
+                        <CinematicView
+                          scene={c?.scene}
+                          frames={c?.animation_frames}
+                          activeFrameIndex={currentFrame}
+                          highlightedNodeIds={highlightedNodeIds}
+                          onFrameChange={handleFrameChange}
+                        />
                       </div>
 
                       {/* WHY Footer */}

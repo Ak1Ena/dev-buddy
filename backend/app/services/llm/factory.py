@@ -22,8 +22,8 @@ def get_llm_provider() -> LLMProvider:
     if provider == "openwebui":
         if not settings.openwebui_api_key:
             raise ValueError("OPENWEBUI_API_KEY is not set in .env")
-        from app.services.llm.openai_provider import OpenAIProvider
-        return OpenAIProvider(
+        from app.services.llm.openwebui_provider import OpenWebUIProvider
+        return OpenWebUIProvider(
             api_key=settings.openwebui_api_key,
             model=settings.llm_model,
             base_url=settings.openwebui_base_url,

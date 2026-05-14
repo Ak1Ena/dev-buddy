@@ -25,10 +25,10 @@ def _strip_thoughts(text: str) -> str:
     return cleaned or text  # if removing leaves empty, return original
 
 
-def _unwrap_text(content: str) -> str:
+def _unwrap_text(content: str | None) -> str:
     """Some models return {"type":"text","text":"..."} instead of plain text."""
     if not content:
-        return content
+        return ""
     if content.strip().startswith("{"):
         try:
             obj = json.loads(content)
@@ -56,6 +56,10 @@ class OpenAIProvider(LLMProvider):
         base_url: str | None = None,
         extra_headers: dict | None = None,
     ):
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("Initializing OpenAIProvider with base_url: %s", base_url)
+
         self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.model = model
         self.extra_headers = extra_headers or {}
