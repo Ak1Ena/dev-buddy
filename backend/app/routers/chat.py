@@ -59,13 +59,15 @@ async def create_remedial_lesson_task(
             if not gap_path:
                 return
 
-            # Concurrency/Race condition fix: Get max index inside the same transaction
-            max_idx_r = await db.execute(
-                select(func.max(Lesson.order_index)).where(
-                    Lesson.learning_path_id == gap_path.id
+            insert_index = gap_lesson.order_index + 1
+            await db.execute(
+                update(Lesson)
+                .where(
+                    Lesson.learning_path_id == gap_path.id,
+                    Lesson.order_index >= insert_index,
                 )
+                .values(order_index=Lesson.order_index + 1)
             )
-            max_idx = max_idx_r.scalar() or 0
             
             planner = PlannerAgent()
             content = await planner.generate_lesson_content(
@@ -84,14 +86,14 @@ async def create_remedial_lesson_task(
                     f"Targeted practice on {topic.replace('_', ' ')} "
                     "— automatically created after repeated hints on this topic."
                 ),
-                order_index=max_idx + 1,
+                order_index=insert_index,
                 estimated_minutes=20,
                 difficulty=skill_level,
                 content=content,
                 is_remedial=True,
             )
             db.add(remedial)
-            gap_path.total_lessons = max_idx + 1
+            gap_path.total_lessons += 1
             await db.commit()
             logger.info("AC-GAP-003: auto-remedial lesson created for topic '%s' (user %s)", topic, user_id)
         except Exception as exc:
@@ -455,6 +457,7 @@ async def accept_proposal(
     if ref_lesson_id == "current":
         ref_lesson_id = session.lesson_id
     
+    ref_lesson = None
     if not ref_lesson_id:
         # Fallback to last lesson in user's first path if not in a lesson context
         path_res = await db.execute(select(LearningPath).where(LearningPath.user_id == current_user.id))
@@ -462,22 +465,40 @@ async def accept_proposal(
         if not path:
             raise HTTPException(status_code=400, detail="No learning path found")
     else:
-        lesson_res = await db.execute(select(Lesson).where(Lesson.id == ref_lesson_id))
+        lesson_res = await db.execute(
+            select(Lesson)
+            .options(joinedload(Lesson.learning_path))
+            .where(Lesson.id == ref_lesson_id)
+        )
         ref_lesson = lesson_res.scalar_one_or_none()
         if not ref_lesson:
             raise HTTPException(status_code=404, detail="Reference lesson not found")
-        path_res = await db.execute(select(LearningPath).where(LearningPath.id == ref_lesson.learning_path_id))
-        path = path_res.scalar_one_or_none()
+        path = ref_lesson.learning_path
 
     if not path:
         raise HTTPException(status_code=404, detail="Learning path not found")
 
-    # Shift existing lessons if inserting "before"
-    # For now, let's just append at the end for simplicity, or find the right index
-    max_idx_res = await db.execute(
-        select(func.max(Lesson.order_index)).where(Lesson.learning_path_id == path.id)
+    # Determine insertion index
+    if ref_lesson:
+        if data.position == "before":
+            target_idx = ref_lesson.order_index
+        else: # "after"
+            target_idx = ref_lesson.order_index + 1
+    else:
+        max_idx_res = await db.execute(
+            select(func.max(Lesson.order_index)).where(Lesson.learning_path_id == path.id)
+        )
+        target_idx = (max_idx_res.scalar() or 0) + 1
+
+    # Shift existing lessons
+    await db.execute(
+        update(Lesson)
+        .where(
+            Lesson.learning_path_id == path.id,
+            Lesson.order_index >= target_idx
+        )
+        .values(order_index=Lesson.order_index + 1)
     )
-    max_idx = max_idx_res.scalar() or 0
 
     planner = PlannerAgent()
     content = await planner.generate_lesson_content(
@@ -494,13 +515,16 @@ async def accept_proposal(
         title=data.title,
         topic=data.topic,
         description=data.description,
-        order_index=max_idx + 1,
+        order_index=target_idx,
         estimated_minutes=data.estimated_minutes,
         difficulty=current_user.skill_level,
         content=content,
     )
     db.add(new_lesson)
-    path.total_lessons = max_idx + 1
+    
+    # Increment total lessons
+    path.total_lessons += 1
+    
     await db.commit()
     await db.refresh(new_lesson)
 

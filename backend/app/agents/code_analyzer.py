@@ -292,7 +292,7 @@ class CodeAnalyzerAgent:
                     system=SYSTEM,
                     max_tokens=4000,
                 ),
-                timeout=10.0,
+                timeout=180.0,
             )
             logger.debug("CodeAnalyzer raw LLM response: %r", raw[:500] if raw else "<empty>")
             if raw and raw.strip():
@@ -337,7 +337,7 @@ class CodeAnalyzerAgent:
                     system=MISCONCEPTION_SYSTEM,
                     max_tokens=1500,
                 ),
-                timeout=10.0,
+                timeout=180.0,
             )
             logger.debug("MisconceptionDetector raw LLM response: %r", raw[:300] if raw else "<empty>")
             if raw and raw.strip():

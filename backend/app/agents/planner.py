@@ -293,7 +293,7 @@ Rules for this path:
                         system=PLANNER_SYSTEM,
                         max_tokens=max_tok,
                     ),
-                    timeout=30.0,
+                    timeout=180.0,
                 )
                 if not raw or not raw.strip():
                     raise ValueError("empty response")
@@ -332,7 +332,7 @@ Design a clear progression of lessons that teaches this topic starting from the 
                         system=TOPIC_PLANNER_SYSTEM,
                         max_tokens=max_tok,
                     ),
-                    timeout=30.0,
+                    timeout=180.0,
                 )
                 if not raw or not raw.strip():
                     raise ValueError("empty response")
@@ -398,7 +398,7 @@ names, function names, and line numbers."""
                     system=CONTENT_SYSTEM,
                     max_tokens=6000,
                 ),
-                timeout=60.0,
+                timeout=180.0,
             )
             if not raw or not raw.strip():
                 raise ValueError("LLM returned empty response for lesson content")

@@ -68,6 +68,12 @@ export default function StepFlow({ steps, onStepActivate, completedUpTo }: Props
           .join(", ");
         return (
           <div key={step.id} className="flex flex-col sm:flex-row items-center gap-4">
+            {i > 0 && (
+              <>
+                <ChevronRight className="hidden sm:block h-5 w-5 shrink-0 text-slate-700" aria-hidden />
+                <ChevronDown className="block sm:hidden h-5 w-5 shrink-0 text-slate-700 self-center" aria-hidden />
+              </>
+            )}
             <button
               type="button"
               data-step-id={step.id}
@@ -103,12 +109,6 @@ export default function StepFlow({ steps, onStepActivate, completedUpTo }: Props
               <span className="whitespace-nowrap tracking-tight">{step.label}</span>
               {isPinned && <Pin className="h-4 w-4 text-sky-300" />}
             </button>
-            {i < steps.length - 1 && (
-              <>
-                <ChevronRight className="hidden sm:block h-5 w-5 shrink-0 text-slate-700" aria-hidden />
-                <ChevronDown className="block sm:hidden h-5 w-5 shrink-0 text-slate-700 self-center" aria-hidden />
-              </>
-            )}
           </div>
         );
       })}

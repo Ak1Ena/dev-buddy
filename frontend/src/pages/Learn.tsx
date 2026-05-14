@@ -163,6 +163,7 @@ export default function Learn() {
   const [isCheckpoint, setIsCheckpoint] = useState(false);
   const [highlightedNodeIds, setHighlightedNodeIds] = useState<string[]>([]);
   const [chatOpen, setChatOpen] = useState(true);
+  const [settledProposals, setSettledProposals] = useState<Set<string>>(new Set());
   /** Lifted state for the controlled CodeWalkthrough / CodePanel. */
   const [currentWalkthroughIndex, setCurrentWalkthroughIndex] = useState(0);
   
@@ -344,13 +345,14 @@ export default function Learn() {
   };
 
   const handleAcceptProposal = async (proposal: LessonProposal) => {
-    if (!chatSessionId) return;
+    if (!chatSessionId || settledProposals.has(proposal.topic)) return;
     const t = toast.loading("Adding lesson to your plan...");
     try {
       await chatApi.acceptProposal({
         session_id: chatSessionId,
         ...proposal,
       });
+      setSettledProposals((prev) => new Set(prev).add(proposal.topic));
       toast.success("Lesson added! You can find it in your learning plan.", { id: t });
       // Optionally refresh the lesson or path if needed, but for now just a success msg
       setMessages((p) => [
@@ -369,12 +371,13 @@ export default function Learn() {
   };
 
   const handleRejectProposal = async (topic: string) => {
-    if (!chatSessionId) return;
+    if (!chatSessionId || settledProposals.has(topic)) return;
     try {
       await chatApi.rejectProposal({
         session_id: chatSessionId,
         topic,
       });
+      setSettledProposals((prev) => new Set(prev).add(topic));
       setMessages((p) => [
         ...p,
         {
@@ -649,10 +652,10 @@ export default function Learn() {
               {c?.code_walkthrough && c.code_walkthrough.length > 0 && (
                 <Section id="sec-execution">
                   <SectionHeading icon={<Zap />} label="Live Execution Analysis" iconClass="text-fuchsia-400" />
-                  <div className="h-[900px] flex flex-col lg:flex-row overflow-hidden rounded-3xl border border-slate-800/60 bg-slate-900/20 shadow-2xl">
+                  <div className="h-[calc(100vh-140px)] min-h-[600px] flex flex-col lg:flex-row overflow-hidden rounded-3xl border border-slate-800/60 bg-slate-900/20 shadow-2xl">
                     
                     {/* LEFT: Code Graph */}
-                    <div className="lg:w-[40%] w-full h-1/2 lg:h-full border-b lg:border-b-0 lg:border-r border-slate-800/60 bg-slate-950/40 overflow-hidden flex flex-col">
+                    <div className="lg:w-[35%] w-full h-1/2 lg:h-full border-b lg:border-b-0 lg:border-r border-slate-800/60 bg-slate-950/40 overflow-hidden flex flex-col">
                       <div className="shrink-0 px-4 py-3 bg-slate-950/60 border-b border-slate-800/60 flex items-center justify-between">
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Logic Steps</span>
                         <span className="text-[10px] font-mono text-sky-500/60">{currentWalkthroughIndex + 1} / {c?.code_walkthrough?.length || 0}</span>
@@ -667,10 +670,10 @@ export default function Learn() {
                     </div>
 
                     {/* RIGHT: Animation & Interpretation */}
-                    <div className="lg:w-[60%] w-full h-1/2 lg:h-full flex flex-col bg-slate-900/10 overflow-hidden relative">
+                    <div className="lg:w-[65%] w-full h-1/2 lg:h-full flex flex-col bg-slate-900/10 overflow-hidden relative">
                       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(232,121,249,0.03),transparent)] pointer-events-none" />
                       
-                      <div className="flex-1 min-h-0 overflow-hidden relative">
+                      <div className="flex-1 min-h-0 overflow-hidden relative flex flex-col">
                         <CinematicView
                           key={lessonId}
                           scene={c?.scene}
@@ -683,26 +686,26 @@ export default function Learn() {
 
                       {/* WHY Footer */}
                       {c?.code_walkthrough?.[currentWalkthroughIndex] && (
-                        <div className="shrink-0 border-t border-slate-800/60 bg-slate-950/60 backdrop-blur-md px-6 py-5 max-h-[200px] overflow-y-auto">
+                        <div className="shrink-0 border-t border-slate-800/60 bg-slate-950/60 backdrop-blur-md px-6 py-4">
                           <AnimatePresence mode="wait">
                             <motion.div
                               key={currentWalkthroughIndex}
-                              initial={{ opacity: 0, x: 10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, x: -10 }}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
                               transition={{ duration: 0.2 }}
-                              className="space-y-3"
+                              className="flex gap-4 items-start"
                             >
-                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-sky-400">Interpretation</span>
-                              </div>
-                              <p className="text-sm leading-relaxed text-slate-200 font-medium">
-                                {c?.code_walkthrough?.[currentWalkthroughIndex]?.plain_english}
-                              </p>
+                                <div className="flex-1 space-y-1">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-sky-400">Interpretation</span>
+                                    <p className="text-xs leading-relaxed text-slate-200 font-medium">
+                                        {c?.code_walkthrough?.[currentWalkthroughIndex]?.plain_english}
+                                    </p>
+                                </div>
                               {c?.code_walkthrough?.[currentWalkthroughIndex]?.why && (
-                                <div className="flex gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 shadow-inner">
-                                  <Zap className="h-4 w-4 shrink-0 text-amber-400 mt-0.5" />
-                                  <p className="text-xs leading-relaxed text-slate-300 italic">
+                                <div className="flex-1 flex gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2 shadow-inner">
+                                  <Zap className="h-3 w-3 shrink-0 text-amber-400 mt-0.5" />
+                                  <p className="text-[11px] leading-relaxed text-slate-300 italic">
                                     {c?.code_walkthrough?.[currentWalkthroughIndex]?.why}
                                   </p>
                                 </div>
@@ -871,14 +874,16 @@ export default function Learn() {
                                     size="sm" 
                                     className="flex-1 bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold text-xs h-8 rounded-lg"
                                     onClick={() => handleAcceptProposal(seg.data)}
+                                    disabled={settledProposals.has(seg.data.topic)}
                                   >
-                                    Accept Lesson
+                                    {settledProposals.has(seg.data.topic) ? "Accepted" : "Accept Lesson"}
                                   </Button>
                                   <Button 
                                     size="sm" 
                                     variant="outline" 
                                     className="flex-1 border-slate-700 text-slate-400 hover:text-white font-bold text-xs h-8 rounded-lg"
                                     onClick={() => handleRejectProposal(seg.data.topic)}
+                                    disabled={settledProposals.has(seg.data.topic)}
                                   >
                                     No Thanks
                                   </Button>

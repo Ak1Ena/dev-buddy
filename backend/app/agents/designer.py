@@ -62,6 +62,30 @@ Return ONLY valid JSON — no markdown, no extra text:
   "animation_frames": [
     {
       "frame": 1,
+      "title": "3D Memory View",
+      "narration": "Let's look at how the objects are laid out in memory.",
+      "canvas_scene": {
+        "nodes": [
+          { "id": "heap", "type": "container", "label": "Heap Memory" },
+          { "id": "obj1", "type": "data", "label": "User Object", "value": "{id: 1}", "parent": "heap" }
+        ]
+      },
+      "sub_frames": [
+        {
+          "title": "Allocating Heap",
+          "narration": "First, the system allocates space on the heap.",
+          "code_state": "obj1 = {}",
+          "canvas_scene": {
+            "nodes": [
+              { "id": "heap", "type": "container", "label": "Heap Memory" }
+            ]
+          },
+          "effects": [{ "type": "spawn", "target": "heap" }]
+        }
+      ]
+    },
+    {
+      "frame": 2,
       "title": "Initialize the accumulator",
       "code_state": "total = 0\\nnumbers = [1, 2, 3, 4, 5]",
       "is_checkpoint": false,
@@ -86,10 +110,24 @@ Return ONLY valid JSON — no markdown, no extra text:
           "cursors": [ { "key": 0, "label": "i=0", "color": "fuchsia" } ]
         }
       ],
+      "sub_frames": [
+        {
+          "title": "Allocating Memory",
+          "narration": "First, we set aside space for our total sum.",
+          "code_state": "total = 0",
+          "effects": [{ "type": "spawn", "target": "total" }]
+        },
+        {
+          "title": "Loading Data",
+          "narration": "Then, we load the list of numbers into memory.",
+          "code_state": "numbers = [1, 2, 3, 4, 5]",
+          "effects": [{ "type": "spawn", "target": "numbers" }]
+        }
+      ],
       "narration": "We start with total at 0 and the cursor at index 0."
     },
     {
-      "frame": 2,
+      "frame": 3,
       "title": "Read numbers[0] and add it",
       "code_state": "total += numbers[0]   # total = 0 + 1",
       "is_checkpoint": true,
@@ -115,6 +153,18 @@ Return ONLY valid JSON — no markdown, no extra text:
           "cursors": [ { "key": 0, "label": "i=0", "color": "fuchsia" } ]
         }
       ],
+      "sub_frames": [
+        {
+          "title": "Accessing Index",
+          "narration": "The CPU fetches the value at index 0.",
+          "effects": [{ "type": "flow", "from": "numbers[0]", "to": "ALU", "label": "fetch" }]
+        },
+        {
+          "title": "Addition Step",
+          "narration": "It adds 1 to the current total of 0.",
+          "effects": [{ "type": "pulse", "target": "total", "from_value": "0", "to_value": "1", "why": "addition" }]
+        }
+      ],
       "narration": "We're about to read numbers[0] and add it into total. Predict the new value."
     }
   ]
@@ -122,9 +172,18 @@ Return ONLY valid JSON — no markdown, no extra text:
 
 ## Philosophy: Show, don't tell
 1. **Every frame is a snapshot of state.** Use `data_views` to render the actual variables, arrays, objects, stacks or queues at this moment in time. Each subsequent frame should differ by exactly the change the code at that step would make — no more, no less.
-2. **Mark what changed.** On a cell or row that just changed, set `status: "updated"` (or `"active"` if it's about to change). On the cell currently being inspected, use `status: "active"`. Use `"compare"` for two cells being compared, `"result"` for the final answer. Cells that haven't been written yet should be `status: "empty"` with `value: null`.
-3. **Cursors track loop variables.** For a loop, include a cursor in `data_views` of kind `array` showing where `i`, `j`, `left`, `right` etc. point. Cursors move from frame to frame.
-4. **Never spoils:** On checkpoints, do NOT pre-update the value the student is supposed to predict — keep the cell `active` (about to change) but show the OLD value.
+2. **Sub-frames are for Cinematic Detail (R3F/Framer Motion).** Use `sub_frames` to break down a single logical line into its physical/mechanical steps. This is where you use R3F (React Three Fiber) effects like `flow`, `spawn`, and `pulse` to make the logic "feel" real. `sub_frames` drive the smooth transitions that make complex logic understandable.
+3. **Monaco Integration.** Every `code_state` in a frame or sub-frame updates the Monaco editor. Use this to focus on the exact expression being evaluated.
+4. **Mark what changed.** On a cell or row that just changed, set `status: "updated"` (or `"active"` if it's about to change). On the cell currently being inspected, use `status: "active"`. Use `"compare"` for two cells being compared, `"result"` for the final answer. Cells that haven't been written yet should be `status: "empty"` with `value: null`.
+5. **Cursors track loop variables.** For a loop, include a cursor in `data_views` of kind `array` showing where `i`, `j`, `left`, `right` etc. point. Cursors move from frame to frame.
+6. **Never spoils:** On checkpoints, do NOT pre-update the value the student is supposed to predict — keep the cell `active` (about to change) but show the OLD value.
+
+## data_views vs canvas_scene
+- **data_views**: Default for logic, loops, and data structures. Clear, 2D, and easy to follow.
+- **canvas_scene**: Best for "Hero Visuals" and architectural concepts. Renders in 3D using R3F.
+  - Node types: `container` (renders as a 3D tunnel/box for grouping), `data` (renders as a 3D block with value).
+  - Use `parent` field on a node to nest it inside a `container`.
+  - Use `sub_frames` within a `canvas_scene` frame to show 3D movements (e.g. data moving into a container).
 
 ## data_views — pick the right shape
 
@@ -142,7 +201,7 @@ Cursor `color`: `"sky"`, `"emerald"`, `"fuchsia"` (default), `"amber"`, `"red"`,
 
 ## Rules for frames
 - **4-7 main frames total.** Each frame should advance the data state by ONE meaningful step.
-- **Cinematic Continuity (sub_frames)**: Use the `sub_frames` list within a frame to show granular transitions (e.g., a cursor moving through an array, or a value being compared across multiple indices). Each sub-frame follows the same structure as a regular frame. Sub-frames should play automatically to create a smooth, cinematic experience.
+- **Cinematic Continuity (sub_frames)**: Use the `sub_frames` list within a frame to show granular transitions (e.g., a cursor moving through an array, or a value being compared across multiple indices). Each sub-frame follows the same structure as a regular frame. Sub-frames should play automatically to create a smooth, cinematic experience. MANDATORY: Use `sub_frames` for all complex operations (loops, list comprehensions, recursive calls).
 - **Visual Effects**: Use the `effects` array to highlight logic events.
   - `flow`: Use for assignments (e.g., `numbers[i] -> total`). Required: `from`, `to`, `label`.
   - `pulse`: Use when a value is updated. Required: `target`, `from_value`, `to_value`, `why`.
@@ -154,8 +213,12 @@ Cursor `color`: `"sky"`, `"emerald"`, `"fuchsia"` (default), `"amber"`, `"red"`,
 - **`narration`**: 1 sentence. Point out the logic's "Senior Lead" insight (the 'why'), not just the 'what'.
 - **State continuity**: each frame's `data_views` must include the SAME keys/structures as the previous frame.
 
-## When to use canvas_scene instead
-For pure control-flow lessons (an `if/elif/else` cascade with no data structure to track), you may emit `canvas_scene` with decision/action/outcome nodes. But if there is ANY data structure (variable, list, dict, string), prefer `data_views`.
+## data_views vs canvas_scene
+- **data_views**: Default for logic, loops, and data structures. Clear, 2D, and easy to follow.
+- **canvas_scene**: Best for "Hero Visuals" and architectural concepts. Renders in 3D using R3F.
+  - Node types: `container` (renders as a 3D tunnel/box for grouping), `data` (renders as a 3D block with value).
+  - Use `parent` field on a node to nest it inside a `container`.
+  - Use `sub_frames` within a `canvas_scene` frame to show 3D movements (e.g. data moving into a container).
 
 ## The Deep Dive: Mastery Cards
 - Create 3-5 focused cards.
@@ -172,7 +235,7 @@ Pick exactly ONE `kind` per lesson based on the topic shape:
 - `flow` for sequenced execution — mirror the `code_walkthrough` order. Requires `steps: VizNode[]` (ordered).
 
 Rules for viz:
-- EVERY node should have a `code_ref` when the concept is visible in the code. Reference `code_walkthrough[walkthrough_index].code` (use 0 if the lesson has only one code block) and use 1-indexed inclusive `line_start` / `line_end` line numbers.
+- EVERY node should have a `code_ref` when the concept is visible in the code. Reference `code_walkthrough[walkthrough_index].code` (use 0 if the lesson has only one code block). MANDATORY: The `walkthrough_index` field must be an integer (e.g., 0) and is REQUIRED for all `code_ref` objects. Use 1-indexed inclusive `line_start` / `line_end` line numbers.
 - Keep node `label` short (≤24 chars). `summary` is 1–2 sentences a beginner can grasp.
 - Node `id` values are kebab-case and unique within the viz.
 - For `tree`, list every node referenced by `root_id` or `children` inside the `nodes` array.
@@ -221,7 +284,7 @@ Focus on the {topic} concept. Use the student's actual variable names."""
                     system=DESIGNER_SYSTEM,
                     max_tokens=8000,
                 ),
-                timeout=60.0,
+                timeout=180.0,
             )
             if not raw or not raw.strip():
                 raise ValueError("empty response")
@@ -232,7 +295,7 @@ Focus on the {topic} concept. Use the student's actual variable names."""
                 return {"animation_frames": result}
             raise ValueError(f"unexpected structure: {type(result)}")
         except asyncio.TimeoutError:
-            logger.warning("Designer agent timed out after 60s for topic=%s", topic)
+            logger.warning("Designer agent timed out after 90s for topic=%s", topic)
             return _fallback_animation(topic, title, language, code_snippet)
         except ValueError:
             logger.info("Designer agent returned non-JSON for topic=%s; using fallback animation", topic)

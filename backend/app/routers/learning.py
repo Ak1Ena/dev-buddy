@@ -848,6 +848,12 @@ async def surrender_lesson(
 
     if progress.status == "completed" and path.completed_lessons > 0:
         path.completed_lessons -= 1
+    
+    # AC-GAP-003: A surrendered lesson is no longer "completable".
+    # Decrement total_lessons so the percentage reflects only current/future valid lessons.
+    if progress.status != "surrendered":
+        path.total_lessons = max(0, path.total_lessons - 1)
+
     progress.status = "surrendered"
     progress.started_at = progress.started_at or datetime.utcnow()
     progress.completed_at = None

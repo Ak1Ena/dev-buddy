@@ -68,100 +68,102 @@ function ArrayView({ label, cells, cursors, note }: { label: string; cells: Arra
 
       <div className="p-4 overflow-x-auto">
         <motion.div 
-          className="inline-flex flex-col gap-1"
+          className="inline-flex gap-1"
           variants={container}
           initial="hidden"
           animate="show"
         >
-          {/* keys row */}
-          <div className="flex gap-1">
-            {safeCells.map((c, i) => (
-              <motion.div
-                key={`k-${i}`}
-                variants={item}
-                className="min-w-[44px] h-6 rounded-md border border-slate-800/60 bg-slate-900/40 flex items-center justify-center font-mono text-[10px] font-bold text-slate-500"
-              >
-                {c.key}
-              </motion.div>
-            ))}
-          </div>
+          {safeCells.map((c, i) => {
+            const styles = cellStyle(c.status);
+            const isEmpty = c.value == null || c.value === "" || c.status === "empty";
+            const glowKf = ACTIVE_GLOW[c.status ?? "filled"];
+            const isScanning = c.status === "active" || c.status === "compare";
 
-          {/* values row */}
-          <div className="flex gap-1">
-            <AnimatePresence initial={false}>
-              {safeCells.map((c, i) => {
-                const styles = cellStyle(c.status);
-                const isEmpty = c.value == null || c.value === "" || c.status === "empty";
-                const glowKf = ACTIVE_GLOW[c.status ?? "filled"];
-                const isScanning = c.status === "active" || c.status === "compare";
+            return (
+              <div key={`cell-group-${i}`} className="flex flex-col gap-1 min-w-[44px]">
+                {/* Key */}
+                <motion.div
+                  variants={item}
+                  className="h-6 rounded-md border border-slate-800/60 bg-slate-900/40 flex items-center justify-center font-mono text-[10px] font-bold text-slate-500"
+                >
+                  {c.key}
+                </motion.div>
+
+                {/* Value */}
+                <motion.div
+                  layout
+                  variants={item}
+                  animate={{
+                    opacity: 1,
+                    scale: 1,
+                    ...(glowKf ? { boxShadow: glowKf } : {}),
+                  }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 24,
+                    ...(glowKf ? { boxShadow: { repeat: Infinity, duration: 1.2, ease: "easeInOut" } } : {}),
+                  }}
+                  className={cn(
+                    "relative h-12 rounded-md border flex items-center justify-center font-mono text-base font-bold ring-1 overflow-hidden px-3",
+                    styles.cell,
+                    styles.text,
+                    styles.ring
+                  )}
+                >
+                  {isScanning && (
+                    <motion.div
+                      className="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-white/10 to-transparent h-1/2 w-full"
+                      animate={{ top: ["-50%", "100%"] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                    />
+                  )}
+                  <span className="relative z-10 whitespace-nowrap">
+                    {isEmpty ? <span className="opacity-40">·</span> : <span>{c.value}</span>}
+                  </span>
+                </motion.div>
                 
-                return (
-                  <motion.div
-                    key={`v-${c.key}-${i}`}
-                    layout
-                    variants={item}
-                    animate={{
-                      opacity: 1,
-                      scale: 1,
-                      ...(glowKf ? { boxShadow: glowKf } : {}),
-                    }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 300,
-                      damping: 24,
-                      ...(glowKf ? { boxShadow: { repeat: Infinity, duration: 1.2, ease: "easeInOut" } } : {}),
-                    }}
-                    className={cn(
-                      "relative min-w-[44px] h-12 rounded-md border flex items-center justify-center font-mono text-base font-bold ring-1 overflow-hidden",
-                      styles.cell,
-                      styles.text,
-                      styles.ring
-                    )}
-                  >
-                    {isScanning && (
-                      <motion.div
-                        className="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-white/10 to-transparent h-1/2 w-full"
-                        animate={{ top: ["-50%", "100%"] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                      />
-                    )}
-                    <span className="relative z-10">
-                      {isEmpty ? <span className="opacity-40">·</span> : <span>{c.value}</span>}
-                    </span>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-          </div>
-
-          {/* cursors row */}
-          {cursors && cursors.length > 0 && (
-            <div className="relative h-8 mt-1">
-              {cursors.map((cur, i) => {
-                const idx = safeCells.findIndex((c) => String(c.key) === String(cur.key));
-                if (idx < 0) return null;
-                const palette = CURSOR_PALETTE[cur.color ?? "fuchsia"];
-                return (
-                  <motion.div
-                    key={`cur-${i}`}
-                    layout
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 28 }}
-                    className="absolute top-0 flex flex-col items-center"
-                    style={{ left: `${idx * 48}px`, width: "44px" }}
-                  >
-                    <div className="text-amber-300 text-xs leading-none">▲</div>
-                    <div className={cn("rounded-full px-2 py-0.5 border text-[10px] font-mono font-bold whitespace-nowrap", palette)}>
-                      {cur.label}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
+                {/* Cursor Anchor Point */}
+                <div id={`cursor-anchor-${c.key}`} className="h-0 w-full relative" />
+              </div>
+            );
+          })}
         </motion.div>
+
+        {/* Cursors Container - Absolute overlay linked to anchors */}
+        {cursors && cursors.length > 0 && (
+          <div className="relative h-8 mt-1">
+            {cursors.map((cur, i) => {
+              const idx = safeCells.findIndex((c) => String(c.key) === String(cur.key));
+              if (idx < 0) return null;
+              const palette = CURSOR_PALETTE[cur.color ?? "fuchsia"];
+              
+              // We'll use a simplified absolute positioning for now, but in a real-world
+              // scenario with variable widths, we'd use a ResizeObserver or Ref-based calc.
+              // For now, flex-basis with same distribution works.
+              return (
+                <motion.div
+                  key={`cur-${i}`}
+                  layout
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                  className="absolute top-0 flex flex-col items-center"
+                  style={{ 
+                    left: `calc(${idx} * (100% / ${safeCells.length}))`, 
+                    width: `calc(100% / ${safeCells.length})`,
+                    minWidth: "44px"
+                  }}
+                >
+                  <div className="text-amber-300 text-xs leading-none">▲</div>
+                  <div className={cn("rounded-full px-2 py-0.5 border text-[10px] font-mono font-bold whitespace-nowrap", palette)}>
+                    {cur.label}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -53,7 +53,16 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
   if (total === 0) return null;
 
   const subFrames = mainFrame?.sub_frames ?? [];
-  const displayFrame = subFrames.length > 0 ? (subFrames[subIdx] ?? mainFrame) : mainFrame;
+  const rawSubFrame = subFrames[subIdx];
+  
+  // Inherit visual state from main frame if sub-frame is missing it
+  const displayFrame = rawSubFrame ? {
+    ...rawSubFrame,
+    data_views: rawSubFrame.data_views || mainFrame?.data_views,
+    canvas_scene: rawSubFrame.canvas_scene || mainFrame?.canvas_scene,
+    code_state: rawSubFrame.code_state || mainFrame?.code_state,
+    title: rawSubFrame.title || mainFrame?.title,
+  } : mainFrame;
 
   const isCheckpoint = !!mainFrame?.is_checkpoint && !checkpointCleared[idx];
 
@@ -160,7 +169,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
   return (
     <div className="h-full flex flex-col rounded-2xl border border-slate-700/60 bg-slate-950/80 backdrop-blur-md overflow-hidden select-none shadow-2xl ring-1 ring-slate-700/30">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between border-b border-slate-700/50 bg-slate-900/40 px-5 py-3">
+      <div className="flex items-center justify-between border-b border-slate-700/50 bg-slate-900/40 px-5 py-2.5">
         <div className="flex items-center gap-3">
           <div className="relative">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-fuchsia-500/10 text-[10px] font-bold text-fuchsia-400 ring-1 ring-fuchsia-500/30">
@@ -174,10 +183,10 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
             )}
           </div>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 block leading-none mb-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500 block leading-none mb-0.5">
               Logic Stream
             </span>
-            <span className="text-xs font-medium text-slate-300">
+            <span className="text-[11px] font-medium text-slate-300">
               Frame {idx + 1} of {total} {subFrames.length > 0 && `(${idx + 1}.${subIdx + 1})`}
             </span>
           </div>
@@ -208,7 +217,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
             onClick={() => setAutoPlay((v) => !v)}
             disabled={isCheckpoint}
             className={cn(
-              "h-8 gap-2 rounded-lg border px-3 text-xs font-bold transition-all uppercase tracking-wider",
+              "h-8 gap-2 rounded-lg border px-3 text-[10px] font-bold transition-all uppercase tracking-wider",
               autoPlay
                 ? "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-300 hover:bg-fuchsia-500/20"
                 : "border-slate-700/50 bg-slate-800/50 text-slate-400 hover:bg-slate-700/50",
@@ -222,7 +231,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
       </div>
 
       {/* ── Frame content ── */}
-      <div className="relative flex-1 min-h-0 overflow-y-auto mesh-gradient">
+      <div className="relative flex-1 min-h-0 mesh-gradient overflow-hidden">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={`${idx}-${subIdx}`}
@@ -230,30 +239,31 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
             animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, x: isForward ? -20 : 20, filter: "blur(10px)" }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="p-4 md:p-5 space-y-4"
+            className="h-full flex flex-col p-4 space-y-3"
           >
-            {/* Frame Title & Progress */}
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <h3 className="text-lg font-black text-white tracking-tight">
+            {/* Compact Header */}
+            <div className="shrink-0 flex items-start justify-between gap-4">
+              <div className="space-y-0.5">
+                <h3 className="text-base font-black text-white tracking-tight">
                   {displayFrame?.title}
                 </h3>
-                <p className="text-sm font-medium text-slate-400 leading-relaxed max-w-3xl">
+                <p className="text-xs font-medium text-slate-400 leading-relaxed line-clamp-2">
                   {displayFrame?.narration}
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-col gap-4">
-              {/* Code State */}
-              <div className="group">
+            <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
+              {/* Code State - Flexible but bounded */}
+              <div className="shrink-0 max-h-[35%] overflow-hidden group">
                 <ExecutionStateView state={displayFrame?.code_state || ""} />
               </div>
 
-              {/* Data Views (preferred) or Canvas Scene (fallback) */}
-              <div className="relative">
+              {/* Data Views (preferred) or Canvas Scene (fallback) - Flexible to fill remaining space */}
+              <div className="flex-1 min-h-0 relative">
                 {displayFrame?.data_views && displayFrame.data_views.length > 0 ? (
                   <motion.div
+                    className="h-full overflow-y-auto pr-1 custom-scrollbar"
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.1, duration: 0.4 }}
@@ -265,7 +275,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.1, duration: 0.4 }}
-                    className="relative w-full h-[550px] rounded-xl overflow-hidden border border-slate-700/60 shadow-inner"
+                    className="h-full w-full rounded-xl overflow-hidden border border-slate-700/60 shadow-inner"
                   >
                     <RuntimeManager scene={{
                       version: "1",
@@ -288,10 +298,10 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
                   </motion.div>
                 )}
 
-                {/* Effects Overlay — Unified for both DataView and Canvas */}
+                {/* Effects Overlay */}
                 {displayFrame.effects && displayFrame.effects.length > 0 && (
                   <motion.div 
-                    className="absolute top-4 right-4 z-50 w-72 pointer-events-none"
+                    className="absolute top-2 right-2 z-50 w-64 pointer-events-none"
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 }}
@@ -302,55 +312,41 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
               </div>
             </div>
 
-            {/* Checkpoint UI */}
+            {/* Checkpoint UI - Absolute Overlay to not push content */}
             <AnimatePresence>
               {isCheckpoint && (
                 <motion.div
-                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95, filter: "blur(8px)" }}
-                  className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-amber-500/5 discovery-gate p-8 shadow-[0_0_50px_rgba(245,158,11,0.15)] ring-1 ring-amber-500/20"
+                  className="absolute inset-4 z-50 overflow-hidden rounded-2xl border border-amber-500/30 bg-slate-900/90 backdrop-blur-md p-6 shadow-2xl flex flex-col justify-center"
                 >
-                  <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500" />
                   
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="space-y-4 max-w-xl">
-                      <div className="flex items-center gap-3">
+                  <div className="space-y-4 text-center max-w-lg mx-auto">
+                    <div className="flex flex-col items-center gap-2">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/30 shadow-inner">
                           <Brain className="h-6 w-6" />
                         </div>
-                        <div>
-                          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-500 block mb-0.5">
+                        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-500 block mb-0.5">
                             Discovery Gate
-                          </span>
-                          <h4 className="text-xl font-bold text-white tracking-tight">Active Prediction Required</h4>
-                        </div>
-                      </div>
-                      
-                      <p className="text-lg font-medium text-slate-200 leading-relaxed">
-                        {mainFrame?.checkpoint_question ?? "Analyze the current state. What do you think happens next in the logic?"}
-                      </p>
-                      
-                      <div className="flex items-center gap-2 text-amber-400/80">
-                        <HelpCircle className="h-4 w-4" />
-                        <p className="text-xs font-bold uppercase tracking-widest">Tip: Hypothesize in the chat to the right</p>
-                      </div>
+                        </span>
+                        <h4 className="text-xl font-bold text-white tracking-tight">Active Prediction Required</h4>
                     </div>
-
-                    <div className="flex flex-col gap-3 shrink-0">
-                       <Button 
+                      
+                    <p className="text-base font-medium text-slate-200 leading-relaxed">
+                        {mainFrame?.checkpoint_question ?? "Analyze the current state. What do you think happens next?"}
+                    </p>
+                      
+                    <Button 
                         size="lg" 
-                        className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-10 h-14 rounded-xl shadow-lg shadow-amber-500/20 group transition-all"
+                        className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-10 h-12 rounded-xl shadow-lg transition-all"
                         onClick={handleClearCheckpoint}
-                      >
-                        I've made my prediction
-                        <ChevronRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                      </Button>
-                    </div>
+                    >
+                        Predict Outcome
+                        <ChevronRight className="ml-2 h-5 w-5" />
+                    </Button>
                   </div>
-                  
-                  {/* Decorative pulse */}
-                  <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-amber-500/10 blur-3xl rounded-full animate-pulse" />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -359,7 +355,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
         </AnimatePresence>
       </div>
 
-      {/* Auto-play progress bar — between frame content and controls */}
+      {/* Auto-play progress bar */}
       {autoPlay && (idx < total - 1 || subIdx < subFrames.length - 1) && !isCheckpoint && (
         <div className="h-0.5 bg-slate-800 shrink-0">
           <div
@@ -370,33 +366,31 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
       )}
 
       {/* ── Controls ── */}
-      <div className="border-t border-slate-700/50 px-5 py-4 flex items-center justify-between bg-slate-900/60 backdrop-blur-sm">
+      <div className="border-t border-slate-700/50 px-5 py-3 flex items-center justify-between bg-slate-900/60 backdrop-blur-sm">
         <Button
           variant="outline"
           size="sm"
           onClick={prev}
           disabled={idx === 0 && subIdx === 0}
-          className="h-9 gap-1.5 border-slate-700/60 bg-slate-800/40 text-slate-400 hover:text-slate-200 hover:border-slate-500 disabled:opacity-30 uppercase tracking-tighter font-bold text-[10px]"
+          className="h-8 gap-1.5 border-slate-700/60 bg-slate-800/40 text-slate-400 hover:text-slate-200 uppercase tracking-tighter font-bold text-[9px]"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
           Back
         </Button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {frames.map((_, i) => (
             <button
               key={i}
               onClick={() => go(i)}
               disabled={i > idx && isCheckpoint}
-              aria-label={`Frame ${i + 1}${i === idx ? ", current" : ""}`}
-              aria-disabled={i > idx && isCheckpoint}
               className={cn(
-                "h-1.5 rounded-full transition-all duration-300",
+                "h-1 rounded-full transition-all duration-300",
                 i === idx
-                  ? "w-8 bg-fuchsia-500 shadow-[0_0_12px_rgba(168,85,247,0.6)]"
+                  ? "w-6 bg-fuchsia-500 shadow-[0_0_8px_rgba(168,85,247,0.6)]"
                   : i < idx
-                    ? "w-2 bg-slate-500"
-                    : "w-2 bg-slate-800 hover:bg-slate-700",
+                    ? "w-1.5 bg-slate-500"
+                    : "w-1.5 bg-slate-800",
                 i > idx && isCheckpoint && "opacity-30 cursor-not-allowed"
               )}
             />
@@ -409,7 +403,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
           onClick={next}
           disabled={(idx === total - 1 && subIdx === subFrames.length - 1) || isCheckpoint}
           className={cn(
-            "h-9 gap-1.5 border-slate-700/60 bg-slate-800/40 text-slate-400 hover:text-slate-200 hover:border-slate-500 disabled:opacity-30 uppercase tracking-tighter font-bold text-[10px]",
+            "h-8 gap-1.5 border-slate-700/60 bg-slate-800/40 text-slate-400 hover:text-slate-200 uppercase tracking-tighter font-bold text-[9px]",
             isCheckpoint && "border-amber-500/50 text-amber-500/50"
           )}
         >
