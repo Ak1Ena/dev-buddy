@@ -4,6 +4,7 @@ import { Grid } from '@react-three/drei';
 import { SceneJSON } from '../../types';
 import SceneGraph from './SceneGraph';
 import CameraDirector from './CameraDirector';
+import ParticleSystem from '../systems/ParticleSystem';
 
 interface RuntimeManagerProps {
   scene?: SceneJSON;
@@ -28,6 +29,7 @@ export const RuntimeManager: React.FC<RuntimeManagerProps> = ({ scene }) => {
         />
         
         <SceneGraph scene={scene || null} />
+        <ParticleSystem scene={scene || null} />
         <CameraDirector scene={scene || null} />
         
       </Canvas>

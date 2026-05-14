@@ -15,7 +15,8 @@ export type PrimitiveType =
   | 'fade' 
   | 'color'
   | 'runtime_variable'
-  | 'stack_frame';
+  | 'stack_frame'
+  | 'async_packet';
 
 export interface ScenePrimitive {
   id: string;
