@@ -649,7 +649,7 @@ export default function Learn() {
               {c?.code_walkthrough && c.code_walkthrough.length > 0 && (
                 <Section id="sec-execution">
                   <SectionHeading icon={<Zap />} label="Live Execution Analysis" iconClass="text-fuchsia-400" />
-                  <div className="h-[640px] flex flex-col lg:flex-row overflow-hidden rounded-3xl border border-slate-800/60 bg-slate-900/20 shadow-2xl">
+                  <div className="h-[900px] flex flex-col lg:flex-row overflow-hidden rounded-3xl border border-slate-800/60 bg-slate-900/20 shadow-2xl">
                     
                     {/* LEFT: Code Graph */}
                     <div className="lg:w-[40%] w-full h-1/2 lg:h-full border-b lg:border-b-0 lg:border-r border-slate-800/60 bg-slate-950/40 overflow-hidden flex flex-col">

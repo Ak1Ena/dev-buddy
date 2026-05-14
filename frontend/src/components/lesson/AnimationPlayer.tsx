@@ -230,21 +230,21 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
             animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, x: isForward ? -20 : 20, filter: "blur(10px)" }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="p-5 md:p-6 space-y-5"
+            className="p-4 md:p-5 space-y-4"
           >
             {/* Frame Title & Progress */}
             <div className="flex items-start justify-between gap-4">
-              <div className="space-y-2">
-                <h3 className="text-xl font-black text-white tracking-tight">
+              <div className="space-y-1">
+                <h3 className="text-lg font-black text-white tracking-tight">
                   {displayFrame?.title}
                 </h3>
-                <p className="text-base font-medium text-slate-300 leading-relaxed max-w-3xl">
+                <p className="text-sm font-medium text-slate-400 leading-relaxed max-w-3xl">
                   {displayFrame?.narration}
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4">
               {/* Code State */}
               <div className="group">
                 <ExecutionStateView state={displayFrame?.code_state || ""} />
@@ -265,7 +265,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.1, duration: 0.4 }}
-                    className="relative w-full h-[600px] rounded-xl overflow-hidden border border-slate-700/60 shadow-inner"
+                    className="relative w-full h-[550px] rounded-xl overflow-hidden border border-slate-700/60 shadow-inner"
                   >
                     <RuntimeManager scene={{
                       version: "1",

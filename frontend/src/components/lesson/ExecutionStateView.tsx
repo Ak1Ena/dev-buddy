@@ -40,9 +40,9 @@ export const ExecutionStateView: React.FC<ExecutionStateViewProps> = ({ state })
             <Cpu className="h-32 w-32 text-white" />
         </div>
 
-        <div className="px-6 py-6 font-mono text-sm leading-relaxed overflow-x-auto min-h-[120px]">
+        <div className="px-5 py-4 font-mono text-[13px] leading-relaxed overflow-x-auto min-h-[100px]">
             <AnimatePresence mode="popLayout">
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                     {lines.map((line, i) => {
                         const isAssignment = line.includes('=');
                         const isReturn = line.toLowerCase().includes('return');
