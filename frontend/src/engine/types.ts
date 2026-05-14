@@ -13,7 +13,9 @@ export type PrimitiveType =
   | 'move' 
   | 'scale' 
   | 'fade' 
-  | 'color';
+  | 'color'
+  | 'runtime_variable'
+  | 'stack_frame';
 
 export interface ScenePrimitive {
   id: string;

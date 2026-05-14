@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Play, Pause, Brain, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { AnimationFrame } from "@/types";
+import type { AnimationFrame, CanvasNode } from "@/types";
+import { SceneJSON } from "../../engine/types";
 import RuntimeManager from "../../engine/r3f/core/RuntimeManager";
 import DataViewRenderer from "./DataView";
 import EffectLayer from "./EffectLayer";
@@ -277,7 +278,22 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
                     transition={{ delay: 0.1, duration: 0.4 }}
                     className="relative w-full h-[400px] rounded-xl overflow-hidden border border-slate-700/60"
                   >
-                    <RuntimeManager />
+                    <RuntimeManager scene={{
+                      version: "1",
+                      metadata: { title: "auto", description: "", totalDuration: 10 },
+                      timeline: displayFrame.canvas_scene.nodes.map((n: CanvasNode, i: number) => ({
+                        id: n.id,
+                        type: n.type === "container" ? "stack_frame" : "runtime_variable",
+                        start: 0,
+                        duration: 10,
+                        props: {
+                          label: n.label,
+                          value: n.value,
+                          color: n.color,
+                          position: [(i % 3) * 2 - 2, 1, Math.floor(i / 3) * -2]
+                        }
+                      }))
+                    }} />
                   </motion.div>
                 )}
 
