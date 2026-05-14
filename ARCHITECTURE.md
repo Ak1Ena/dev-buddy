@@ -18,12 +18,11 @@ This document serves as the high-level entry point for the redesigned devBuddy A
 11. **[Example Python Models](./docs/architecture/03-data-schema.md#4-python-models)**
 12. **[Example API Responses](./docs/architecture/03-data-schema.md#5-api-responses)**
 13. **[Framer Motion Integration Strategy](./docs/architecture/05-strategy.md#1-framer-motion-strategy)**
-14. **[Optional React Three Fiber Integration](./docs/architecture/05-strategy.md#2-r3f-integration)**
-15. **[State Management Strategy](./docs/architecture/02-frontend.md#2-state-management)**
-16. **[AI Orchestration Strategy](./docs/architecture/01-backend.md#4-ai-orchestration)**
-17. **[Scalability Recommendations](./docs/architecture/05-strategy.md#3-scalability)**
-18. **[MVP Implementation Order](./docs/architecture/05-strategy.md#4-mvp-roadmap)**
-19. **[Future Extensibility Recommendations](./docs/architecture/05-strategy.md#5-future-extensibility)**
+14. **[State Management Strategy](./docs/architecture/02-frontend.md#2-state-management)**
+15. **[AI Orchestration Strategy](./docs/architecture/01-backend.md#4-ai-orchestration)**
+16. **[Scalability Recommendations](./docs/architecture/05-strategy.md#3-scalability)**
+17. **[MVP Implementation Order](./docs/architecture/05-strategy.md#4-mvp-roadmap)**
+18. **[Future Extensibility Recommendations](./docs/architecture/05-strategy.md#5-future-extensibility)**
 
 ---
 

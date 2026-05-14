@@ -23,19 +23,12 @@ Framer Motion is our primary tool for "Declarative Choreography".
     ```
 - **Performance:** Use `layout` prop for smooth position transitions between steps and `useReducedMotion` to satisfy accessibility requirements.
 
-## 2. Optional React Three Fiber (R3F) Integration
-For complex memory visualizations (e.g., 3D Stack/Heap or Garbage Collection), R3F can be integrated as a "High-Depth View".
-
-- **Strategy:** Create a `CanvasRenderer` component that mirrors the `DOMRenderer`.
-- **Use Case:** When the Scene JSON contains a `view: "3d"` flag, the system swaps the 2D layout for an R3F scene.
-- **Benefit:** Allows for spatial reasoning of nested data structures (e.g., deep recursion trees) that become cluttered in 2D.
-
-## 3. Scalability Recommendations
+## 2. Scalability Recommendations
 - **Scene Caching:** Hash the input code + detected concept. Store the generated `Scene JSON` in Redis/PostgreSQL to avoid redundant AI costs for common snippets.
 - **Lazy Loading Primitives:** Only load the component code for primitives present in the current scene.
 - **Edge Functions:** Deploy the AST Parser to the edge (e.g., Vercel Functions) to reduce latency for initial structural analysis.
 
-## 4. MVP Implementation Order
+## 3. MVP Implementation Order
 1.  **Stage 1: The Contract (Week 1)**
     - Finalize `Scene JSON` Schema.
     - Implement the `Primitive Factory` on the frontend with 3 basic primitives (`box`, `label`, `pulse`).
@@ -49,7 +42,7 @@ For complex memory visualizations (e.g., 3D Stack/Heap or Garbage Collection), R
     - Add advanced primitives (`particle`, `vibrate`, `gate`).
     - Implement the `Timeline Controller` (Scrubbing/Sync).
 
-## 5. Future Extensibility Recommendations
+## 4. Future Extensibility Recommendations
 - **Multi-File Analysis:** Extend the AST parser to handle imports and cross-file dependencies.
 - **Live Debugger Integration:** Connect the engine to a real debugger (e.g., `debugpy` for Python) to generate scenes from real-time production data.
 - **Community Primitives:** Allow users to define their own visualization primitives using a standardized API.

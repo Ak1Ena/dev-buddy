@@ -172,7 +172,7 @@ Return ONLY valid JSON — no markdown, no extra text:
 
 ## Philosophy: Show, don't tell
 1. **Every frame is a snapshot of state.** Use `data_views` to render the actual variables, arrays, objects, stacks or queues at this moment in time. Each subsequent frame should differ by exactly the change the code at that step would make — no more, no less.
-2. **Sub-frames are for Cinematic Detail (R3F/Framer Motion).** Use `sub_frames` to break down a single logical line into its physical/mechanical steps. This is where you use R3F (React Three Fiber) effects like `flow`, `spawn`, and `pulse` to make the logic "feel" real. `sub_frames` drive the smooth transitions that make complex logic understandable.
+2. **Sub-frames are for Cinematic Detail (Framer Motion).** Use `sub_frames` to break down a single logical line into its physical/mechanical steps. This is where you use effects like `flow`, `spawn`, and `pulse` to make the logic "feel" real. `sub_frames` drive the smooth transitions that make complex logic understandable.
 3. **Monaco Integration.** Every `code_state` in a frame or sub-frame updates the Monaco editor. Use this to focus on the exact expression being evaluated.
 4. **Mark what changed.** On a cell or row that just changed, set `status: "updated"` (or `"active"` if it's about to change). On the cell currently being inspected, use `status: "active"`. Use `"compare"` for two cells being compared, `"result"` for the final answer. Cells that haven't been written yet should be `status: "empty"` with `value: null`.
 5. **Cursors track loop variables.** For a loop, include a cursor in `data_views` of kind `array` showing where `i`, `j`, `left`, `right` etc. point. Cursors move from frame to frame.
@@ -180,10 +180,10 @@ Return ONLY valid JSON — no markdown, no extra text:
 
 ## data_views vs canvas_scene
 - **data_views**: Default for logic, loops, and data structures. Clear, 2D, and easy to follow.
-- **canvas_scene**: Best for "Hero Visuals" and architectural concepts. Renders in 3D using R3F.
-  - Node types: `container` (renders as a 3D tunnel/box for grouping), `data` (renders as a 3D block with value).
+- **canvas_scene**: Best for "Hero Visuals" and architectural concepts. Renders in 2D using HTML5 Canvas.
+  - Node types: `container` (renders as a box for grouping), `data` (renders as a block with value).
   - Use `parent` field on a node to nest it inside a `container`.
-  - Use `sub_frames` within a `canvas_scene` frame to show 3D movements (e.g. data moving into a container).
+  - Use `sub_frames` within a `canvas_scene` frame to show movements (e.g. data moving into a container).
 
 ## data_views — pick the right shape
 
