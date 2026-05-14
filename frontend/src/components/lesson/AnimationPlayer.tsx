@@ -276,7 +276,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.1, duration: 0.4 }}
-                    className="relative w-full h-[400px] rounded-xl overflow-hidden border border-slate-700/60"
+                    className="relative w-full h-[600px] rounded-xl overflow-hidden border border-slate-700/60 shadow-inner"
                   >
                     <RuntimeManager scene={{
                       version: "1",
@@ -290,7 +290,9 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
                           label: n.label,
                           value: n.value,
                           color: n.color,
-                          position: [(i % 3) * 2 - 2, 1, Math.floor(i / 3) * -2]
+                          parent: n.parent,
+                          // If it has a parent, let SceneGraph handle layout, otherwise spread them
+                          position: n.parent ? [0, 0, 0] : [(i % 3) * 4 - 4, 1, Math.floor(i / 3) * -4]
                         }
                       }))
                     }} />
