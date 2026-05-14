@@ -1,8 +1,9 @@
 import React from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid } from '@react-three/drei';
+import { Grid } from '@react-three/drei';
 import { SceneJSON } from '../../types';
 import SceneGraph from './SceneGraph';
+import CameraDirector from './CameraDirector';
 
 interface RuntimeManagerProps {
   scene?: SceneJSON;
@@ -27,8 +28,8 @@ export const RuntimeManager: React.FC<RuntimeManagerProps> = ({ scene }) => {
         />
         
         <SceneGraph scene={scene || null} />
+        <CameraDirector scene={scene || null} />
         
-        <OrbitControls makeDefault />
       </Canvas>
     </div>
   );
