@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Play, Pause, Brain, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AnimationFrame } from "@/types";
-import CanvasScene from "./CanvasScene";
+import RuntimeManager from "../../engine/r3f/core/RuntimeManager";
 import DataViewRenderer from "./DataView";
 import EffectLayer from "./EffectLayer";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,16 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
 
   const mainFrame = frames[idx];
   const total = frames.length;
+
+  // Reset state when frames change (e.g. new lesson loaded)
+  useEffect(() => {
+    setIdx(0);
+    setSubIdx(0);
+    setDir("forward");
+    setAutoPlay(false);
+    setFrameProgress(0);
+    setCheckpointCleared({});
+  }, [frames]);
 
   if (total === 0) return null;
 
@@ -265,11 +275,9 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.1, duration: 0.4 }}
+                    className="relative w-full h-[400px] rounded-xl overflow-hidden border border-slate-700/60"
                   >
-                    <CanvasScene
-                      scene={displayFrame.canvas_scene}
-                      highlightedNodeIds={highlightedNodeIds}
-                    />
+                    <RuntimeManager />
                   </motion.div>
                 )}
 

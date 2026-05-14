@@ -546,7 +546,8 @@ export default function Learn() {
                     
                     {/* The Visualization Area (internal LessonViz handles scrolling) */}
                     <div className="h-full w-full relative">
-                      <LessonViz
+                    <LessonViz
+                        key={lessonId}
                         viz={c?.viz}
                         onStepActivate={(idx) => typeof idx === "number" && handleJumpToCode(idx)}
                       />
@@ -555,7 +556,7 @@ export default function Learn() {
                     {/* Docked Detail Panel (Bottom) */}
                     <div className="absolute bottom-6 left-6 right-6 pointer-events-none z-20">
                       <div className="pointer-events-auto max-w-4xl mx-auto">
-                        <NodeDetail viz={c?.viz} onJumpToCode={handleJumpToCode} />
+                        <NodeDetail key={`detail-${lessonId}`} viz={c?.viz} onJumpToCode={handleJumpToCode} />
                       </div>
                     </div>
 
@@ -656,6 +657,7 @@ export default function Learn() {
                       
                       <div className="flex-1 min-h-0 overflow-hidden relative">
                         <CinematicView
+                          key={lessonId}
                           scene={c?.scene}
                           frames={c?.animation_frames}
                           activeFrameIndex={currentFrame}
