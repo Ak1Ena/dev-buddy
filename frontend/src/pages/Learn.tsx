@@ -166,6 +166,9 @@ export default function Learn() {
   /** Lifted state for the controlled CodeWalkthrough / CodePanel. */
   const [currentWalkthroughIndex, setCurrentWalkthroughIndex] = useState(0);
   
+  // Prevent circular updates between frame and step
+  const lastUpdateSource = useRef<"frame" | "step" | null>(null);
+  
   const clearHighlight = useLessonHighlight((s) => s.clear);
   const c = lesson?.content;
   const lessonContentReady = hasCompleteLessonContent(c);
@@ -408,6 +411,7 @@ export default function Learn() {
   }, [c?.code_walkthrough?.length, c?.animation_frames?.length]);
 
   const handleFrameChange = useCallback((idx: number, isCp: boolean) => {
+    lastUpdateSource.current = "frame";
     setCurrentFrame(idx);
     setIsCheckpoint(isCp);
     setCurrentWalkthroughIndex((prev) => {
@@ -419,8 +423,18 @@ export default function Learn() {
   useEffect(() => {
     const frames = c?.animation_frames;
     if (!frames?.length) return;
+    
+    // Only update frame from step if the last update was NOT from a frame
+    if (lastUpdateSource.current === "frame") {
+        lastUpdateSource.current = null;
+        return;
+    }
+
     const next = stepToFrame(currentWalkthroughIndex);
-    if (next !== currentFrame) setCurrentFrame(next);
+    if (next !== currentFrame) {
+        lastUpdateSource.current = "step";
+        setCurrentFrame(next);
+    }
   }, [currentWalkthroughIndex, c?.animation_frames, stepToFrame, currentFrame]);
 
   useEffect(() => {
@@ -433,6 +447,7 @@ export default function Learn() {
 
   const handleJumpToCode = useCallback((idx: number) => {
     clearHighlight();
+    lastUpdateSource.current = "step";
     setCurrentWalkthroughIndex(idx);
     const codeSection = document.getElementById("sec-execution");
     if (codeSection) {

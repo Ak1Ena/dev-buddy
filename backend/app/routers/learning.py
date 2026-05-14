@@ -391,17 +391,31 @@ async def instant_discovery(
     
     # Step 2: Create Learning Space
     await _deactivate_all_spaces(current_user.id, db)
-    lang_label = language.title()
     
-    # Count existing spaces for name uniqueness
+    # Generate a descriptive space name from analysis
+    raw_summary = analysis.get("summary", "New Logic Space")
+    # Clean up summary for title: remove trailing dots, capitalize
+    clean_summary = raw_summary.rstrip(".").strip()
+    if len(clean_summary) > 40:
+        space_name = clean_summary[:37] + "..."
+    else:
+        space_name = clean_summary
+    
+    # Fallback to language if summary is generic
+    if not clean_summary or len(clean_summary) < 5:
+        lang_label = language.title()
+        space_name = lang_label
+        
+    # Ensure uniqueness
     count_result = await db.execute(
         select(LearningSpace).where(
             LearningSpace.user_id == current_user.id,
-            LearningSpace.name.like(f"{lang_label}%"),
+            LearningSpace.name.like(f"{space_name}%"),
         )
     )
     existing_count = len(count_result.scalars().all())
-    space_name = lang_label if existing_count == 0 else f"{lang_label} {existing_count + 1}"
+    if existing_count > 0:
+        space_name = f"{space_name} ({existing_count + 1})"
     
     space = LearningSpace(
         user_id=current_user.id,

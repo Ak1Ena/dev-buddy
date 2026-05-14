@@ -7,6 +7,7 @@ import { SceneJSON } from "../../engine/types";
 import RuntimeManager from "../../engine/r3f/core/RuntimeManager";
 import DataViewRenderer from "./DataView";
 import EffectLayer from "./EffectLayer";
+import ExecutionStateView from "./ExecutionStateView";
 import { Button } from "@/components/ui/button";
 
 interface Props {
@@ -246,19 +247,7 @@ export default function AnimationPlayer({ frames, activeFrameIndex, highlightedN
             <div className="flex flex-col gap-6">
               {/* Code State */}
               <div className="group">
-                <div className="rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-950/60 glass-panel shadow-2xl transition-all duration-500 group-hover:border-sky-500/40">
-                  <div className="flex items-center justify-between bg-slate-900/80 px-5 py-2.5 border-b border-slate-700/50">
-                    <div className="flex gap-2">
-                      <div className="h-2.5 w-2.5 rounded-full bg-slate-800" />
-                      <div className="h-2.5 w-2.5 rounded-full bg-slate-800" />
-                      <div className="h-2.5 w-2.5 rounded-full bg-slate-800" />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Execution State</span>
-                  </div>
-                  <pre className="px-6 py-5 font-mono text-sm leading-relaxed text-sky-300 overflow-x-auto selection:bg-sky-500/40">
-                    {displayFrame?.code_state}
-                  </pre>
-                </div>
+                <ExecutionStateView state={displayFrame?.code_state || ""} />
               </div>
 
               {/* Data Views (preferred) or Canvas Scene (fallback) */}
