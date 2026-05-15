@@ -421,3 +421,37 @@ names, function names, and line numbers."""
         except Exception as exc:
             logger.warning("Lesson content generation failed for topic=%s: %s", topic, exc)
             return _fallback_lesson_content(topic, language, code_snippet)
+
+    async def generate_space_name(
+        self,
+        language: str,
+        concepts: list[str],
+        code_summary: str | None,
+        skill_level: str | None,
+    ) -> str:
+        concepts_str = ", ".join(concepts[:6]) if concepts else "general programming"
+        summary_str = f"\nCode summary: {code_summary}" if code_summary else ""
+        level_str = f"\nSkill level: {skill_level}" if skill_level else ""
+
+        prompt = (
+            f"Generate a short, catchy learning space name (3-5 words) for a beginner learning "
+            f"{language} who is studying: {concepts_str}.{summary_str}{level_str}\n\n"
+            "Rules:\n"
+            "- 3 to 5 words maximum\n"
+            "- No quotes, no punctuation at the end\n"
+            "- Descriptive and motivating\n"
+            "- Reply with ONLY the name, nothing else"
+        )
+        try:
+            raw = await asyncio.wait_for(
+                self.llm.complete(
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=30,
+                ),
+                timeout=180.0,
+            )
+            name = raw.strip().strip('"').strip("'")
+            return name if name else language.title()
+        except Exception as exc:
+            logger.warning("Space name generation failed: %s", exc)
+            return language.title()

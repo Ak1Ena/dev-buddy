@@ -560,23 +560,25 @@ async def generate_learning_path(
     # Always create a NEW learning space
     await _deactivate_all_spaces(current_user.id, db)
 
-    lang_label = (assessment.detected_language or "General").title()
+    planner = PlannerAgent()
 
+    space_name = await planner.generate_space_name(
+        language=assessment.detected_language or "General",
+        concepts=assessment.extracted_concepts or [],
+        code_summary=assessment.code_summary,
+        skill_level=assessment.skill_level_result,
+    )
+
+    # Ensure uniqueness
     count_result = await db.execute(
         select(LearningSpace).where(
             LearningSpace.user_id == current_user.id,
-            LearningSpace.name.like(f"{lang_label}%"),
+            LearningSpace.name.like(f"{space_name}%"),
         )
     )
-
-    existing_spaces = count_result.scalars().all()
-    existing_count = len(existing_spaces)
-
-    space_name = (
-        lang_label
-        if existing_count == 0
-        else f"{lang_label} {existing_count + 1}"
-    )
+    existing_count = len(count_result.scalars().all())
+    if existing_count > 0:
+        space_name = f"{space_name} ({existing_count + 1})"
 
     active_space = LearningSpace(
         user_id=current_user.id,
@@ -586,8 +588,6 @@ async def generate_learning_path(
 
     db.add(active_space)
     await db.flush()
-
-    planner = PlannerAgent()
 
     # Use assessment data if completed
     weak_areas = (
