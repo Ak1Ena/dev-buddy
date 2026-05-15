@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { GraduationCap, LogOut, LayoutDashboard, BookOpen, UserCircle } from "lucide-react";
+import { GraduationCap, LogOut, LayoutDashboard, BookOpen } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -62,18 +62,12 @@ export default function Navbar() {
         <div className="flex items-center gap-2">
           {isAuthenticated ? (
             <>
-              <Link
-                to="/profile"
-                className={cn(
-                  "hidden sm:flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  isActive("/profile")
-                    ? "bg-sky-500/15 text-sky-400"
-                    : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-                )}
-              >
-                <UserCircle className="h-4 w-4" />
-                {user?.username}
-              </Link>
+              <span className="hidden sm:block text-sm text-slate-400">
+                Hi,{" "}
+                <span className="font-medium text-slate-200">
+                  {user?.username}
+                </span>
+              </span>
               <Button
                 variant="ghost"
                 size="sm"

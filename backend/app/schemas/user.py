@@ -38,9 +38,6 @@ class UserResponse(BaseModel):
     skill_level: str
     preferred_language: str
     assessment_completed: bool
-    assessment_score: int | None
-    weak_areas: list[str] | None
-    strong_areas: list[str] | None
     avatar_url: str | None
     created_at: datetime
 
