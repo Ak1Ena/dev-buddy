@@ -232,8 +232,17 @@ async def complete_assessment(
     current_user.assessment_completed = True
     current_user.assessment_score = score_data["score"]
     current_user.skill_level = score_data["skill_level"]
-    current_user.strong_areas = score_data["strong_areas"]
-    current_user.weak_areas = score_data["weak_areas"]
+
+    # Accumulate weak/strong areas across assessments:
+    # weak = (historical weak ∪ new weak) - newly mastered
+    # strong = (historical strong ∪ new strong) - newly weak
+    old_weak = set(current_user.weak_areas or [])
+    old_strong = set(current_user.strong_areas or [])
+    new_weak = set(score_data["weak_areas"])
+    new_strong = set(score_data["strong_areas"])
+
+    current_user.weak_areas = sorted((old_weak | new_weak) - new_strong)
+    current_user.strong_areas = sorted((old_strong | new_strong) - new_weak)
 
     # FR-05-003: snapshot skill profile so retention score can be computed over time
     db.add(SkillProgression(

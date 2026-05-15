@@ -75,6 +75,10 @@ export const authApi = {
   me: () => api.get("/auth/me"),
 };
 
+export const analyticsApi = {
+  me: () => api.get("/analytics/me"),
+};
+
 export const assessmentApi = {
   // User pastes their code — backend analyzes it and generates 10 questions
   start: (code_snippet: string) =>
