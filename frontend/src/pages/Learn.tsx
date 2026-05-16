@@ -55,9 +55,32 @@ type ChatSegment =
   | { kind: "feedback"; correct: boolean | null; summary: string; explanation: string; next_step?: string }
   | { kind: "proposal"; data: LessonProposal };
 
+function tryParseProposal(text: string): { data: LessonProposal; end: number } | null {
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0;
+  for (let i = start; i < text.length; i++) {
+    if (text[i] === "{") depth++;
+    else if (text[i] === "}") {
+      depth--;
+      if (depth === 0) {
+        try {
+          const parsed = JSON.parse(text.slice(start, i + 1));
+          if (parsed && typeof parsed === "object" && parsed.topic && parsed.title && parsed.position) {
+            return { data: parsed as LessonProposal, end: i + 1 };
+          }
+        } catch { /* not valid JSON */ }
+        break;
+      }
+    }
+  }
+  return null;
+}
+
 function parseChatMessage(content: string): { segments: ChatSegment[]; hasAnim: boolean } {
   const segments: ChatSegment[] = [];
-  const re = /```(animation|feedback|proposal)\s*\n([\s\S]*?)\n```/gi;
+  // Allow optional \n before closing ``` to handle model outputs like {...}``` (no trailing newline)
+  const re = /```(animation|feedback|proposal)[^\n]*\n([\s\S]*?)\n?```/gi;
   let last = 0;
   let hasAnim = false;
   let m: RegExpExecArray | null;
@@ -93,7 +116,30 @@ function parseChatMessage(content: string): { segments: ChatSegment[]; hasAnim: 
     }
     last = re.lastIndex;
   }
-  if (last < content.length) segments.push({ kind: "md", text: content.slice(last) });
+
+  // Fallback: scan remaining text for bare proposal JSON (model skipped backtick fences)
+  const remaining = last < content.length ? content.slice(last) : "";
+  if (remaining) {
+    const bareProposalRe = /\bproposal\b[^\{]*(\{[\s\S]*)/gi;
+    const bm = bareProposalRe.exec(remaining);
+    if (bm) {
+      const textBefore = remaining.slice(0, bm.index);
+      if (textBefore.trim()) segments.push({ kind: "md", text: textBefore });
+      const result = tryParseProposal(bm[1]);
+      if (result) {
+        segments.push({ kind: "proposal", data: result.data });
+        // text after the JSON object (bm.index offset + position of { in bm[1] + end)
+        const jsonAbsEnd = bm.index + bm[1].indexOf("{") + result.end;
+        const afterJson = remaining.slice(jsonAbsEnd).trim();
+        if (afterJson) segments.push({ kind: "md", text: afterJson });
+      } else {
+        segments.push({ kind: "md", text: remaining });
+      }
+    } else {
+      segments.push({ kind: "md", text: remaining });
+    }
+  }
+
   if (segments.length === 0) segments.push({ kind: "md", text: content });
   return { segments, hasAnim };
 }

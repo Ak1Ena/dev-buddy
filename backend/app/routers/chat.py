@@ -1,11 +1,12 @@
+import asyncio
 import json
 import logging
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from sqlalchemy.orm import selectinload
+from sqlalchemy import select, func, update
+from sqlalchemy.orm import selectinload, joinedload
 
 from app.database import get_db, AsyncSessionLocal
 from app.models.user import User
@@ -439,9 +440,39 @@ async def stream_message(
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
+async def _fill_lesson_content_bg(
+    lesson_id: str,
+    topic: str,
+    title: str,
+    language: str,
+    skill_level: str,
+    code_snippet: str,
+    weak_areas: list[str],
+):
+    try:
+        planner = PlannerAgent()
+        content = await planner.generate_lesson_content(
+            topic=topic,
+            title=title,
+            language=language,
+            skill_level=skill_level,
+            code_snippet=code_snippet,
+            weak_areas=weak_areas,
+        )
+        async with AsyncSessionLocal() as session:
+            await session.execute(
+                update(Lesson).where(Lesson.id == lesson_id).values(content=content)
+            )
+            await session.commit()
+        logger.info("Background-generated content for proposal lesson %s", lesson_id)
+    except Exception as exc:
+        logger.warning("Failed to generate content for proposal lesson %s: %s", lesson_id, exc)
+
+
 @router.post("/proposal/accept", response_model=SuggestedLesson)
 async def accept_proposal(
     data: ProposalAcceptRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -500,16 +531,6 @@ async def accept_proposal(
         .values(order_index=Lesson.order_index + 1)
     )
 
-    planner = PlannerAgent()
-    content = await planner.generate_lesson_content(
-        topic=data.topic,
-        title=data.title,
-        language=path.language,
-        skill_level=current_user.skill_level,
-        code_snippet=(path.source_code or "")[:1000],
-        weak_areas=[data.topic],
-    )
-
     new_lesson = Lesson(
         learning_path_id=path.id,
         title=data.title,
@@ -518,15 +539,23 @@ async def accept_proposal(
         order_index=target_idx,
         estimated_minutes=data.estimated_minutes,
         difficulty=current_user.skill_level,
-        content=content,
+        content=None,
     )
     db.add(new_lesson)
-    
-    # Increment total lessons
     path.total_lessons += 1
-    
     await db.commit()
     await db.refresh(new_lesson)
+
+    background_tasks.add_task(
+        _fill_lesson_content_bg,
+        lesson_id=str(new_lesson.id),
+        topic=data.topic,
+        title=data.title,
+        language=path.language,
+        skill_level=current_user.skill_level,
+        code_snippet=(path.source_code or "")[:1000],
+        weak_areas=[data.topic],
+    )
 
     return SuggestedLesson(
         id=new_lesson.id,

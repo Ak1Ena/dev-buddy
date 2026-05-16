@@ -42,6 +42,15 @@ async def run_assessment_generation_task(session_id: str, code_snippet: str):
             # Step 1: Analyze the code
             analysis = await code_analyzer.analyze(code_snippet)
 
+            # Reject non-code input before burning tokens on question generation
+            if not analysis.get("is_code", True):
+                result = await db.execute(select(AssessmentSession).where(AssessmentSession.id == session_id))
+                session = result.scalar_one_or_none()
+                if session:
+                    session.status = "not_code"
+                    await db.commit()
+                return
+
             # Step 2: Generate 10 questions
             questions_with_answers = await assessment_generator.generate_questions(
                 code_snippet=code_snippet,

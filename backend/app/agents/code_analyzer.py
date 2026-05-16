@@ -11,12 +11,14 @@ from app.agents.utils import extract_json
 logger = logging.getLogger(__name__)
 
 SYSTEM = """You are a polyglot code analysis expert.
-Analyze the given code snippet from ANY programming language and return ONLY valid JSON.
-Identify universal programming patterns (Control Flow, Data Transformation, Memory Management) 
-regardless of the specific syntax.
+Analyze the given input and return ONLY valid JSON.
+
+IMPORTANT: First determine if the input is actually programming code. Plain text, sentences,
+essays, or natural language descriptions are NOT code — even if they mention programming topics.
 
 Return this exact structure:
 {
+  "is_code": true,
   "language": "detected_language",
   "difficulty": "beginner/intermediate/advanced",
   "concepts": ["universal_concept_1", "universal_concept_2"],
@@ -27,8 +29,20 @@ Return this exact structure:
   }
 }
 
+If the input is NOT programming code, return:
+{
+  "is_code": false,
+  "language": "none",
+  "difficulty": "beginner",
+  "concepts": [],
+  "line_count": 0,
+  "summary": "",
+  "concept_locations": {}
+}
+
 Rules:
-- Handle any language: Python, JS, C++, Rust, Go, SQL, Swift, or even assembly.
+- Set is_code=false for: plain sentences, essays, questions, descriptions, lyrics, or any non-code text.
+- Set is_code=true for: any programming language including Python, JS, C++, Rust, Go, SQL, Swift, assembly, shell scripts, config files with code logic, etc.
 - Focus on the LOGIC, not just the syntax.
 - Include only concepts actually present in the code."""
 
@@ -261,6 +275,7 @@ def _static_analyze(code: str) -> dict:
             break
 
     return {
+        "is_code": True,
         "language": language,
         "difficulty": difficulty,
         "concepts": concepts or ["variables"],
@@ -297,6 +312,9 @@ class CodeAnalyzerAgent:
             logger.debug("CodeAnalyzer raw LLM response: %r", raw[:500] if raw else "<empty>")
             if raw and raw.strip():
                 result = extract_json(raw)
+                # Return immediately for non-code — don't fall through to static fallback
+                if result.get("is_code") is False:
+                    return result
                 if result.get("language") and result.get("concepts"):
                     # If snippet was truncated, merge with static results for the rest
                     if len(code_snippet) > 4000:

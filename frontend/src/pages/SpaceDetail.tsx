@@ -43,14 +43,15 @@ export default function SpaceDetail() {
     fetchSpace();
   }, [fetchSpace]);
 
+  const hasUnreadyLessons = space?.path?.lessons.some((l) => !l.content) ?? false;
+
   useEffect(() => {
-    // Poll every 3s if there's no path yet (for Instant Discovery background tasks)
     let interval: any;
-    if (!loading && space && !space.path) {
+    if (!loading && space && (!space.path || hasUnreadyLessons)) {
       interval = setInterval(fetchSpace, 3000);
     }
     return () => clearInterval(interval);
-  }, [fetchSpace, loading, !!space, !!space?.path]);
+  }, [fetchSpace, loading, !!space, !!space?.path, hasUnreadyLessons]);
 
   const handleActivateAndGenerate = async () => {
     if (!space) return;

@@ -99,6 +99,10 @@ export default function Assessment() {
           setCodeLanguage(code_analysis.language);
           setCodeSummary(code_analysis.summary);
           setPageState("quiz");
+        } else if (res.data.status === "not_code") {
+          clearInterval(interval);
+          toast.error("That doesn't look like code. Please paste a programming snippet (Python, JavaScript, Java, etc.).");
+          setPageState("code_input");
         } else if (res.data.status === "error") {
           clearInterval(interval);
           toast.error("Analysis failed. Please check your code snippet.");
