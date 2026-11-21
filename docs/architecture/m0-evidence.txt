@@ -1,0 +1,60 @@
+# M0 evidence log 2026-11-22T01:36:38+07:00 branch docs/m0-audit head 5254f5d8
+
+$ ls backend/.venv/bin/python && backend/.venv/bin/python --version
+backend/.venv/bin/python
+Python 3.11.15
+
+$ (cd frontend && ls node_modules | wc -l)
+1
+
+$ (cd frontend && npx tsc --noEmit)
+
+[41m                                                                               [0m
+[41m[37m                This is not the tsc command you are looking for                [0m
+[41m                                                                               [0m
+
+To get access to the TypeScript compiler, [34mtsc[0m, from the command line either:
+
+- Use [1mnpm install typescript[0m to first add TypeScript to your project [1mbefore[0m using npx
+- Use [1myarn[0m to avoid accidentally running code from un-installed packages
+exit=1
+
+$ (cd frontend && npm ci --no-audit --no-fund)
+
+added 278 packages in 4s
+exit=0
+
+$ (cd frontend && npx tsc --noEmit)
+src/pages/Learn.tsx(345,9): error TS2322: Type 'number' is not assignable to type 'Timeout'.
+src/pages/Learn.tsx(349,5): error TS2322: Type 'number' is not assignable to type 'Timeout'.
+exit=2
+
+$ (cd frontend && npx vite build)
+✓ 2293 modules transformed.
+[plugin vite:reporter] 
+(!) /home/akiena/code/dev-buddy/frontend/src/store/auth.ts is dynamically imported by /home/akiena/code/dev-buddy/frontend/src/lib/api.ts, /home/akiena/code/dev-buddy/frontend/src/lib/api.ts but also statically imported by /home/akiena/code/dev-buddy/frontend/src/App.tsx, /home/akiena/code/dev-buddy/frontend/src/components/layout/Navbar.tsx, /home/akiena/code/dev-buddy/frontend/src/pages/Assessment.tsx, /home/akiena/code/dev-buddy/frontend/src/pages/Dashboard.tsx, /home/akiena/code/dev-buddy/frontend/src/pages/Landing.tsx, /home/akiena/code/dev-buddy/frontend/src/pages/Login.tsx, /home/akiena/code/dev-buddy/frontend/src/pages/Register.tsx, dynamic import will not move module into another chunk.
+
+rendering chunks...
+computing gzip size...
+../../../../../tmp/nexora-m0-build/index.html                   0.93 kB │ gzip:   0.51 kB
+../../../../../tmp/nexora-m0-build/assets/index-DoiBR529.css   62.08 kB │ gzip:  10.35 kB
+../../../../../tmp/nexora-m0-build/assets/index-sy76G4IF.js   701.64 kB │ gzip: 216.05 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 6.04s
+exit=0
+
+$ (cd backend && .venv/bin/python -c "import app.main; print(len(app.main.app.routes))")
+DEBUG: Loading .env from: /home/akiena/code/dev-buddy/.env
+routes 28
+
+$ git status --short
+ M frontend/src/pages/Learn.tsx
+?? PROJECT_OVERVIEW.md
+?? docs/product/
+
+$ # clean HEAD 5254f5d8 worktree: (cd /tmp/nexora-m0-head/frontend && npx tsc --noEmit)
+exit=0
