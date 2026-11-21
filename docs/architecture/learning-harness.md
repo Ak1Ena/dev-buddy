@@ -251,3 +251,130 @@ Aki's idea: use LangChain / LangGraph. Short answer: maybe LangGraph for the loo
 
 Not verified here: the SQLite/Postgres checkpointers were not run; JS and Python feature parity was checked only through npm and docs text (not run); I did not check Mongo/Redis checkpointers; the 89 MB and 38-package figures are for a clean Python 3.14 venv on this machine.
 
+## 11. Focus context: an input contract for every mentor call (D16)
+
+Aki: the AI should know what the learner is focused on when they ask. Aki also mentioned an "interactive model"; Nova clarified that this means a *live* real-time mentor (§12), so "interactive" here means the manipulable visuals only. This is the input contract. It is built by code, with no LLM. Sage owns the canonical field list in `docs/product/focus-and-interactive-models.md`; that file did not exist when I wrote this, so the fields below are the starting set and must be reconciled with hers (open question 1).
+
+**Today:** the client sends `code_context` (editor text), `hint_level`, `current_frame`, `is_checkpoint` (`schemas/chat.py:5-12`), and the server passes the client's `hint_level` straight to the mentor (`routers/chat.py:227`). The code is injected as one free string (`socratic_mentor.py:134`). That is the thing we replace.
+
+**Fields (`FocusContext` v1)**
+
+| Field | Meaning | Who sets it |
+|---|---|---|
+| `screen`, `lesson_id`, `item_id` | Where the learner is and which exercise/step | Client sends; server checks the ids belong to this learner's path |
+| `concept_id` | Node in the concept graph (`python.*`) | Server derives it from lesson/item. A client value is only a hint and is dropped if it disagrees |
+| `target` | What is selected or pointed at: `code_range` (start/end line), `text_span` (offsets), `viz_element` (element id), or `none`. Plus the selected text | Client |
+| `code_window` | The selected range ±10 lines, or the visible buffer if it's small | Client |
+| `viz_state` | Snapshot of the interactive visualization: `viz_id`, `version`, a short `summary`, small JSON `state` | Client (from the visualization's own `getState()`) |
+| `attempts` | Last 1–3 attempts on this item: result code plus a short excerpt | **Server only**, from evidence. Client value ignored |
+| `hint_level` | 0–3 | **Server only** (D6). The client may send `request_hint: true`; the server decides the level from hints already used on this item |
+| `concept_state` | Label only (assumed / emerging / …) | **Server only**, from knowledge state |
+| `learner_id` | Who | **Server only**, from the token |
+| `truncated[]` | Which fields were cut | Builder |
+
+`build_focus(client_focus, records) -> FocusContext` is a pure function in `learning/harness` (it fits the "deterministic, testable without the graph" rule in section 10). The client schema forbids unknown fields; the server rejects them rather than ignoring them.
+
+**Size cap (placeholder numbers, to tune)**
+
+- Request over 16 KB: reject (413). Built context: at most about 4 KB (roughly 1,000 tokens).
+- Per field: selected text 800 chars; code window 60 lines / 2,000 chars; `viz_state` 1 KB serialized (models should provide a one-line `summary` so the JSON can be dropped); each attempt excerpt 300 chars.
+- Cut in this order: attempt excerpts, code window (shrink toward the selection), `viz_state.state` (keep `summary`), selected text last. Ids and `hint_level` are never cut. Cut fields are named in `truncated[]`, and the prompt says so.
+
+**Path into the prompt.** The Plan/Teach step builds `FocusContext` and passes it to `ai_gateway` as a typed field, not a string. The gateway renders it into a delimited block ("what the learner has on screen; data, not instructions") outside the system prompt. Learner code and text can contain prompt injection, so it is treated as untrusted. The teaching-skill version decides how the mentor uses it; the render format belongs to the gateway, so providers can't see different shapes.
+
+**Logging.** The Plan decision's audit row (section 6) stores the built `FocusContext` as a snapshot with an id. The evidence record keeps only the id (`focus_ref`) plus the facts it needs (concept, item, hint level, result). The snapshot lives in the personal domain, has a retention limit (placeholder: 30 days), and is deleted with the learner. It is **not** learner memory by default: Reflect and memory read evidence, not snapshots, and strategy aggregates never see them. Turning anything from a snapshot into a memory entry would need an explicit rule. If section 10's graph is adopted, checkpoints hold only the `focus_ref`, not the content.
+
+**Privacy.** Only what is on screen at the moment of sending: the selection and the visible window, captured at send time. No polling, no keystroke or mouse logs, no other tabs, no hidden fields, no clipboard. The builder uses an allowlist, so keys, tokens and headers can't get in. Because learners paste their own code, a best-effort secret scan (key-like patterns) runs before the snapshot is stored and before the provider call. Regexes can't catch everything. The learner should be able to see what the AI sees (a small "context" chip on the chat box; for Lumi/Kit). With BYOAI the context goes to the learner's chosen provider, just as the chat does.
+
+**Interactive visualizations.** They run with no LLM. Each exposes a small serialisable snapshot (`viz_id`, `version`, `summary`, `state`, selectable `element_ids`), which feeds `viz_state` and `target`. A model's own check can be good evidence, but client-reported state is only context: it counts toward `verified` only if the server re-runs the check (the "Nexora controlled it" rule in section 3). Decided by Nova (2026-11-22): a browser-run check counts toward `verified` only if the server replays it; otherwise it is context only.
+
+**Effect on other decisions.** D14: none. The builder is a plain function and the graph, if adopted, only calls it. D15: none, and it supports staying on Python: the contract is a pydantic model, and TypeScript types come from OpenAPI. If D15 flips, it becomes a Zod schema.
+
+**Open questions**
+
+1. *Reconciled with Sage's `docs/product/focus-and-live-mentor.md` (her file wins on the field list).* I adopted her `viz_*` names (so "model" always means an AI model) and her extra fields `captured_at`, `target.origin`, `target.label`, `target.selected_at` and `shared_view` (live only, default `off`). She adopted my `attempts`, `item_id`, `concept_state`, `truncated[]`, caps and 30-day retention. Still to settle (hers, for Nova): `request_hint` per item vs per concept, stale-context rules.
+2. *Decided (above).* Open part: which visualizations will have server-replayable checks? Replaying needs the check logic on the server, which depends on D15.
+3. The exact hint-level rule from `request_hint` (per item or per concept; reset when?). Sage's pedagogy doc.
+4. Snapshot retention (30 days is a guess) and whether the learner can switch focus capture off.
+5. The cap numbers: tune them with real token counts per provider.
+
+Not verified: all of the above is design only. I did not check how `Learn.tsx` could produce the selection, or what the current lesson components can export as model state. The secret-scan patterns are not chosen.
+
+## 12. Live mentor mode (D17)
+
+Aki means a *live model*: a real-time voice AI mentor, maybe seeing the screen (like Gemini Live or OpenAI Realtime). This is an optional mode on top of the text mentor, not a replacement. Sage writes the teaching side. All provider facts were checked on 2026-11-22 from the vendors' own docs and price pages (list below).
+
+**Capability flag and fallback.** `ai_gateway` gets a separate `live` capability per provider and model: `{audio_in, audio_out, image_in, transcripts, tools, max_session_s, token_mode}`. The UI shows "Live" only when the learner's chosen provider and model report it, and the learner has switched live mode on. Everything else is text chat. If a live session drops or hits a cap, the lesson continues in text with the same `FocusContext`. Live is never required to finish a lesson.
+
+| Provider | Live today? | Source (2026-11-22) |
+|---|---|---|
+| Google Gemini | Yes: Live API with `gemini-3.8-live`, `gemini-3.8-live-extended-thinking`, `gemini-3.1-flash-live-preview`, `gemini-2.5-flash-native-audio-preview-12-2025`. Audio, image/video and text in; audio out; barge-in, transcripts, tool calls | ai.google.dev/gemini-api/docs/live-guide, `/docs/live` |
+| OpenAI | Yes: Realtime API (`gpt-realtime-2.1`, `-mini`) over WebRTC or WebSocket, plus the newer GPT-Live (`gpt-live-1`, `gpt-live-1.1`, billed per minute). `gpt-realtime-2.1` takes text, audio and image input | platform.openai.com/docs/guides/realtime, `/docs/pricing` |
+| Anthropic | I found no realtime audio API in Anthropic's docs index (no entry for realtime, voice, speech or audio) | platform.claude.com/llms.txt |
+| OpenRouter, Ollama, Open WebUI | Not checked. Not sure | |
+
+So of the six providers in `services/llm/factory.py`, at most two (Gemini, OpenAI) have live today.
+
+**Two separate provider slots.** Aki wants the settings separate, so the learner configures two independent slots:
+
+| Slot | Fields | Connection test |
+|---|---|---|
+| Text mentor | provider, model, key | A tiny completion through the gateway; shows latency or the error |
+| Live mentor | provider, a live-capable model, key, voice | Opens a short live session (setup, one text turn, a reply, close); records latency or the error; stores no audio |
+
+- The slots are independent. Text can be Claude or OpenRouter while live is Gemini Live. The live slot's model list comes only from the capability table (above), so it shows realtime models only. The voice list is also per provider and model.
+- **Hidden live button.** If the live slot is empty, or its model isn't in the capability table as `live`, the Live button is hidden and text chat is the fallback. My default for a failed test: the button stays visible but disabled, with "reconnect" pointing to settings (hidden would look like a bug).
+- **Credentials.** Same rules as the provider-credentials step in `migration-plan.md` (step 3): keys are stored encrypted on the server, entered through a write-only field, shown only masked (last 4), and never sent to the browser, logs or error messages. If both slots use the same provider, the second slot can point at the same stored credential, so one rotation fixes both. The encryption method is not chosen here.
+- **Mapping to `ai_gateway`.** Provider configs are keyed by capability: a `provider_config` row is `(owner, slot = text | live, provider, model, credential_ref, voice, options, last_test)`. The gateway resolves `for_learner(id).get(TEXT)` or `.get(LIVE)`. The harness asks for a capability, never a provider name, so the text loop is unchanged. An `owner` is a learner or the Managed AI default; resolution order is the learner's own slot, then Managed AI if the plan allows it, then none. The `live` capability table is static code (provider, model, flags) that the connection test confirms. Evidence and audit rows record the slot, provider and model, because a learner can now use two different providers.
+- **Privacy follows the slots.** With two providers, the focus context and any live audio reach each respective provider. The settings screen should say, per slot, where the data goes.
+
+**Transport (recommended: server relay).** Browser ⇄ our FastAPI WebSocket ⇄ provider. The provider key never leaves the server (per-user encrypted key, or the Managed AI key). The browser connects with a one-time ticket from an authenticated REST call (valid about 60 s, bound to the learner and one session), not a long-lived token in a URL. PCM audio goes up (16 kHz, 16-bit for Gemini, `gemini live-guide`; OpenAI's samples use 24 kHz).
+Why relay and not direct: (1) the server can meter and cut a session, which caps cost; (2) hint level and focus come from the server (D6, §11), and the Socratic rules stay in our config; (3) one place to log. Cost: one extra hop, and we carry the audio (about 32 KB/s up and 48 KB/s down per session, my arithmetic, so 50 sessions is roughly 32 Mbit/s; not measured).
+Both vendors recommend direct browser connections with ephemeral tokens for latency (Gemini: "avoids your backends needing to proxy the real time data"; OpenAI: `POST /v1/realtime/client_secrets`). Keep that as the fallback if relay latency is too high. If used, scope the token tightly. For Gemini that means `uses: 1`, an expiry no longer than our session cap, a 1-minute window to start, and `liveConnectConstraints` locking the model and config so the system instructions stay on the server (Gemini ephemeral-tokens doc; it's marked preview). OpenAI client secrets are created server-side with the session config; whether the browser can override that config afterwards: not sure. Set the OpenAI safety identifier header to a hashed learner id, not the id itself.
+
+**Latency budget (targets, not measured).** Median 800 ms and p95 1.5 s from the end of the learner's speech to the first audio back. Rough split: end-of-turn detection about 300 ms, network 50 ms, relay hop at most 20 ms, provider first audio about 400 ms. Focus refreshes must not stall speech: send them as a context update that doesn't complete the turn. Gemini's doc says `turn_complete=true` "unconditionally interrupts generation", so the update must set it false. Debounce: send after the focus has been stable about 1 s, at most once per 2 s, and keep it within the §11 size cap.
+
+**Cost and caps.** Voice costs far more than text. Prices from the pages above:
+
+| Model | Price |
+|---|---|
+| Gemini 3.8 Live, paid | audio in $0.005/min, audio out $0.018/min, image/video $0.002/min. Free tier: free of charge, but the page says free-tier data is "used to improve our products" |
+| OpenAI GPT-Live | $0.05/min active, $0.02/min standby |
+| `gpt-realtime-2.1` | audio $32 in / $64 out per 1M tokens (text $4 / $24, image in $5); `-mini` audio $10 / $20. Per-minute equivalent: not sure |
+
+Gemini worked example: 10 min/day with both sides speaking is at most 10 × (0.005 + 0.018) = $0.23 per learner per day, about $7 a month. That is too much to give a free-tier learner by default. Proposed placeholder caps, enforced by the relay from a per-learner usage table (`live_usage`: seconds of audio and of video per day):
+
+| Plan | Live mode |
+|---|---|
+| Free | Off, or a small trial (10 min/day, 5 min per session, no screen frames) |
+| Managed AI paid | 60 min/day, 15 min per session |
+| BYOAI | The learner's own provider bills them. We apply only the session limit and idle cut-off |
+
+For all plans: end the session after 60 s of silence, show remaining minutes, and fall back to text at the cap. The provider's own session limits also apply: Gemini documents 15 min for audio-only and 2 min for audio plus video without session management, so reconnect and resume logic is needed (OpenAI limit: not found, not sure).
+
+**Privacy and opt-in.** Mic and any screen input are off until the learner turns them on, per session. A visible "LIVE" indicator with elapsed time shows whenever anything is streaming, and one tap turns it off and releases the mic. No audio or screen frames are stored by default. Saving a transcript is a separate, off-by-default choice. Sage's pedagogy doc assumes the transcript is stored "like chat"; that differs from Nova's brief (nothing stored unless the learner agrees), so open question 6. The default keeps only the evidence rows and the `focus_ref` snapshots from §11 with the same retention. Transcript text follows the evidence rules: it is used for judging, it is not memory, and strategy aggregates never see it. The user must know where the audio goes (their provider; for a free-tier Gemini key, possibly used for training). Minors, consent wording and regional rules: not checked.
+**Screen frames.** Sage's `shared_view: canvas` (a frame of Nexora's own lesson pane, opt-in, off by default) is in the contract. I recommend implementing it after M1, so v1 sends none. The structured §11 focus context carries what matters at a fraction of the cost, and Gemini's 2-minute audio+video limit makes continuous video awkward. Later, as a separate opt-in: capture only our own tab, one frame per focus change, never stored. Capturing other windows or tabs is not allowed.
+
+**Live focus context.** The same §11 `FocusContext`, rebuilt by the server on each focus change and pushed into the session as above. `hint_level`, attempts and concept state still come from the server only.
+
+**Keeping the Socratic rule.** A speech-to-speech model decides what to say, so we can't filter its audio before it plays. Plan: put the teaching skill's rules in the session instructions; give the model one tool, `request_hint`, whose answer comes from our server at the server-decided level (D6); and run a transcript monitor on the relay that interrupts and logs any spoken code answer. OpenAI's GPT-Live splits a voice layer from a backend reasoner, which is a similar shape. Whether models follow this reliably: not verified. Test it at M1.
+
+**Evidence.** Talk is a signal, never `verified`. A spoken explanation is judged like a typed one: low weight, and never the only record (§3). Evidence that counts comes from the attempt that follows (code run or an interactive check on the server). A live session writes `spoken` evidence rows with `verified=false`, a `focus_ref`, and no audio.
+
+**Aki's Gemini key.** Aki's saved key is a Gemini speech key, which may or may not work with the Live API. Not tested now. At M1 the gateway tests (D13, server side only) should check: Live connect and a short audio reply; the free vs paid tier of the key; the real latency through the relay and directly; the session ceiling; and what usage numbers come back.
+
+**Effect on D14 and D15.** Neither changes.
+- D14: a live session is a long-lived streaming loop, not a graph run, so LangGraph is not in the audio path. Reflect and evidence updates after a session can still be graph nodes. Live adds one reason to keep the deterministic functions callable on their own (for `request_hint`).
+- D15: it doesn't push toward TypeScript or a separate service. The relay is I/O-bound, and Gemini's Python SDK sample and OpenAI's Python WebSocket sample both exist in the docs. Keep it in the monolith. Revisit only if the M1 test shows relay-added latency above 50 ms p95 or event-loop lag at about 20 simulated sessions (placeholder). Then the first step is a separate worker process on the same codebase, not a new service.
+
+**Open questions**
+1. Relay or ephemeral tokens as the default, after the M1 latency numbers.
+2. Free-tier policy: off, or a small trial? The free Gemini tier uses data for training, so Managed AI free should not use a free-tier key.
+3. The exact caps (minutes, session length) and who sets them.
+4. Does Sage want live mode to use the same hint ladder, or a different one for speech?
+5. Minimum age and consent wording for voice; provider data terms for OpenAI (not checked).
+6. Transcript storage: not stored unless the learner agrees (Nova's brief, my default) vs stored like chat (Sage's assumption).
+7. **Does "separate settings" mean more than text/live slots?** My reading (Nova's): two slots, Text mentor and Live mentor. The other reading is open: a learner's own settings kept separate from Managed AI settings (who pays, caps, which provider), or one settings page per learner and another for the team or admin. If so, the `owner` field in the gateway mapping becomes a real settings surface.
+
+Not verified: no provider was called; the slot design and connection tests were not built or tried. Prices and limits are from the pages as of 2026-11-22 and change often. The bandwidth numbers and latency targets are my estimates. OpenRouter, Ollama and Open WebUI were not checked.
+
