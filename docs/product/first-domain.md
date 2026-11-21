@@ -38,7 +38,7 @@ Tracing (predicting program state line by line) is a skill inside every concept,
 
 ## Evidence of mastery per concept
 
-States: `unseen → assumed → in progress → verified → retained`, plus `needs review`.
+States: `unseen → assumed → in progress → verified → retained`, plus `needs review`. In the skill tree (`skill-career-path-model.md`), `unseen` is shown as `locked` or `available` depending on prerequisites. That split is derived, not stored.
 
 | State | Rule (thresholds are assumptions, tune with pilot data) |
 |---|---|
