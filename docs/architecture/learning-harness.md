@@ -199,3 +199,55 @@ Recommended option: the design above (evidence log + derived state + gated skill
 - I did not read all of `evals/`; the claim "no skill-quality eval" is from a directory listing only.
 - Nexora's current code was read only for the LLM provider layer and model fields, not audited (that is M0).
 - Line numbers are from commit `f6c3eb1a79` and will drift.
+
+## 10. LangGraph and the loop (D14)
+
+Aki's idea: use LangChain / LangGraph. Short answer: maybe LangGraph for the loop only, decided by a small M2 spike. Not the LangChain model wrappers. All facts below were checked on 2026-11-22.
+
+**Facts (sources)**
+
+| Item | Finding |
+|---|---|
+| LangGraph (Python) | 1.2.24, uploaded 2026-11-20, MIT (PyPI `langgraph`). Requires `langchain-core>=1.4.7`, `langgraph-checkpoint`, `langgraph-prebuilt`, `langgraph-sdk`, `pydantic`, `xxhash` |
+| LangChain core | 1.8.4, 2026-11-19, MIT. It comes with LangGraph (hard dependency), plus `langsmith`. The `langchain` package itself (1.5.2) is *not* needed |
+| JS twin | `@langchain/langgraph` 1.7.5, 2026-11-17, MIT; sqlite and postgres checkpointers exist on npm. Docs show `interrupt()` and `Command({ resume })` in JS too |
+| Footprint | A clean venv with only `langgraph` installed 38 packages, 89 MB. Python SQLite/Postgres checkpointers are separate packages (`langgraph-checkpoint-sqlite` pulls `aiosqlite`, `sqlite-vec`; `-postgres` pulls `psycopg`, a second driver next to our SQLAlchemy one) |
+| Telemetry / LangSmith | I found no telemetry or analytics code in `langgraph` or `langchain_core` (grep: telemetry, posthog, sentry). Tracing is on only if the `TRACING_V2` / `TRACING` env var (with the LANGSMITH_/LANGCHAIN_ prefix) equals `true` (`langsmith/utils.py:139`). The `langsmith` client is still installed. Smoke test ran with sockets blocked and made no network call |
+| Smoke test | `/tmp/lgtest/smoke.py`: a 2-node graph calling plain functions `gap()` and `plan()`, an `interrupt()` gate and `Command(resume=True)` with an in-memory checkpointer. It paused, resumed and finished. The plain functions were asserted without importing the graph |
+
+**Where it sits (if adopted)**
+
+`learning/harness` keeps the deterministic code: state from evidence, gap, planner order, hint rules. A new `learning/harness/graph.py` is the only file that imports LangGraph. Each node is a thin wrapper around one of those functions or one `ai_gateway` call. The graph never imports a provider and never touches LangChain model classes.
+
+| Our thing | LangGraph piece | Rule |
+|---|---|---|
+| Evidence log, knowledge state (`memory`) | Not in the graph | Ours, append-only. Graph state holds ids and small facts, never learner free text |
+| Loop step order (Observe…Reflect) | Graph nodes and edges | Nodes are wrappers; logic stays testable without the graph |
+| One learner session | `thread_id` | An opaque session id, not the learner id, so deleting a learner can't be blocked by checkpoint rows |
+| Wait for the learner's answer (Challenge) | `interrupt()` / resume | Optional. A normal request/response turn also works |
+| Skill promotion gates G0–G4, G3 human approval | Not the graph | A DB status and approval row (days long). Keeping a run paused for days would tie a checkpoint to a business decision |
+| Checkpointer | Disposable cache | Delete it at any time. The next turn rebuilds state from evidence and must give the same next step. TTL it |
+| Provider calls | `ai_gateway` | Unchanged. No `langchain-*` provider packages |
+| Reflection (draft skills) | Offline job, not the live graph | As in section 4 |
+
+**Risks and exit cost**
+
+- **Two copies of state.** The loop's real state is the evidence log, which is rebuildable. A checkpoint is a second copy and could drift. Mitigation: the rebuild test below.
+- **Personal data in checkpoints.** Checkpoints serialize the whole state each step. Keep state to ids; add a check that scans checkpoint rows for learner text.
+- **Churn.** Python and JS versions move weekly (1.2.24 on 2026-11-20). Pin versions; no use of experimental APIs.
+- **Dependency weight.** 38 packages, 89 MB, plus a second DB driver for the Postgres checkpointer. Small, but real for a monolith.
+- **Exit cost.** What we'd rewrite if we dropped it: `graph.py` (the builder and node wiring), the checkpointer setup, and any `interrupt()` calls. Nothing else, if the rule above holds (estimate: about a day, not measured). Lock-in happens only if logic leaks into nodes; the spike checks this.
+- **Gain is modest.** Because state is derived from evidence, we can already resume any session. LangGraph mostly adds a structured way to write the loop, retries, streaming and a graph view. Not sure it beats a ~100-line hand-written loop; the spike answers it.
+
+**M2 spike plan**
+
+| | |
+|---|---|
+| Scope | The loop for the 8 `python.*` concepts as one graph. Nodes wrap the pure functions. Fake provider through `ai_gateway`. SQLite checkpointer. One `interrupt()` at Challenge. Also a ~100-line hand-written version of the same loop for comparison. No UI |
+| Success criteria | (1) Pure-function tests pass with `langgraph` not importable. (2) Delete the checkpoint DB mid-session: next turn gives the same step as before (golden test). (3) With tracing env unset and sockets blocked, a full run makes no network call. (4) A scan of checkpoint rows finds no learner free text. (5) Added dependencies listed and pinned; the sizes noted. (6) The graph version is clearly better than the hand-written one on at least two of: lines, retry/streaming handling, readability for a new teammate |
+| Timebox | 3 working days (estimate) |
+| Exit criteria | Any of (1)–(4) fails, or (6) not met: skip LangGraph, keep the hand-written loop, delete `graph.py` and the dependency, record the result in D14 |
+| Language | The plan is the same with LangGraph.js if D15 ever flips to TypeScript |
+
+Not verified here: the SQLite/Postgres checkpointers were not run; JS and Python feature parity was checked only through npm and docs text (not run); I did not check Mongo/Redis checkpointers; the 89 MB and 38-package figures are for a clean Python 3.14 venv on this machine.
+
