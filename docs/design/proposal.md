@@ -348,3 +348,15 @@ What's in the mock (`nexora-mock/notebook/index.html`, one file, opens offline f
 Review and test: Ella's review (`nexora-mock/review/FINDINGS-r5.md`) had 2 must-fixes (scene out of view at 390, SQL labels on the art), both fixed (`review/r5-fix-check.log`). Juno's first video failed 1 of 8 checks (SQL step 10 caption clipped, step 3 pill touching a label); Lumi fixed those and four HTTP label touches (`review/r5-fix2-check.log`). Re-record `nexora-mock/videos/a-path-r5b.mp4` (H.264, yuv420p, 1280x800, 2:55, sped up 1.4x): all 8 checks pass, 36 script checks, 0 console errors; commands in `nexora-mock/videos/log.txt`, script `videos/record-r5b.mjs`.
 
 Not checked: real devices, Safari, screen readers, contrast by tool, dark mode by eye (script only), text against 3D art (by eye on sampled frames only). Open for Aki: points per check vs one award at verified; where videos come from.
+
+## Round 6: points at Verified, author-attached video, mentor chat bubble (A. Path only)
+
+Aki's request (2026-11-22, verbatim): "ให้ทีเดียวตอน Skill verified พวกวิดีโอคนเป็นคนแนบเข้ามา แล้วก็เราว่าเรื่องแชทเอาเป็น bubble ขวาล่างน่าจะดีกว่านะ คิดว่าไง" (D24–D26).
+
+- Points (D24): one Apply pass shows "1 of 3 checks for Verified · no points yet"; the header stays at 150. Points land once when the skill turns Verified. The mock has a labelled "Sample, mock only" switch to show that moment (sample award +100, header 150 → 250).
+- Video (D25): the optional video line says it was added by the lesson author. The Edit panel has "Attach video (link or file)", mock only, nothing saved.
+- Chat bubble (D26): round icon button bottom-right. Desktop opens a 420px side panel and the page column reflows. Mobile opens full screen with a Close button and a focus trap (Tab and Shift+Tab wrap). Esc closes and returns focus to the bubble. The Live entry sits inside the panel.
+- Bubble hide rule (Nova's call): it hides at every width, but only when a guess block comes within 16px of it (1280: 0/50 scroll positions hidden; 390/360: 10–11/50). While "Ask about this step" is active the bubble stays hidden and the inline "Ask the mentor" is the only chat entry.
+- Review: Mira (UX) found 1 must-fix (points pill accessible name mismatch, axe serious) and 3 should-fixes; Lumi fixed all; Mira's re-check passed with her own measurements, axe 0 serious/critical at 360/390/1000/1280 light and dark. Reports: nexora-mock/review/mira-r6-review.md, mira-r6b-review.md.
+- Video: nexora-mock/videos/a-path-r6.mp4 (H.264, yuv420p, 1280×800, 2:59, 1.2× speed-up). 41 DOM checks pass, no console errors (Juno, videos/log.txt).
+- Not checked: Safari/WebKit (host needs libicu74 via sudo), a real screen reader, real phones, real browser zoom.
