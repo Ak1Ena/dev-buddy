@@ -1,149 +1,117 @@
-# Standard lesson template: story trace
+# Lesson shapes and the story-trace template
 
-Status: proposal. Author: Sage. Date: 2026-11-22. Design only, no code.
-Inspiration: designedtoscale.app. Aki: "adapt that teaching method to ours". I saw the site only through two screenshots and Chief's notes. I did not open it, did not check whether its lessons test the learner, and did not read its terms. Builds on `learning-harness-pedagogy.md`, `first-domain.md`, `focus-and-live-mentor.md`, `skill-career-path-model.md`, and D6, D17, D20 in `initial-decisions.md`. "Assumption" marks a choice with no Nexora data behind it.
+Status: proposal, round 5. Author: Sage. Date: 2026-11-22. Design only, no code.
+Inspiration: designedtoscale.app, seen only through two screenshots and Chief's notes (not opened, lessons not tested, terms not read). Builds on `learning-harness-pedagogy.md`, `first-domain.md`, `focus-and-live-mentor.md`, and D6, D17, D20, D22, D23 in `initial-decisions.md`. "Assumption" marks a choice with no Nexora data behind it.
 
-**Idea:** a lesson is one realistic problem, followed step by step. A picture builds up, a number grows, one change is shown at a time. Our addition: the learner commits a guess before each reveal, and only those guesses and the check at the end count as evidence. Finishing the story proves nothing.
+**Idea:** a lesson is one realistic problem followed step by step: a picture builds up, a number grows, one change at a time. Our addition: the learner commits a guess before each reveal. Only those guesses and the check at the end count as evidence. Finishing the story proves nothing.
 
-## 1. The template
+## 1. Pick the shape (D22)
 
-One lesson = one story = one concept (assumption). 6 to 10 steps; a small concept may use 4 to 5.
+Story-trace is the default only where there is a flow to follow. Every shape opens with a real-world story and ends with a check.
+
+| Shape | Use when | Example | Main evidence |
+|---|---|---|---|
+| **Story-trace** | A process whose state changes step by step and can be replayed from stored data | loops, an HTTP request, a DB query | predict records, then the check |
+| **Syntax drill** | Small rules to produce fluently, nothing to watch growing | syntax, naming, operators | apply on fresh variants, spaced |
+| **Debugging hunt** | Search for a cause, no fixed path | `python.debugging`, `debug.isolate-reproduce` | bug fixed so a failing test passes (transfer) |
+| **Design exercise** | Several answers can be right, no stored run to compare with | basic system design | explain, graded against a rubric (never the only record) |
+| **Video-led** | The concept is mostly shown: a tool, an environment, an overview | using the terminal, reading a stack trace in an IDE | the predict and check after the video |
+
+A story can still introduce a debugging or design lesson. Tiny concepts use a 4 to 5 step story-trace or one predict item.
+
+**Video** is an optional block in any shape: at the start (a short intro) or inside one step. Rules: never the only way to learn the idea (a text version of the same step always exists); transcript and captions; no autoplay; 5 minutes or less (assumption; engagement falls with length, Guo 2014, from memory, unchecked); curated or ours, no embedding someone else's video without approval (open question 3). Watching gives no evidence. A video is always followed by a predict point and the check.
+
+**Real-world story:** every lesson opens with 2 to 3 sentences about a situation a person could meet, with a name and a place. Curated, not freely LLM-written. Where it fits, a later case step goes back to the story.
+
+**Authoring (D23):** AI drafts story, steps, predict questions and check items → a human reviews and may edit anything → publish. Nothing unapproved reaches learners. The approver's edited version is the published one. Reviewer checklist: story is realistic; every number comes from a stored run or is labelled "example numbers"; each predict question has one defensible answer; no Next label shows a pending value; check items differ from the predict questions; every visual has a text equivalent. Lessons are versioned. Editing a lesson never re-awards points.
+
+## 2. Story-trace template
+
+One lesson = one story = one concept (assumption). 6 to 10 steps.
 
 | Part | Required? | What it must do |
 |---|---|---|
-| **Problem story** (step 1, tagged PROBLEM) | Required | One concrete situation a learner could meet ("my script feels slow", "Save fails sometimes"). Curated text, not LLM-written. |
-| **Named steps** | Required | Short names that say what happens ("Inner loop"). The Next button previews the next name, never a value waiting to be predicted. Back is always allowed. |
-| **Predict points** | Required: at least 3, and every case step | The learner commits a guess (or "I'm not sure") before the reveal. Stepping on without committing is allowed and earns nothing. |
-| **Visualization** | Required | The trace stepper (`focus-and-live-mentor.md` §2) or another 2D view built up one step at a time, with replay and pause. It shows stored data (a real run where code is involved, otherwise a labelled simulation). The LLM never writes its values. 2D only. |
-| **Metric strip** | Required when the concept has a count or cost; otherwise a state panel instead | Numbers filling in as steps advance, so the learner sees the effect grow. Use counts (turns, comparisons, round trips, rows) over clock time, which is not repeatable. Simulated numbers carry an "example numbers" label. |
-| **Case steps** (late) | Required: at least 1 | Change one thing, ask for a prediction first, then show the effect. |
-| **"What changed"** | Required with each case step | One line per change, before → after, generated from the difference between two stored runs. |
-| **Key idea** | Optional | One curated sentence per step. Not an LLM summary. |
-| **"Seen" list** (their "You'll learn" ticks) | Optional | If shown, it says "seen" and sits apart from the concept's real state, so a ticked box never looks like `verified`. |
-| **Recap** | Required | Three plain sentences from the curators. Shown after the last step. |
-| **Check** | Required | The tasks that make evidence: apply (write or fix, passes tests), explain (own words, rubric-graded), transfer (new-looking problem), per `first-domain.md`. A lesson without a check is an explainer, not a lesson. |
+| **Problem story** (step 1) | Required | The real-world story. Curated. |
+| **Named steps** | Required | Names say what happens. Next previews the next name, never a value waiting to be predicted. Back always allowed. |
+| **Predict points** | At least 3, and every case step | Learner commits a guess (or "not sure") before the reveal. Stepping on without one is allowed and earns nothing. |
+| **Visualization** | Required | A view built up one step at a time, with replay and pause, over stored data (a real run for code, otherwise a labelled simulation). The LLM never writes its values. **2D for code (loops); 3D allowed for spatial systems (requests, servers, tables), because Aki asked for it (round 4).** 3D rules: a view over stored data only; every 3D element has a text or 2D equivalent (step name, metric strip); a reduced-motion version; readable at 390px; no state shown only in 3D. Engine is for Lumi and Arjun (the old one was removed in `1845c368`). |
+| **Metric strip** | When the concept has a count or cost | Counts, not clock time. Simulated numbers say "example numbers". |
+| **Case steps** (late) | At least 1 | Change one thing, predict first, then show the effect. |
+| **"What changed"** | With each case step | One line, before → after, from the difference between two stored runs. |
+| **Recap** | Required | Three plain sentences, curated. |
+| **Check** | Required | Apply, explain, transfer per `first-domain.md`. No check, no lesson. |
 
-## 2. How our parts fuse with it
+**How our parts fuse in:**
+- **Evidence:** a server-compared prediction with hint ≤ 1 is a `predict` record (`verified: true`), toward `in progress`, never the apply leg. A case-step prediction is `predict`, not transfer (Nova, round 4). Not evidence: watching, replay, video, reaching the recap. One miss changes nothing; two independent misses on the same misconception open review.
+- **Mentor (text and live):** `FocusContext.viz_state.step_id` and `step_name`. Chip: "Asking about: step 4, inner loop". The mentor gets the current step only, never later values, and never states a pending prediction. Talk is never evidence.
+- **Adaptivity:** skip to the check only when the concept is `verified`. `Assumed` runs the full story after a quick probe. After one miss, one smaller sub-step is offered (assumption). Every skip is logged.
+- **Hints:** levels 0 to 3; hint 3 earns no credit.
+- **Points:** see `points-and-levels.md`. Steps, predictions, video and finishing the story give none.
 
-| Our part | How it works inside the template |
-|---|---|
-| **Predict before step** | Each predict point goes to the server before the reveal and is compared with the stored data (D6). The server records the result. A prediction it never saw is context only. |
-| **Evidence** | A server-compared prediction with hint ≤ 1 is a `predict` record, `verified: true`, toward `in progress`. It is never the apply leg. Whether a case-step prediction may count as the transfer leg is open question 4 in the focus doc. I do not change the rule here. Not evidence: watching, replay, reaching the recap, ticks. One miss changes nothing. Two independent misses on the same misconception open review. |
-| **Focus-aware mentor (text and live)** | `FocusContext.viz_state.state` carries the step id and name (field names are mine, for Nova and Arjun to settle). The chip reads "Asking about: step 4, inner loop". The mentor aims its question at that step. It never states a pending prediction. Hint levels do not change because of focus. The live model gets only the current step, never later values, so it cannot read them out. This needs no screen frame, which fits D17. Talk is never evidence. |
-| **Adaptivity** | By verified knowledge only. If the concept is `verified`, offer "skip to the check" and let the learner choose. If it is only `assumed`, the full story runs, opening with a quick probe. After one wrong prediction, offer one smaller sub-step on the same point (assumption). It changes no state and no path. Two independent misses use the existing prerequisite rules. Every skip or zoom is logged with its reason and records. |
-| **Hints** | Levels 0 to 3 as now. Hint 3 shows a worked example for a similar case and earns no credit. |
-| **Points (D20)** | Points move only when the check changes a concept's state (a passed check, a retained skill). Steps, predictions and finishing the story give none. The UI says why points moved. Values and level names are not decided. |
-| **Skill** | A new teaching skill candidate, `story-trace-lesson`, built on `trace-prediction-questioning`. It goes through the normal proposal and trial flow. |
-
-### Acceptance criteria (the template, not one lesson)
-1. No lesson can reach `verified` from story steps alone.
+**Acceptance criteria**
+1. No lesson reaches `verified` from story steps or video alone.
 2. Every predict point is stored server-side before its reveal is sent.
 3. A Next label never contains a pending value.
-4. A wrong prediction shows no answer text beyond the reveal itself, and changes no state.
-5. Every metric-strip number is reproducible from stored data. Simulated ones are labelled.
-6. A skip is offered only when the concept is `verified`, never when `assumed`.
-7. The mentor payload holds the current step only. No later values.
-8. The "seen" list, if shown, never uses the verified style.
+4. A wrong prediction shows nothing beyond the reveal and changes no state.
+5. Every metric number is reproducible from stored data; simulated ones are labelled.
+6. Skip is offered only when `verified`.
+7. The mentor payload holds the current step only.
+8. A video step has a text equivalent and is followed by a predict point.
+9. Every 3D element has a text equivalent; a reduced-motion version exists.
+10. A lesson has an approver and a version before it is visible.
 
-## 3. When the template does not fit
+## 3. Real lessons
 
-- **No process to trace.** Vocabulary, syntax rules and naming conventions have nothing to watch growing. Use a short predict-and-check item instead.
-- **Open-ended hunting.** `python.debugging` and `debug.isolate-reproduce` are search tasks. A fixed step list suggests a straight path that real bugs do not have. Use a bug hunt with a failing test. A story can still introduce it.
-- **Planted-flaw review** (`ai.review-output`) is a task, not a trace. It keeps its own shape from `skill-career-path-model.md`.
-- **Design judgement** (basic system design, "familiar" depth): many answers can be right, and there is no stored run to compare a prediction with.
-- **Tiny concepts** (variables): use the 4 to 5 step form, or a single predict item.
-- **Learner-written code** cannot be traced from stored data. Only curated programs have stored runs (open sandbox question in `first-domain.md`).
-- **Cost.** Each lesson needs a curated story, a verified run or model, and a check set. Only 8 Python concepts are real in v1. Passive watching can feel like learning, which is exactly why steps earn no credit.
-- **Effect not known.** I have no Nexora data that this form teaches better. The support I know of is for tracing before writing (Lister 2004) and the notional machine (Sorva 2013), not for this exact form. Both are from memory, not re-checked. A trial against the current lesson format is the way to know.
+Loops stays as built in mock A (10 steps: Guess, Two lists, First name, Inner loop, Next name, Whole run, More names, Both longer, Stop early, Recap; counts 9, 18, 36, 7, checked by running the code). Real-world wrapper to add: *Mai matches the party RSVP list against the ticket list and the script feels slow.* The two below are new and are to be built in 3D in the mock. Numbers are stored simulations, labelled "example numbers".
 
-## 4. Three example outlines
+### B. "Why does Save sometimes fail?" (`web.http-basics`, then `sys.client-server`)
 
-Only the first is a real node today. The others (not in Nexora yet) show the template holds outside Python. Their node placement is my guess.
+**Story:** Noi keeps a shopping list in a notes app on her phone. Most days Save works. On the train, sometimes a red "Couldn't save" appears and she cannot tell why.
+**Scene (3D):** phone → server → database on a small map, a message travels between them. Mock server is a stored simulation, not a live network.
+**Metric strip:** Messages sent · Database asked · Rows saved · Status code.
+**Request used:** `POST /notes` with `{"title":"Groceries","text":"milk, eggs"}`.
 
-### A. Python loops: "Why is my loop slow?" (`python.loops`)
+| # | Step | Predict (one question) | Reveal | Msgs / DB / Rows / Status |
+|---|---|---|---|---|
+| 1 | The problem | Gut guess: where does Save break (phone, internet, server, database, not sure)? | Signal only; shown again at 10 | 0 / 0 / 0 / – |
+| 2 | The Save button | Which method does Save use: GET, POST or DELETE? | POST, address `/notes`, body with title and text | 0 / 0 / 0 / – |
+| 3 | Request reaches the server | What does the server read first to decide what to do: method and address, or body? | Method and address | 1 / 0 / 0 / – |
+| 4 | Ask the database | Who talks to the database: the phone or the server? | The server; one query, one reply | 3 / 1 / 1 / – |
+| 5 | Reply comes back | Which code family comes back for a good save: 2xx, 4xx or 5xx? | 2xx (201) | 4 / 1 / 1 / 201 |
+| 6 | Case: wrong address (`/note`) | Which family comes back, and is the database asked? | 4xx (404); not asked | 2 / 0 / 0 / 404 |
+| 7 | Case: missing title | Is the database asked before the server answers? | No; the server checks first, 400 | 2 / 0 / 0 / 400 |
+| 8 | Case: database is down | Whose fault does the code say: 4xx (the request) or 5xx (the server)? | 5xx (500); one query sent, nothing saved | 4 / 1 / 0 / 500 |
+| 9 | Case: no signal (the tunnel) | What status code does the server send back? | None. The server never got it; the phone shows its own error | 0 / 0 / 0 / none |
+| 10 | Recap | None. Shows the step-1 guess and asks which of the four cases fits "sometimes" | Three sentences | – |
 
-Story: a script matching two name lists feels slow. Counting how many times the body runs, not big-O (complexity is out of scope in `first-domain.md`). Program, 3 names against 3:
+Evidence: predictions in 2 to 9 (`predict`). Check: apply (fix a request so the mock server accepts it: wrong path and missing field, auto-checked); explain (who owns 404, 400, 500 and "no code", rubric-graded); transfer (a new endpoint, `DELETE /notes/7`, with a new fault such as an unknown id or a missing login). Not sure a mock server fits the sandbox decision. Predicting a code family, not an exact number, avoids marking "200" wrong for a good save.
 
-```python
-mine = ["ann", "bo", "cy"]
-theirs = ["cy", "dee", "ann"]
-for a in mine:
-    for b in theirs:
-        if a == b:
-            print(a)
-```
+### C. "Why is one lookup slow in a big table?" (`backend.sql-basics`, or a later node)
 
-Real run: 9 comparisons, prints `ann` then `cy`. Metric strip: outer turns, comparisons, prints.
+**Story:** Pim runs a small online shop. Support types a customer's email into the admin page. It was instant with 200 customers; now with 200,000 it takes seconds. A phone book is sorted by name, but a list by sign-up date cannot be searched by email without reading every line.
+**Scene (3D):** a stack of table rows with a row counter; a sorted index stack beside it later. A 12-row toy table is drawn; counts are modelled for 1,000 and 10,000 rows (label: "example numbers").
+**Metric strip:** Rows examined · Index comparisons · Writes per insert.
+**Query used:** `SELECT * FROM customers WHERE email = '…'`, email not marked unique, so every row is checked.
 
-| # | Step | Learner does | Record |
-|---|---|---|---|
-| 1 | Guess | Reads story and code, guesses the comparisons for 3×3 | Signal only |
-| 2 | Two lists | Watches the variables fill | None |
-| 3 | First name | Predicts `a` and the first `b` | `predict` |
-| 4 | Inner loop | Predicts how often the `if` runs for `"ann"`, and when `print` fires | `predict` |
-| 5 | Next name | Predicts where the inner loop restarts for `"bo"` | `predict`, misconception tag if it "carries on" |
-| 6 | Whole run | Predicts the total, sees 9 | `predict` |
-| 7 | More names | Predicts the count with 6 names in `theirs`; sees 9 → 18 | `predict` |
-| 8 | Both longer | Predicts for 6 and 6; sees 36 | `predict` |
-| 9 | Stop early | Predicts the count when the inner loop stops at a match; sees 7 | `predict` |
-| 10 | Recap | Three sentences, then the check | None |
+| # | Step | Predict (one question) | Reveal | Rows / Compar. / Writes |
+|---|---|---|---|---|
+| 1 | The slow page | Gut guess: why slower now (more customers, server, network, not sure)? | Signal only | – |
+| 2 | The table | Is the table sorted by email? | No, by sign-up id | 0 / 0 / – |
+| 3 | Lookup by id | How many rows are examined for id 640? | 1 (the id is the table's own order) | 1 / 10 / – |
+| 4 | Lookup by email, no shortcut | How many rows are examined in the 1,000-row table? | All 1,000 | 1,000 / 0 / – |
+| 5 | What an index is | Does the index hold full customers, or the email plus a pointer to the row? | Email plus pointer, kept sorted | – |
+| 6 | Same lookup, indexed | About how many comparisons to find one email among 1,000 sorted: 10, 100 or 500? | 10, then 1 row | 1 / 10 / – |
+| 7 | Case: 10× more customers | Scan goes from 1,000 to what, and the index from 10 to what? | 10,000 and 14 | 10,000 vs 1 / 14 / – |
+| 8 | Case: add a customer | How many writes does one insert cost now (table plus email index)? | 2 (without the index: 1) | – / – / 2 |
+| 9 | Case: search by city (no index) | How many rows are examined with 10,000 customers? | 10,000; the email index does not help | 10,000 / 0 / – |
+| 10 | Recap | None | Three sentences | – |
 
-Check: write a loop that counts matches (apply); say why 3×3 runs 9 times (explain); a new-looking problem with the same shape (transfer). Doubling `theirs` as `theirs + theirs` repeats names, so a curated version should use new names. Counts 9, 18, 36 and 7 were checked by running the code. Step 9 needs `break`, which `first-domain.md` does not name; I'm not sure it is in the loops node. Fallback story: "Why does my loop print one too many?" (`range` off-by-one).
+Index comparisons are modelled with a sorted list (about log2 of the rows: 10 for 1,000, 14 for 10,000). Real databases use a tree with similar growth; the strip says so. Evidence: predictions in 2 to 9. Check: apply (given four queries, choose which column to index; auto-checked from the query plan, assumed possible in SQLite, to confirm); explain (why not index every column: each index adds a write); transfer (another table, such as orders by customer and by date). Not sure SQLite exposes rows examined cheaply; if not, counts stay modelled and labelled.
 
-### B. How a request travels: "Why does Save sometimes fail?" (`web.http-basics`, then `sys.client-server`)
+## 4. Not copied
+Their text, story, step names, outline, isometric art, layout, colours, type, name. Whether our 3D art or wording sits too close is for Lumi and Nova to check.
 
-Story: a small notes app. Pressing Save sometimes shows "failed". Where along the way did it break? (A different angle from a slow page, on purpose.)
-
-| # | Step | Predict point |
-|---|---|---|
-| 1 | Problem | None |
-| 2 | The button | What the browser sends: method, address, body |
-| 3 | Find the server | None (watching) |
-| 4 | Request arrives | Which part of the request the server reads first |
-| 5 | Ask the database | None |
-| 6 | Reply goes back | The status code of a good save |
-| 7 | Case: wrong address | Predict the code (404) |
-| 8 | Case: missing field | Predict the code (400) |
-| 9 | Case: server crashes | Predict the code (500) |
-| 10 | Recap | None |
-
-Metric strip: hops reached (browser → server → database → back), status code. Counts only. The run is a stored **simulation** of a mock server, labelled as such, not a live network. Evidence: the case predictions. Check: fix a request so a mock server accepts it (apply, tests); explain which side owns each code; a new endpoint with a new fault (transfer). Not sure a mock server fits the sandbox decision.
-
-### C. SQL index: "Why is one lookup slow in a big table?" (`backend.sql-basics` or a later node)
-
-Story: finding one customer by email gets slower as the table grows.
-
-| # | Step | Predict point |
-|---|---|---|
-| 1 | Problem | None |
-| 2 | The table | None |
-| 3 | Lookup by id | Rows the database looks at |
-| 4 | Lookup by email | Rows looked at with no shortcut |
-| 5 | What an index is | None (a sorted shortcut is drawn) |
-| 6 | Same lookup, indexed | Rows looked at now |
-| 7 | Case: 10× more rows | How both counts change |
-| 8 | Case: add a row | What an insert must also update |
-| 9 | Case: a column with no index | Predict the lookup cost |
-| 10 | Recap | None |
-
-Metric strip: rows examined, index entries read, writes per insert. Counts from a small toy table. I'm not sure the real engine (SQLite) exposes rows examined cheaply; if not, they are modelled counts, labelled. Evidence: predictions in 3, 4, 6, 7, 8, 9. Check: choose and justify an index for a given query set (apply, auto-checked on the plan), explain the cost of an index, transfer to another table.
-
-## 5. Not copied
-
-Their lesson text, story ("shop feels slow"), step names and 40-lesson outline; their isometric illustrations (we are 2D, and 3D was removed in `1845c368`); their three-column layout, stepper strip, colours and type; their name and branding. Ideas are free, but whether any wording or art ends up too close is for Lumi and Nova to check.
-
-## 6. Open questions
-
-For Aki:
-1. Is this the standard form for all lessons on the Software Engineer path, with the short form for tiny concepts? Default: yes.
-2. Are examples B and C fine as illustrations only? They need curated runs and a mock server or toy database that do not exist yet.
-3. Real-world wrapper ("a notes app") or code only for the first stories? Default: one sentence of wrapper.
-
-Nova's answers (2026-11-22, reversible; Arjun may rename fields when the harness is built):
-- Step id: `FocusContext.viz_state.step_id` plus `step_name`.
-- A case-step prediction is a `predict` record, not the transfer leg. Transfer stays a new-looking task (bug hunt or new setting).
-- `break` stays in the loops story: it is part of "termination", which `python.loops` already covers.
-- Who writes stories and runs: open, goes to Aki together with the item-bank question in `first-domain.md` (default: AI drafts, a human approves).
-- Point values: samples until Aki sets them (D20).
-
-Not checked: the site beyond two screenshots, any Nexora learner data, the exact edge cases of a mock server or SQLite counters.
+## 5. Open questions
+For Aki: (1) point values and level names, see `points-and-levels.md`; (2) video: ours, licensed, or linked from others? Default: ours or licensed, curated; (3) 3D scope: only spatial systems like HTTP and SQL, loops stay 2D (default).
+For Arjun and Nova: 3D engine choice; mock server and toy table in the sandbox.
+Not checked: the site beyond two screenshots, any Nexora learner data, SQLite plan output, whether this form teaches better than the current one. That needs a trial (controlled trial, `learning-harness-pedagogy.md`).
