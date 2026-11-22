@@ -299,3 +299,37 @@ For Nova (and Sage where it is about the model):
 - I did not run keyboard or screen-reader tests on the old apps (audit is code grep plus screenshots) or measure the old contrast pairs.
 - No user testing with a real learner. Everything here is a designer's judgment.
 - I did not install any other skill or plugin; the frontend-design SKILL.md was the only one used.
+
+## Round 4: the lesson as a story trace (A. Path only)
+
+Aki liked the way designedtoscale.app teaches and asked us to adapt it to Nexora. The story trace is now Nexora's standard lesson format (Sage's template: `docs/product/lesson-pattern-story-trace.md`). A. Path's lesson page is rebuilt as one full lesson, "Why is my loop slow?", with all 10 steps clickable. Bench is dropped and was not touched. The reference is inspiration only: no content, art or layout was copied.
+
+What the lesson does (`nexora-mock/notebook/index.html`, source in `nexora-mock/src`):
+- Steps follow Sage's loops outline: Guess (PROBLEM), Two lists, First name, Inner loop, Next name, Whole run, More names (CASE), Both longer (CASE), Stop early (CASE), Recap. Two lists of 3 names make 3 × 3 = 9 comparisons; one list of 6 makes 18; both of 6 make 36; with a break it is 7. Every number comes from one stored sample run, so the metric strip, the grid, the captions and the text alternatives agree.
+- Stepper plus a Next button that names only the next step. Back is free; forward only as far as you have been.
+- Diagram (lists, then a grid of match cells, then recap bars) reacts to the current code line. Replay and Pause. Still under reduced motion.
+- Metric strip (outer turns, comparisons, prints) and an auto-built "What changed" that is just the difference between this step's counts and the last one's.
+- Predict before step, with Sage's rules: the guess on step k is about the reveal on step k+1; the guess is saved before the answer shows; a wrong guess shows no answer text and changes nothing; "I'm not sure" is allowed and never counted wrong; step 1 only records a signal. Score line reads "Predicted right: 5 of 6" in the test walk.
+- Adaptive skip: on step 2 there is a "You already showed this" hint, backed by the verified Variables evidence from Nov 19 (it links to the evidence). "Skip to step 3" is logged, earns nothing and changes no skill. Loops itself is not verified, so there is no skip-to-check and the guesses still count.
+- "You'll learn" list: items get a neutral "seen" tag. Seen means watched, not shown. Only guesses and the check are evidence, so ticks are not green.
+- Kept: code card (diagram follows the line), "Asking about: line 4 / step 3" chip, live buddy panel, loops check with +40 only on a pass.
+- Check: now the apply leg only (write the nested match loop, expects 2 prints). The explain and transfer legs are listed but not built in the mock.
+
+Reusable slots (`data-slot` in `body.html`, content in `js/44-lesson-loops.js`, behaviour in `js/45-trace.js`): stage (metrics, visual, controls), stepper, code, story (key idea, what changed, predict point), nav (with skip hint), focus, seen, check. A new lesson is a new LESSON object (steps, code, counts, line and variable questions, check); the layout and engine do not change. Notes: `nexora-mock/src/README-lesson-template.md`.
+
+Two 390 px bugs fixed: the "+40 points" toast now appears at the top, so it no longer covers Reset or the Passed panel; the "Mock-up" badge sits in the page flow above the tab bar, so it no longer covers the result text.
+
+Tested at 1280 and 390 (Chromium, headless): route check, no console errors, no sideways overflow, all 10 steps walked with right, wrong and "not sure" guesses, counts per step, skip hint, focus chip for a step and a line, wrong then right check answer, toast and badge not overlapping Reset or the result. Screenshots: `nexora-mock/notebook/screenshots/r4-lesson-*.png` (start, skip hint, case step, stop early, focus, passed check; 390, desktop, dark desktop).
+
+Open questions for Nova and Sage:
+- `break` scope: Sage was unsure it belongs in this lesson. It is in as the last CASE step; easy to drop.
+- Do case-step guesses count as transfer evidence? Not wired.
+- A wrong guess should lead to a smaller sub-step (Sage). Not built.
+- The skip is only logged in the page's memory. Real logging needs Rio.
+- Estimated time was removed in favour of counts, since counts are reproducible.
+
+Not checked: screen readers (live region, `aria-current` and diagram text alternatives are in but untested), Firefox and Safari, a real phone, explain and transfer check legs, Bench.
+
+Round 4 fixes after Ella's review (FINDINGS-r4.md): the stretched "Light" pill and wrapped "My path" at 1280 were a class-name clash (`.tl` was both the lesson grid and the theme label) and are fixed; the page now scrolls normally at 1280 (no inner scrolling columns, buddy privacy note collapsed, story widest, Back/Next sticky under the story), the 390 diagram text is about 12 px, the 390 stepper shows "Step 8 of 10 · Both longer", and N1 to N5 are done (shorter skip label, Mock-up badge in the page flow, recap strip relabelled, "Predicted right" only at the Recap, toast under the header).
+
+Round 4, Juno's video fixes: code lines now wrap inside the code box (same line number, no sideways scroll; measured 493 px of code in a 356 px box before, none after, at 1280 and 390), and a step chip now follows the step on screen (a value chip is cleared when the step changes; a line chip stays). One focus chip is shown per width: in the buddy panel at 900 px and up, under the story below that.
