@@ -1,0 +1,3040 @@
+# Nexora seed content check
+# date: 2026-11-25T12:16:07+07:00
+# branch: feat/m2-seed-python  content commit: d2fcaeb5
+# python3 on PATH: Python 3.14.10 (/usr/bin/python3); checker runs samples with the interpreter below
+# command: /tmp/nexora-content-venv/bin/python content/tools/check_content.py
+
+python: 3.14.10 (/tmp/nexora-content-venv/bin/python)
+jsonschema: 4.26.0
+content dir: /home/akiena/code/dev-buddy-worktrees/m2-seed-python/content
+schema schema/content.schema.json: valid Draft 2020-12 schema
+
+##############################################################################
+# 1. SCHEMA VALIDATION (10 files)
+##############################################################################
+RESULT: PASS  python-fundamentals/assessment/placement.json valid against content.schema.json (kind=assessment)
+RESULT: PASS  python-fundamentals/domain.json valid against content.schema.json (kind=domain)
+RESULT: PASS  python-fundamentals/lessons/01-variables.json valid against content.schema.json (kind=lesson)
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json valid against content.schema.json (kind=lesson)
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json valid against content.schema.json (kind=lesson)
+RESULT: PASS  python-fundamentals/lessons/04-loops.json valid against content.schema.json (kind=lesson)
+RESULT: PASS  python-fundamentals/lessons/05-lists.json valid against content.schema.json (kind=lesson)
+RESULT: PASS  python-fundamentals/lessons/06-functions.json valid against content.schema.json (kind=lesson)
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json valid against content.schema.json (kind=lesson)
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json valid against content.schema.json (kind=lesson)
+
+##############################################################################
+# 2. CROSS-REFERENCES
+##############################################################################
+RESULT: PASS  python-fundamentals/domain.json prerequisite graph has no cycle (8 concepts)
+RESULT: PASS  python-fundamentals/lessons/01-variables.json matches domain entry python.variables; 7 misconception refs resolve
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json matches domain entry python.types-expressions; 13 misconception refs resolve
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json matches domain entry python.conditionals; 10 misconception refs resolve
+RESULT: PASS  python-fundamentals/lessons/04-loops.json matches domain entry python.loops; 9 misconception refs resolve
+RESULT: PASS  python-fundamentals/lessons/05-lists.json matches domain entry python.lists; 14 misconception refs resolve
+RESULT: PASS  python-fundamentals/lessons/06-functions.json matches domain entry python.functions; 11 misconception refs resolve
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json matches domain entry python.dictionaries; 13 misconception refs resolve
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json matches domain entry python.debugging; 13 misconception refs resolve
+RESULT: PASS  python-fundamentals/assessment/placement.json: 15 items in pool, every concept covered, max 10 asked
+RESULT: PASS  all 10 files are status=draft, approved_by=null (D23: a person approves before learners see it)
+RESULT: PASS  all 8 lessons have an empty video slot (D25: a person attaches videos)
+
+##############################################################################
+# 3. RUN EVERY CODE SAMPLE, TEST CASE AND HINT CHECK
+##############################################################################
+
+==============================================================================
+LESSON python-fundamentals/lessons/01-variables.json  id=lesson.python.variables  concept=python.variables  shape=story-trace
+==============================================================================
+--- python-fundamentals/lessons/01-variables.json program
+$ python -I -X utf8 sample.py
+  | balance = 50
+  | fare = 15
+  | balance = balance - fare
+  | print(balance)
+  | balance = balance + 100
+  | print(balance)
+  | fare = 20
+  | print(balance)
+  stdout: '35\n135\n135\n'
+  exit: 0
+  expected: '35\n135\n135\n' -> match
+RESULT: PASS  python-fundamentals/lessons/01-variables.json program
+
+--- python-fundamentals/lessons/01-variables.json step s2 'Two names, two values' predict python.variables.s2.p
+  question: Line 3 is `balance = balance - fare`. What is that line?
+  answer: 'An instruction: work out the right side, then store it in balance'
+  not run: Conceptual question; step 3 checks the same idea against the real run.
+
+--- python-fundamentals/lessons/01-variables.json step s3 'Pay a fare' predict python.variables.s3.p
+  question: What does line 4 print?
+  answer: '35'
+$ python -I -X utf8 sample.py
+  | balance = 50
+  | fare = 15
+  | balance = balance - fare
+  | print(balance)
+  stdout: '35\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/01-variables.json step s3 'Pay a fare' predict python.variables.s3.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/01-variables.json step s4 'Top up' predict python.variables.s4.p
+  question: What does line 6 print?
+  answer: '135'
+$ python -I -X utf8 sample.py
+  | balance = 50
+  | fare = 15
+  | balance = balance - fare
+  | balance = balance + 100
+  | print(balance)
+  stdout: '135\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/01-variables.json step s4 'Top up' predict python.variables.s4.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/01-variables.json step s5 'The fare goes up' predict python.variables.s5.p
+  question: Line 7 sets fare to 20. What does line 8 print?
+  answer: '135'
+$ python -I -X utf8 sample.py
+  | balance = 50
+  | fare = 15
+  | balance = balance - fare
+  | balance = balance + 100
+  | fare = 20
+  | print(balance)
+  stdout: '135\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/01-variables.json step s5 'The fare goes up' predict python.variables.s5.p (verify output equals the answer)
+RESULT: PASS  python-fundamentals/lessons/01-variables.json step names never show a pending predict answer
+RESULT: PASS  python-fundamentals/lessons/01-variables.json has 4 predict points and 1 case steps (min 3 and 1)
+
+--- python-fundamentals/lessons/01-variables.json item python.variables.apply-1 (fix_bug, apply)
+  >> reference solution (must pass every case)
+  [case 1/1]
+$ python -I -X utf8 sample.py
+  | score = 70
+  | bonus = 10
+  | score = score + bonus
+  | print(score)
+  | print(score * 2)
+  stdout: '80\n160\n'
+  exit: 0
+  expected: '80\n160\n' -> match
+RESULT: PASS  python-fundamentals/lessons/01-variables.json item python.variables.apply-1 (fix_bug, apply) reference passes
+  >> buggy code as given (must fail at least one case)
+  [case 1/1]
+$ python -I -X utf8 sample.py
+  | score = 70
+  | bonus = 10
+  | score + bonus
+  | print(score)
+  | print(score * 2)
+  stdout: '70\n140\n'
+  exit: 0
+  expected: '80\n160\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/01-variables.json item python.variables.apply-1 (fix_bug, apply) rejects buggy code as given
+  >> must_fail #1: fixes what is printed, not the stored value (must fail at least one case)
+  [case 1/1]
+$ python -I -X utf8 sample.py
+  | score = 70
+  | bonus = 10
+  | score + bonus
+  | print(score + bonus)
+  | print(score * 2)
+  stdout: '80\n140\n'
+  exit: 0
+  expected: '80\n160\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/01-variables.json item python.variables.apply-1 (fix_bug, apply) rejects must_fail #1
+RESULT: PASS  python-fundamentals/lessons/01-variables.json item python.variables.apply-1 (fix_bug, apply) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/01-variables.json item python.variables.explain-1 (explain, explain)
+  not run: python-fundamentals/lessons/01-variables.json item python.variables.explain-1 (explain, explain): rubric-graded by an LLM (3 criteria), nothing to run
+RESULT: PASS  python-fundamentals/lessons/01-variables.json item python.variables.explain-1 (explain, explain) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/01-variables.json item python.variables.transfer-1 (predict_output, transfer)
+  [case 1/1]
+$ python -I -X utf8 sample.py
+  | left = "tea"
+  | right = "coffee"
+  | left = right
+  | right = left
+  | print(left)
+  | print(right)
+  stdout: 'coffee\ncoffee\n'
+  exit: 0
+  expected: 'coffee\ncoffee\n' -> match
+RESULT: PASS  python-fundamentals/lessons/01-variables.json item python.variables.transfer-1 (predict_output, transfer)
+RESULT: PASS  python-fundamentals/lessons/01-variables.json item python.variables.transfer-1 (predict_output, transfer) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/01-variables.json item python.variables.probe-1 (predict_output, probe)
+$ python -I -X utf8 sample.py
+  | price = 100
+  | discount = 20
+  | final = price - discount
+  | discount = 50
+  | print(final)
+  stdout: '80\n'
+  exit: 0
+  correct choice A: '80'; actual: '80'
+RESULT: PASS  python-fundamentals/lessons/01-variables.json item python.variables.probe-1 (predict_output, probe)
+RESULT: PASS  python-fundamentals/lessons/01-variables.json item python.variables.probe-1 (predict_output, probe) hints: no answer in levels 1-2, no solution line in any level
+
+==============================================================================
+LESSON python-fundamentals/lessons/02-types-expressions.json  id=lesson.python.types-expressions  concept=python.types-expressions  shape=story-trace
+==============================================================================
+--- python-fundamentals/lessons/02-types-expressions.json program
+$ python -I -X utf8 sample.py
+  | noodles = "45"
+  | drink = "20"
+  | print(noodles + drink)
+  | total = int(noodles) + int(drink)
+  | print(total)
+  | print("Total: " + str(total) + " baht")
+  | print(total / 2)
+  | print(total // 2)
+  stdout: '4520\n65\nTotal: 65 baht\n32.5\n32\n'
+  exit: 0
+  expected: '4520\n65\nTotal: 65 baht\n32.5\n32\n' -> match
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json program
+
+--- python-fundamentals/lessons/02-types-expressions.json step s2 'Prices arrive as text' predict python.types-expressions.s2.p
+  question: What type is noodles? (int = whole number, str = text, float = decimal number)
+  answer: 'str'
+$ python -I -X utf8 sample.py
+  | noodles = "45"
+  | print(type(noodles).__name__)
+  stdout: 'str\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json step s2 'Prices arrive as text' predict python.types-expressions.s2.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/02-types-expressions.json step s3 'Adding two texts' predict python.types-expressions.s3.p
+  question: What does line 3 print?
+  answer: '4520'
+$ python -I -X utf8 sample.py
+  | noodles = "45"
+  | drink = "20"
+  | print(noodles + drink)
+  stdout: '4520\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json step s3 'Adding two texts' predict python.types-expressions.s3.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/02-types-expressions.json step s4 'Turn text into numbers' predict python.types-expressions.s4.p
+  question: What does line 5 print?
+  answer: '65'
+$ python -I -X utf8 sample.py
+  | noodles = "45"
+  | drink = "20"
+  | total = int(noodles) + int(drink)
+  | print(total)
+  stdout: '65\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json step s4 'Turn text into numbers' predict python.types-expressions.s4.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/02-types-expressions.json step s5 'Glue a number into a sentence' predict python.types-expressions.s5.p
+  question: Without str(), what happens when this line runs?
+  answer: 'TypeError'
+$ python -I -X utf8 sample.py
+  | total = 65
+  | try:
+  |     print("Total: " + total + " baht")
+  | except TypeError:
+  |     print("TypeError")
+  stdout: 'TypeError\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json step s5 'Glue a number into a sentence' predict python.types-expressions.s5.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/02-types-expressions.json step s6 'Split the bill' predict python.types-expressions.s6.p
+  question: What does line 7 print?
+  answer: '32.5'
+$ python -I -X utf8 sample.py
+  | total = 65
+  | print(total / 2)
+  stdout: '32.5\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json step s6 'Split the bill' predict python.types-expressions.s6.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/02-types-expressions.json step s7 'Whole baht only' predict python.types-expressions.s7.p
+  question: What does line 8 print?
+  answer: '32'
+$ python -I -X utf8 sample.py
+  | total = 65
+  | print(total // 2)
+  stdout: '32\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json step s7 'Whole baht only' predict python.types-expressions.s7.p (verify output equals the answer)
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json step names never show a pending predict answer
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json has 6 predict points and 2 case steps (min 3 and 1)
+
+--- python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.apply-1 (write_code, apply)
+  >> reference solution (must pass every case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '3\n25\n'
+  | cups = input()
+  | price_each = input()
+  | print(int(cups) * int(price_each))
+  stdout: '75\n'
+  exit: 0
+  expected: '75\n' -> match
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '10\n12\n'
+  | cups = input()
+  | price_each = input()
+  | print(int(cups) * int(price_each))
+  stdout: '120\n'
+  exit: 0
+  expected: '120\n' -> match
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '1\n9\n'
+  | cups = input()
+  | price_each = input()
+  | print(int(cups) * int(price_each))
+  stdout: '9\n'
+  exit: 0
+  expected: '9\n' -> match
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '0\n30\n'
+  | cups = input()
+  | price_each = input()
+  | print(int(cups) * int(price_each))
+  stdout: '0\n'
+  exit: 0
+  expected: '0\n' -> match
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.apply-1 (write_code, apply) reference passes
+  >> starter code untouched (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '3\n25\n'
+  | cups = input()
+  | price_each = input()
+  | # print the total cost as a number
+  stdout: ''
+  exit: 0
+  expected: '75\n' -> NO MATCH
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '10\n12\n'
+  | cups = input()
+  | price_each = input()
+  | # print the total cost as a number
+  stdout: ''
+  exit: 0
+  expected: '120\n' -> NO MATCH
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '1\n9\n'
+  | cups = input()
+  | price_each = input()
+  | # print the total cost as a number
+  stdout: ''
+  exit: 0
+  expected: '9\n' -> NO MATCH
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '0\n30\n'
+  | cups = input()
+  | price_each = input()
+  | # print the total cost as a number
+  stdout: ''
+  exit: 0
+  expected: '0\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.apply-1 (write_code, apply) rejects starter code untouched
+  >> must_fail #1: glues the two texts (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '3\n25\n'
+  | cups = input()
+  | price_each = input()
+  | print(cups + price_each)
+  stdout: '325\n'
+  exit: 0
+  expected: '75\n' -> NO MATCH
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '10\n12\n'
+  | cups = input()
+  | price_each = input()
+  | print(cups + price_each)
+  stdout: '1012\n'
+  exit: 0
+  expected: '120\n' -> NO MATCH
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '1\n9\n'
+  | cups = input()
+  | price_each = input()
+  | print(cups + price_each)
+  stdout: '19\n'
+  exit: 0
+  expected: '9\n' -> NO MATCH
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '0\n30\n'
+  | cups = input()
+  | price_each = input()
+  | print(cups + price_each)
+  stdout: '030\n'
+  exit: 0
+  expected: '0\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.apply-1 (write_code, apply) rejects must_fail #1
+  >> must_fail #2: multiplies text by text: TypeError (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '3\n25\n'
+  | cups = input()
+  | price_each = input()
+  | print(cups * price_each)
+  stdout: ''
+  exit: 1
+  stderr (last line): TypeError: can't multiply sequence by non-int of type 'str'
+  expected: '75\n' -> NO MATCH
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '10\n12\n'
+  | cups = input()
+  | price_each = input()
+  | print(cups * price_each)
+  stdout: ''
+  exit: 1
+  stderr (last line): TypeError: can't multiply sequence by non-int of type 'str'
+  expected: '120\n' -> NO MATCH
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '1\n9\n'
+  | cups = input()
+  | price_each = input()
+  | print(cups * price_each)
+  stdout: ''
+  exit: 1
+  stderr (last line): TypeError: can't multiply sequence by non-int of type 'str'
+  expected: '9\n' -> NO MATCH
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '0\n30\n'
+  | cups = input()
+  | price_each = input()
+  | print(cups * price_each)
+  stdout: ''
+  exit: 1
+  stderr (last line): TypeError: can't multiply sequence by non-int of type 'str'
+  expected: '0\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.apply-1 (write_code, apply) rejects must_fail #2
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.apply-1 (write_code, apply) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.explain-1 (explain, explain)
+  not run: python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.explain-1 (explain, explain): rubric-graded by an LLM (3 criteria), nothing to run
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.explain-1 (explain, explain) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.transfer-1 (fix_bug, transfer)
+  >> reference solution (must pass every case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '30\n'
+  | celsius = int(input())
+  | fahrenheit = celsius * 9 / 5 + 32
+  | print(fahrenheit)
+  stdout: '86.0\n'
+  exit: 0
+  expected: '86.0\n' -> match
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '100\n'
+  | celsius = int(input())
+  | fahrenheit = celsius * 9 / 5 + 32
+  | print(fahrenheit)
+  stdout: '212.0\n'
+  exit: 0
+  expected: '212.0\n' -> match
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '0\n'
+  | celsius = int(input())
+  | fahrenheit = celsius * 9 / 5 + 32
+  | print(fahrenheit)
+  stdout: '32.0\n'
+  exit: 0
+  expected: '32.0\n' -> match
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '-40\n'
+  | celsius = int(input())
+  | fahrenheit = celsius * 9 / 5 + 32
+  | print(fahrenheit)
+  stdout: '-40.0\n'
+  exit: 0
+  expected: '-40.0\n' -> match
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.transfer-1 (fix_bug, transfer) reference passes
+  >> buggy code as given (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '30\n'
+  | celsius = input()
+  | fahrenheit = celsius * 9 / 5 + 32
+  | print(fahrenheit)
+  stdout: ''
+  exit: 1
+  stderr (last line): TypeError: unsupported operand type(s) for /: 'str' and 'int'
+  expected: '86.0\n' -> NO MATCH
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '100\n'
+  | celsius = input()
+  | fahrenheit = celsius * 9 / 5 + 32
+  | print(fahrenheit)
+  stdout: ''
+  exit: 1
+  stderr (last line): TypeError: unsupported operand type(s) for /: 'str' and 'int'
+  expected: '212.0\n' -> NO MATCH
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '0\n'
+  | celsius = input()
+  | fahrenheit = celsius * 9 / 5 + 32
+  | print(fahrenheit)
+  stdout: ''
+  exit: 1
+  stderr (last line): TypeError: unsupported operand type(s) for /: 'str' and 'int'
+  expected: '32.0\n' -> NO MATCH
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '-40\n'
+  | celsius = input()
+  | fahrenheit = celsius * 9 / 5 + 32
+  | print(fahrenheit)
+  stdout: ''
+  exit: 1
+  stderr (last line): TypeError: unsupported operand type(s) for /: 'str' and 'int'
+  expected: '-40.0\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.transfer-1 (fix_bug, transfer) rejects buggy code as given
+  >> must_fail #1: converts the result instead of the input (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '30\n'
+  | celsius = input()
+  | fahrenheit = int(celsius * 9 / 5 + 32)
+  | print(fahrenheit)
+  stdout: ''
+  exit: 1
+  stderr (last line): TypeError: unsupported operand type(s) for /: 'str' and 'int'
+  expected: '86.0\n' -> NO MATCH
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '100\n'
+  | celsius = input()
+  | fahrenheit = int(celsius * 9 / 5 + 32)
+  | print(fahrenheit)
+  stdout: ''
+  exit: 1
+  stderr (last line): TypeError: unsupported operand type(s) for /: 'str' and 'int'
+  expected: '212.0\n' -> NO MATCH
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '0\n'
+  | celsius = input()
+  | fahrenheit = int(celsius * 9 / 5 + 32)
+  | print(fahrenheit)
+  stdout: ''
+  exit: 1
+  stderr (last line): TypeError: unsupported operand type(s) for /: 'str' and 'int'
+  expected: '32.0\n' -> NO MATCH
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '-40\n'
+  | celsius = input()
+  | fahrenheit = int(celsius * 9 / 5 + 32)
+  | print(fahrenheit)
+  stdout: ''
+  exit: 1
+  stderr (last line): TypeError: unsupported operand type(s) for /: 'str' and 'int'
+  expected: '-40.0\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.transfer-1 (fix_bug, transfer) rejects must_fail #1
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.transfer-1 (fix_bug, transfer) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.probe-1 (predict_output, probe)
+$ python -I -X utf8 sample.py
+  | a = "7"
+  | b = "3"
+  | print(a + b)
+  stdout: '73\n'
+  exit: 0
+  correct choice B: '73'; actual: '73'
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.probe-1 (predict_output, probe)
+RESULT: PASS  python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.probe-1 (predict_output, probe) hints: no answer in levels 1-2, no solution line in any level
+
+==============================================================================
+LESSON python-fundamentals/lessons/03-conditionals.json  id=lesson.python.conditionals  concept=python.conditionals  shape=story-trace
+==============================================================================
+--- python-fundamentals/lessons/03-conditionals.json program
+$ python -I -X utf8 sample.py
+  | age = 15
+  | is_student = True
+  | if age < 12:
+  |     price = 80
+  | elif is_student:
+  |     price = 120
+  | else:
+  |     price = 180
+  | print(price)
+  stdout: '120\n'
+  exit: 0
+  expected: '120\n' -> match
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json program
+
+--- python-fundamentals/lessons/03-conditionals.json step s2 'The first question' predict python.conditionals.s2.p
+  question: With age 15, is `age < 12` True or False?
+  answer: 'False'
+$ python -I -X utf8 sample.py
+  | age = 15
+  | print(age < 12)
+  stdout: 'False\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json step s2 'The first question' predict python.conditionals.s2.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/03-conditionals.json step s3 'The second question' predict python.conditionals.s3.p
+  question: Which price is printed for this customer?
+  answer: '120'
+$ python -I -X utf8 sample.py
+  | age = 15
+  | is_student = True
+  | if age < 12:
+  |     price = 80
+  | elif is_student:
+  |     price = 120
+  | else:
+  |     price = 180
+  | print(price)
+  stdout: '120\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json step s3 'The second question' predict python.conditionals.s3.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/03-conditionals.json step s4 'Does else still run?' predict python.conditionals.s4.p
+  question: Does the line `price = 180` run for this customer?
+  answer: 'No'
+$ python -I -X utf8 sample.py
+  | age = 15
+  | is_student = True
+  | ran = "No"
+  | if age < 12:
+  |     price = 80
+  | elif is_student:
+  |     price = 120
+  | else:
+  |     price = 180
+  |     ran = "Yes"
+  | print(ran)
+  stdout: 'No\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json step s4 'Does else still run?' predict python.conditionals.s4.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/03-conditionals.json step s5 'A 9-year-old student' predict python.conditionals.s5.p
+  question: What price is printed now?
+  answer: '80'
+$ python -I -X utf8 sample.py
+  | age = 9
+  | is_student = True
+  | if age < 12:
+  |     price = 80
+  | elif is_student:
+  |     price = 120
+  | else:
+  |     price = 180
+  | print(price)
+  stdout: '80\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json step s5 'A 9-year-old student' predict python.conditionals.s5.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/03-conditionals.json step s6 'Swap the two checks' predict python.conditionals.s6.p
+  question: What price is printed with the checks swapped?
+  answer: '120'
+$ python -I -X utf8 sample.py
+  | age = 9
+  | is_student = True
+  | if is_student:
+  |     price = 120
+  | elif age < 12:
+  |     price = 80
+  | else:
+  |     price = 180
+  | print(price)
+  stdout: '120\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json step s6 'Swap the two checks' predict python.conditionals.s6.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/03-conditionals.json step s7 'An adult without a card' predict python.conditionals.s7.p
+  question: What price is printed?
+  answer: '180'
+$ python -I -X utf8 sample.py
+  | age = 30
+  | is_student = False
+  | if age < 12:
+  |     price = 80
+  | elif is_student:
+  |     price = 120
+  | else:
+  |     price = 180
+  | print(price)
+  stdout: '180\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json step s7 'An adult without a card' predict python.conditionals.s7.p (verify output equals the answer)
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json step names never show a pending predict answer
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json has 6 predict points and 2 case steps (min 3 and 1)
+
+--- python-fundamentals/lessons/03-conditionals.json item python.conditionals.apply-1 (write_code, apply)
+  >> reference solution (must pass every case)
+  [case 1/5]
+$ python -I -X utf8 sample.py  <<< '10\n'
+  | temperature = int(input())
+  | if temperature < 15:
+  |     print("cold")
+  | elif temperature <= 28:
+  |     print("nice")
+  | else:
+  |     print("hot")
+  stdout: 'cold\n'
+  exit: 0
+  expected: 'cold\n' -> match
+  [case 2/5]
+$ python -I -X utf8 sample.py  <<< '15\n'
+  | temperature = int(input())
+  | if temperature < 15:
+  |     print("cold")
+  | elif temperature <= 28:
+  |     print("nice")
+  | else:
+  |     print("hot")
+  stdout: 'nice\n'
+  exit: 0
+  expected: 'nice\n' -> match
+  [case 3/5]
+$ python -I -X utf8 sample.py  <<< '28\n'
+  | temperature = int(input())
+  | if temperature < 15:
+  |     print("cold")
+  | elif temperature <= 28:
+  |     print("nice")
+  | else:
+  |     print("hot")
+  stdout: 'nice\n'
+  exit: 0
+  expected: 'nice\n' -> match
+  [case 4/5]
+$ python -I -X utf8 sample.py  <<< '29\n'
+  | temperature = int(input())
+  | if temperature < 15:
+  |     print("cold")
+  | elif temperature <= 28:
+  |     print("nice")
+  | else:
+  |     print("hot")
+  stdout: 'hot\n'
+  exit: 0
+  expected: 'hot\n' -> match
+  [case 5/5]
+$ python -I -X utf8 sample.py  <<< '-3\n'
+  | temperature = int(input())
+  | if temperature < 15:
+  |     print("cold")
+  | elif temperature <= 28:
+  |     print("nice")
+  | else:
+  |     print("hot")
+  stdout: 'cold\n'
+  exit: 0
+  expected: 'cold\n' -> match
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json item python.conditionals.apply-1 (write_code, apply) reference passes
+  >> starter code untouched (must fail at least one case)
+  [case 1/5]
+$ python -I -X utf8 sample.py  <<< '10\n'
+  | temperature = int(input())
+  | # print cold, nice or hot
+  stdout: ''
+  exit: 0
+  expected: 'cold\n' -> NO MATCH
+  [case 2/5]
+$ python -I -X utf8 sample.py  <<< '15\n'
+  | temperature = int(input())
+  | # print cold, nice or hot
+  stdout: ''
+  exit: 0
+  expected: 'nice\n' -> NO MATCH
+  [case 3/5]
+$ python -I -X utf8 sample.py  <<< '28\n'
+  | temperature = int(input())
+  | # print cold, nice or hot
+  stdout: ''
+  exit: 0
+  expected: 'nice\n' -> NO MATCH
+  [case 4/5]
+$ python -I -X utf8 sample.py  <<< '29\n'
+  | temperature = int(input())
+  | # print cold, nice or hot
+  stdout: ''
+  exit: 0
+  expected: 'hot\n' -> NO MATCH
+  [case 5/5]
+$ python -I -X utf8 sample.py  <<< '-3\n'
+  | temperature = int(input())
+  | # print cold, nice or hot
+  stdout: ''
+  exit: 0
+  expected: 'cold\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json item python.conditionals.apply-1 (write_code, apply) rejects starter code untouched
+  >> must_fail #1: two separate ifs: 10 prints cold and nice (must fail at least one case)
+  [case 1/5]
+$ python -I -X utf8 sample.py  <<< '10\n'
+  | temperature = int(input())
+  | if temperature < 15:
+  |     print("cold")
+  | if temperature <= 28:
+  |     print("nice")
+  | else:
+  |     print("hot")
+  stdout: 'cold\nnice\n'
+  exit: 0
+  expected: 'cold\n' -> NO MATCH
+  [case 2/5]
+$ python -I -X utf8 sample.py  <<< '15\n'
+  | temperature = int(input())
+  | if temperature < 15:
+  |     print("cold")
+  | if temperature <= 28:
+  |     print("nice")
+  | else:
+  |     print("hot")
+  stdout: 'nice\n'
+  exit: 0
+  expected: 'nice\n' -> match
+  [case 3/5]
+$ python -I -X utf8 sample.py  <<< '28\n'
+  | temperature = int(input())
+  | if temperature < 15:
+  |     print("cold")
+  | if temperature <= 28:
+  |     print("nice")
+  | else:
+  |     print("hot")
+  stdout: 'nice\n'
+  exit: 0
+  expected: 'nice\n' -> match
+  [case 4/5]
+$ python -I -X utf8 sample.py  <<< '29\n'
+  | temperature = int(input())
+  | if temperature < 15:
+  |     print("cold")
+  | if temperature <= 28:
+  |     print("nice")
+  | else:
+  |     print("hot")
+  stdout: 'hot\n'
+  exit: 0
+  expected: 'hot\n' -> match
+  [case 5/5]
+$ python -I -X utf8 sample.py  <<< '-3\n'
+  | temperature = int(input())
+  | if temperature < 15:
+  |     print("cold")
+  | if temperature <= 28:
+  |     print("nice")
+  | else:
+  |     print("hot")
+  stdout: 'cold\nnice\n'
+  exit: 0
+  expected: 'cold\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json item python.conditionals.apply-1 (write_code, apply) rejects must_fail #1
+  >> must_fail #2: wrong edge: 28 prints hot (must fail at least one case)
+  [case 1/5]
+$ python -I -X utf8 sample.py  <<< '10\n'
+  | temperature = int(input())
+  | if temperature < 15:
+  |     print("cold")
+  | elif temperature < 28:
+  |     print("nice")
+  | else:
+  |     print("hot")
+  stdout: 'cold\n'
+  exit: 0
+  expected: 'cold\n' -> match
+  [case 2/5]
+$ python -I -X utf8 sample.py  <<< '15\n'
+  | temperature = int(input())
+  | if temperature < 15:
+  |     print("cold")
+  | elif temperature < 28:
+  |     print("nice")
+  | else:
+  |     print("hot")
+  stdout: 'nice\n'
+  exit: 0
+  expected: 'nice\n' -> match
+  [case 3/5]
+$ python -I -X utf8 sample.py  <<< '28\n'
+  | temperature = int(input())
+  | if temperature < 15:
+  |     print("cold")
+  | elif temperature < 28:
+  |     print("nice")
+  | else:
+  |     print("hot")
+  stdout: 'hot\n'
+  exit: 0
+  expected: 'nice\n' -> NO MATCH
+  [case 4/5]
+$ python -I -X utf8 sample.py  <<< '29\n'
+  | temperature = int(input())
+  | if temperature < 15:
+  |     print("cold")
+  | elif temperature < 28:
+  |     print("nice")
+  | else:
+  |     print("hot")
+  stdout: 'hot\n'
+  exit: 0
+  expected: 'hot\n' -> match
+  [case 5/5]
+$ python -I -X utf8 sample.py  <<< '-3\n'
+  | temperature = int(input())
+  | if temperature < 15:
+  |     print("cold")
+  | elif temperature < 28:
+  |     print("nice")
+  | else:
+  |     print("hot")
+  stdout: 'cold\n'
+  exit: 0
+  expected: 'cold\n' -> match
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json item python.conditionals.apply-1 (write_code, apply) rejects must_fail #2
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json item python.conditionals.apply-1 (write_code, apply) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/03-conditionals.json item python.conditionals.explain-1 (explain, explain)
+  not run: python-fundamentals/lessons/03-conditionals.json item python.conditionals.explain-1 (explain, explain): rubric-graded by an LLM (3 criteria), nothing to run
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json item python.conditionals.explain-1 (explain, explain) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/03-conditionals.json item python.conditionals.transfer-1 (fix_bug, transfer)
+  >> reference solution (must pass every case)
+  [case 1/6]
+$ python -I -X utf8 sample.py  <<< '1200\n'
+  | total = int(input())
+  | if total >= 1000:
+  |     fee = 0
+  | elif total >= 500:
+  |     fee = 30
+  | else:
+  |     fee = 60
+  | print(fee)
+  stdout: '0\n'
+  exit: 0
+  expected: '0\n' -> match
+  [case 2/6]
+$ python -I -X utf8 sample.py  <<< '1000\n'
+  | total = int(input())
+  | if total >= 1000:
+  |     fee = 0
+  | elif total >= 500:
+  |     fee = 30
+  | else:
+  |     fee = 60
+  | print(fee)
+  stdout: '0\n'
+  exit: 0
+  expected: '0\n' -> match
+  [case 3/6]
+$ python -I -X utf8 sample.py  <<< '999\n'
+  | total = int(input())
+  | if total >= 1000:
+  |     fee = 0
+  | elif total >= 500:
+  |     fee = 30
+  | else:
+  |     fee = 60
+  | print(fee)
+  stdout: '30\n'
+  exit: 0
+  expected: '30\n' -> match
+  [case 4/6]
+$ python -I -X utf8 sample.py  <<< '500\n'
+  | total = int(input())
+  | if total >= 1000:
+  |     fee = 0
+  | elif total >= 500:
+  |     fee = 30
+  | else:
+  |     fee = 60
+  | print(fee)
+  stdout: '30\n'
+  exit: 0
+  expected: '30\n' -> match
+  [case 5/6]
+$ python -I -X utf8 sample.py  <<< '499\n'
+  | total = int(input())
+  | if total >= 1000:
+  |     fee = 0
+  | elif total >= 500:
+  |     fee = 30
+  | else:
+  |     fee = 60
+  | print(fee)
+  stdout: '60\n'
+  exit: 0
+  expected: '60\n' -> match
+  [case 6/6]
+$ python -I -X utf8 sample.py  <<< '0\n'
+  | total = int(input())
+  | if total >= 1000:
+  |     fee = 0
+  | elif total >= 500:
+  |     fee = 30
+  | else:
+  |     fee = 60
+  | print(fee)
+  stdout: '60\n'
+  exit: 0
+  expected: '60\n' -> match
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json item python.conditionals.transfer-1 (fix_bug, transfer) reference passes
+  >> buggy code as given (must fail at least one case)
+  [case 1/6]
+$ python -I -X utf8 sample.py  <<< '1200\n'
+  | total = int(input())
+  | if total >= 500:
+  |     fee = 30
+  | elif total >= 1000:
+  |     fee = 0
+  | else:
+  |     fee = 60
+  | print(fee)
+  stdout: '30\n'
+  exit: 0
+  expected: '0\n' -> NO MATCH
+  [case 2/6]
+$ python -I -X utf8 sample.py  <<< '1000\n'
+  | total = int(input())
+  | if total >= 500:
+  |     fee = 30
+  | elif total >= 1000:
+  |     fee = 0
+  | else:
+  |     fee = 60
+  | print(fee)
+  stdout: '30\n'
+  exit: 0
+  expected: '0\n' -> NO MATCH
+  [case 3/6]
+$ python -I -X utf8 sample.py  <<< '999\n'
+  | total = int(input())
+  | if total >= 500:
+  |     fee = 30
+  | elif total >= 1000:
+  |     fee = 0
+  | else:
+  |     fee = 60
+  | print(fee)
+  stdout: '30\n'
+  exit: 0
+  expected: '30\n' -> match
+  [case 4/6]
+$ python -I -X utf8 sample.py  <<< '500\n'
+  | total = int(input())
+  | if total >= 500:
+  |     fee = 30
+  | elif total >= 1000:
+  |     fee = 0
+  | else:
+  |     fee = 60
+  | print(fee)
+  stdout: '30\n'
+  exit: 0
+  expected: '30\n' -> match
+  [case 5/6]
+$ python -I -X utf8 sample.py  <<< '499\n'
+  | total = int(input())
+  | if total >= 500:
+  |     fee = 30
+  | elif total >= 1000:
+  |     fee = 0
+  | else:
+  |     fee = 60
+  | print(fee)
+  stdout: '60\n'
+  exit: 0
+  expected: '60\n' -> match
+  [case 6/6]
+$ python -I -X utf8 sample.py  <<< '0\n'
+  | total = int(input())
+  | if total >= 500:
+  |     fee = 30
+  | elif total >= 1000:
+  |     fee = 0
+  | else:
+  |     fee = 60
+  | print(fee)
+  stdout: '60\n'
+  exit: 0
+  expected: '60\n' -> match
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json item python.conditionals.transfer-1 (fix_bug, transfer) rejects buggy code as given
+  >> must_fail #1: separate ifs: the second one overwrites free delivery (must fail at least one case)
+  [case 1/6]
+$ python -I -X utf8 sample.py  <<< '1200\n'
+  | total = int(input())
+  | fee = 60
+  | if total >= 1000:
+  |     fee = 0
+  | if total >= 500:
+  |     fee = 30
+  | print(fee)
+  stdout: '30\n'
+  exit: 0
+  expected: '0\n' -> NO MATCH
+  [case 2/6]
+$ python -I -X utf8 sample.py  <<< '1000\n'
+  | total = int(input())
+  | fee = 60
+  | if total >= 1000:
+  |     fee = 0
+  | if total >= 500:
+  |     fee = 30
+  | print(fee)
+  stdout: '30\n'
+  exit: 0
+  expected: '0\n' -> NO MATCH
+  [case 3/6]
+$ python -I -X utf8 sample.py  <<< '999\n'
+  | total = int(input())
+  | fee = 60
+  | if total >= 1000:
+  |     fee = 0
+  | if total >= 500:
+  |     fee = 30
+  | print(fee)
+  stdout: '30\n'
+  exit: 0
+  expected: '30\n' -> match
+  [case 4/6]
+$ python -I -X utf8 sample.py  <<< '500\n'
+  | total = int(input())
+  | fee = 60
+  | if total >= 1000:
+  |     fee = 0
+  | if total >= 500:
+  |     fee = 30
+  | print(fee)
+  stdout: '30\n'
+  exit: 0
+  expected: '30\n' -> match
+  [case 5/6]
+$ python -I -X utf8 sample.py  <<< '499\n'
+  | total = int(input())
+  | fee = 60
+  | if total >= 1000:
+  |     fee = 0
+  | if total >= 500:
+  |     fee = 30
+  | print(fee)
+  stdout: '60\n'
+  exit: 0
+  expected: '60\n' -> match
+  [case 6/6]
+$ python -I -X utf8 sample.py  <<< '0\n'
+  | total = int(input())
+  | fee = 60
+  | if total >= 1000:
+  |     fee = 0
+  | if total >= 500:
+  |     fee = 30
+  | print(fee)
+  stdout: '60\n'
+  exit: 0
+  expected: '60\n' -> match
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json item python.conditionals.transfer-1 (fix_bug, transfer) rejects must_fail #1
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json item python.conditionals.transfer-1 (fix_bug, transfer) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/03-conditionals.json item python.conditionals.probe-1 (predict_output, probe)
+$ python -I -X utf8 sample.py
+  | x = 7
+  | if x > 5:
+  |     print("big")
+  | elif x > 3:
+  |     print("medium")
+  | else:
+  |     print("small")
+  | print("done")
+  stdout: 'big\ndone\n'
+  exit: 0
+  correct choice A: 'big\ndone'; actual: 'big\ndone'
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json item python.conditionals.probe-1 (predict_output, probe)
+RESULT: PASS  python-fundamentals/lessons/03-conditionals.json item python.conditionals.probe-1 (predict_output, probe) hints: no answer in levels 1-2, no solution line in any level
+
+==============================================================================
+LESSON python-fundamentals/lessons/04-loops.json  id=lesson.python.loops  concept=python.loops  shape=story-trace
+==============================================================================
+--- python-fundamentals/lessons/04-loops.json program
+$ python -I -X utf8 sample.py
+  | rsvp = ["Ann", "Bo", "Chai"]
+  | tickets = ["Bo", "Dee", "Ann"]
+  | checks = 0
+  | matched = 0
+  | for guest in rsvp:
+  |     for holder in tickets:
+  |         checks = checks + 1
+  |         if guest == holder:
+  |             matched = matched + 1
+  | print(checks)
+  | print(matched)
+  stdout: '9\n2\n'
+  exit: 0
+  expected: '9\n2\n' -> match
+RESULT: PASS  python-fundamentals/lessons/04-loops.json program
+
+--- python-fundamentals/lessons/04-loops.json step s2 'The outer loop' predict python.loops.s2.p
+  question: How many times does the outer loop start its body?
+  answer: '3'
+$ python -I -X utf8 sample.py
+  | rsvp = ["Ann", "Bo", "Chai"]
+  | rounds = 0
+  | for guest in rsvp:
+  |     rounds = rounds + 1
+  | print(rounds)
+  stdout: '3\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/04-loops.json step s2 'The outer loop' predict python.loops.s2.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/04-loops.json step s3 'First guest' predict python.loops.s3.p
+  question: When the inner loop has finished for Ann, what is checks?
+  answer: '3'
+$ python -I -X utf8 sample.py
+  | rsvp = ["Ann", "Bo", "Chai"]
+  | tickets = ["Bo", "Dee", "Ann"]
+  | checks = 0
+  | for guest in rsvp:
+  |     for holder in tickets:
+  |         checks = checks + 1
+  |     break
+  | print(checks)
+  stdout: '3\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/04-loops.json step s3 'First guest' predict python.loops.s3.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/04-loops.json step s4 'The whole run' predict python.loops.s4.p
+  question: When both loops finish, what does `print(checks)` show?
+  answer: '9'
+$ python -I -X utf8 sample.py
+  | rsvp = ["Ann", "Bo", "Chai"]
+  | tickets = ["Bo", "Dee", "Ann"]
+  | checks = 0
+  | for guest in rsvp:
+  |     for holder in tickets:
+  |         checks = checks + 1
+  | print(checks)
+  stdout: '9\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/04-loops.json step s4 'The whole run' predict python.loops.s4.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/04-loops.json step s5 'More guests' predict python.loops.s5.p
+  question: With 6 guests and 3 tickets, how many checks?
+  answer: '18'
+$ python -I -X utf8 sample.py
+  | rsvp = ["Ann", "Bo", "Chai", "Dao", "Ek", "Fah"]
+  | tickets = ["Bo", "Dee", "Ann"]
+  | checks = 0
+  | for guest in rsvp:
+  |     for holder in tickets:
+  |         checks = checks + 1
+  | print(checks)
+  stdout: '18\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/04-loops.json step s5 'More guests' predict python.loops.s5.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/04-loops.json step s6 'Both lists longer' predict python.loops.s6.p
+  question: With 6 guests and 6 tickets, how many checks?
+  answer: '36'
+$ python -I -X utf8 sample.py
+  | rsvp = ["Ann", "Bo", "Chai", "Dao", "Ek", "Fah"]
+  | tickets = ["Bo", "Dee", "Ann", "Gun", "Fah", "Hong"]
+  | checks = 0
+  | for guest in rsvp:
+  |     for holder in tickets:
+  |         checks = checks + 1
+  | print(checks)
+  stdout: '36\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/04-loops.json step s6 'Both lists longer' predict python.loops.s6.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/04-loops.json step s7 'Stop at the first match' predict python.loops.s7.p
+  question: With break, how many checks now?
+  answer: '7'
+$ python -I -X utf8 sample.py
+  | rsvp = ["Ann", "Bo", "Chai"]
+  | tickets = ["Bo", "Dee", "Ann"]
+  | checks = 0
+  | for guest in rsvp:
+  |     for holder in tickets:
+  |         checks = checks + 1
+  |         if guest == holder:
+  |             break
+  | print(checks)
+  stdout: '7\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/04-loops.json step s7 'Stop at the first match' predict python.loops.s7.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/04-loops.json step s8 'A countdown with while' predict python.loops.s8.p
+  question: How many times is "Sending invite" printed?
+  answer: '3'
+$ python -I -X utf8 sample.py
+  | invites_left = 3
+  | sent = 0
+  | while invites_left > 0:
+  |     sent = sent + 1
+  |     invites_left = invites_left - 1
+  | print(sent)
+  stdout: '3\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/04-loops.json step s8 'A countdown with while' predict python.loops.s8.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/04-loops.json step s9 'Forget to count down' predict python.loops.s9.p
+  question: Without line 4, what happens?
+  answer: 'It never stops'
+$ python -I -X utf8 sample.py
+  | invites_left = 3
+  | rounds = 0
+  | while invites_left > 0:
+  |     rounds = rounds + 1
+  |     if rounds > 10000:
+  |         break
+  | if rounds > 10000:
+  |     print("It never stops")
+  | else:
+  |     print(rounds, "times")
+  stdout: 'It never stops\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/04-loops.json step s9 'Forget to count down' predict python.loops.s9.p (verify output equals the answer)
+RESULT: PASS  python-fundamentals/lessons/04-loops.json step names never show a pending predict answer
+RESULT: PASS  python-fundamentals/lessons/04-loops.json has 8 predict points and 4 case steps (min 3 and 1)
+
+--- python-fundamentals/lessons/04-loops.json item python.loops.apply-1 (write_code, apply)
+  >> reference solution (must pass every case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '1\n'
+  | n = int(input())
+  | total = 0
+  | for k in range(1, n + 1):
+  |     total = total + k
+  | print(total)
+  stdout: '1\n'
+  exit: 0
+  expected: '1\n' -> match
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '4\n'
+  | n = int(input())
+  | total = 0
+  | for k in range(1, n + 1):
+  |     total = total + k
+  | print(total)
+  stdout: '10\n'
+  exit: 0
+  expected: '10\n' -> match
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '10\n'
+  | n = int(input())
+  | total = 0
+  | for k in range(1, n + 1):
+  |     total = total + k
+  | print(total)
+  stdout: '55\n'
+  exit: 0
+  expected: '55\n' -> match
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '0\n'
+  | n = int(input())
+  | total = 0
+  | for k in range(1, n + 1):
+  |     total = total + k
+  | print(total)
+  stdout: '0\n'
+  exit: 0
+  expected: '0\n' -> match
+RESULT: PASS  python-fundamentals/lessons/04-loops.json item python.loops.apply-1 (write_code, apply) reference passes
+  >> starter code untouched (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '1\n'
+  | n = int(input())
+  | # add up 1 to n and print the total
+  stdout: ''
+  exit: 0
+  expected: '1\n' -> NO MATCH
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '4\n'
+  | n = int(input())
+  | # add up 1 to n and print the total
+  stdout: ''
+  exit: 0
+  expected: '10\n' -> NO MATCH
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '10\n'
+  | n = int(input())
+  | # add up 1 to n and print the total
+  stdout: ''
+  exit: 0
+  expected: '55\n' -> NO MATCH
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '0\n'
+  | n = int(input())
+  | # add up 1 to n and print the total
+  stdout: ''
+  exit: 0
+  expected: '0\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/04-loops.json item python.loops.apply-1 (write_code, apply) rejects starter code untouched
+  >> must_fail #1: range(1, n) stops before n (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '1\n'
+  | n = int(input())
+  | total = 0
+  | for k in range(1, n):
+  |     total = total + k
+  | print(total)
+  stdout: '0\n'
+  exit: 0
+  expected: '1\n' -> NO MATCH
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '4\n'
+  | n = int(input())
+  | total = 0
+  | for k in range(1, n):
+  |     total = total + k
+  | print(total)
+  stdout: '6\n'
+  exit: 0
+  expected: '10\n' -> NO MATCH
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '10\n'
+  | n = int(input())
+  | total = 0
+  | for k in range(1, n):
+  |     total = total + k
+  | print(total)
+  stdout: '45\n'
+  exit: 0
+  expected: '55\n' -> NO MATCH
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '0\n'
+  | n = int(input())
+  | total = 0
+  | for k in range(1, n):
+  |     total = total + k
+  | print(total)
+  stdout: '0\n'
+  exit: 0
+  expected: '0\n' -> match
+RESULT: PASS  python-fundamentals/lessons/04-loops.json item python.loops.apply-1 (write_code, apply) rejects must_fail #1
+  >> must_fail #2: range(n) is 0 to n-1 (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '1\n'
+  | n = int(input())
+  | total = 0
+  | for k in range(n):
+  |     total = total + k
+  | print(total)
+  stdout: '0\n'
+  exit: 0
+  expected: '1\n' -> NO MATCH
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '4\n'
+  | n = int(input())
+  | total = 0
+  | for k in range(n):
+  |     total = total + k
+  | print(total)
+  stdout: '6\n'
+  exit: 0
+  expected: '10\n' -> NO MATCH
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '10\n'
+  | n = int(input())
+  | total = 0
+  | for k in range(n):
+  |     total = total + k
+  | print(total)
+  stdout: '45\n'
+  exit: 0
+  expected: '55\n' -> NO MATCH
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '0\n'
+  | n = int(input())
+  | total = 0
+  | for k in range(n):
+  |     total = total + k
+  | print(total)
+  stdout: '0\n'
+  exit: 0
+  expected: '0\n' -> match
+RESULT: PASS  python-fundamentals/lessons/04-loops.json item python.loops.apply-1 (write_code, apply) rejects must_fail #2
+RESULT: PASS  python-fundamentals/lessons/04-loops.json item python.loops.apply-1 (write_code, apply) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/04-loops.json item python.loops.explain-1 (explain, explain)
+  not run: python-fundamentals/lessons/04-loops.json item python.loops.explain-1 (explain, explain): rubric-graded by an LLM (3 criteria), nothing to run
+RESULT: PASS  python-fundamentals/lessons/04-loops.json item python.loops.explain-1 (explain, explain) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/04-loops.json item python.loops.transfer-1 (fix_bug, transfer)
+  >> reference solution (must pass every case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '1000\n'
+  | goal = int(input())
+  | saved = 0
+  | weeks = 0
+  | while saved < goal:
+  |     weeks = weeks + 1
+  |     saved = saved + 200
+  | print(weeks)
+  stdout: '5\n'
+  exit: 0
+  expected: '5\n' -> match
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '1100\n'
+  | goal = int(input())
+  | saved = 0
+  | weeks = 0
+  | while saved < goal:
+  |     weeks = weeks + 1
+  |     saved = saved + 200
+  | print(weeks)
+  stdout: '6\n'
+  exit: 0
+  expected: '6\n' -> match
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '200\n'
+  | goal = int(input())
+  | saved = 0
+  | weeks = 0
+  | while saved < goal:
+  |     weeks = weeks + 1
+  |     saved = saved + 200
+  | print(weeks)
+  stdout: '1\n'
+  exit: 0
+  expected: '1\n' -> match
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '0\n'
+  | goal = int(input())
+  | saved = 0
+  | weeks = 0
+  | while saved < goal:
+  |     weeks = weeks + 1
+  |     saved = saved + 200
+  | print(weeks)
+  stdout: '0\n'
+  exit: 0
+  expected: '0\n' -> match
+RESULT: PASS  python-fundamentals/lessons/04-loops.json item python.loops.transfer-1 (fix_bug, transfer) reference passes
+  >> buggy code as given (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '1000\n'
+  | goal = int(input())
+  | saved = 0
+  | weeks = 0
+  | while saved < goal:
+  |     weeks = weeks + 1
+  | print(weeks)
+  stdout: ''
+  exit: TIMEOUT after 5s (killed)
+  expected: '5\n' -> NO MATCH
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '1100\n'
+  | goal = int(input())
+  | saved = 0
+  | weeks = 0
+  | while saved < goal:
+  |     weeks = weeks + 1
+  | print(weeks)
+  stdout: ''
+  exit: TIMEOUT after 5s (killed)
+  expected: '6\n' -> NO MATCH
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '200\n'
+  | goal = int(input())
+  | saved = 0
+  | weeks = 0
+  | while saved < goal:
+  |     weeks = weeks + 1
+  | print(weeks)
+  stdout: ''
+  exit: TIMEOUT after 5s (killed)
+  expected: '1\n' -> NO MATCH
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '0\n'
+  | goal = int(input())
+  | saved = 0
+  | weeks = 0
+  | while saved < goal:
+  |     weeks = weeks + 1
+  | print(weeks)
+  stdout: '0\n'
+  exit: 0
+  expected: '0\n' -> match
+RESULT: PASS  python-fundamentals/lessons/04-loops.json item python.loops.transfer-1 (fix_bug, transfer) rejects buggy code as given
+  >> must_fail #1: <= counts one week too many (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '1000\n'
+  | goal = int(input())
+  | saved = 0
+  | weeks = 0
+  | while saved <= goal:
+  |     weeks = weeks + 1
+  |     saved = saved + 200
+  | print(weeks)
+  stdout: '6\n'
+  exit: 0
+  expected: '5\n' -> NO MATCH
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '1100\n'
+  | goal = int(input())
+  | saved = 0
+  | weeks = 0
+  | while saved <= goal:
+  |     weeks = weeks + 1
+  |     saved = saved + 200
+  | print(weeks)
+  stdout: '6\n'
+  exit: 0
+  expected: '6\n' -> match
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '200\n'
+  | goal = int(input())
+  | saved = 0
+  | weeks = 0
+  | while saved <= goal:
+  |     weeks = weeks + 1
+  |     saved = saved + 200
+  | print(weeks)
+  stdout: '2\n'
+  exit: 0
+  expected: '1\n' -> NO MATCH
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '0\n'
+  | goal = int(input())
+  | saved = 0
+  | weeks = 0
+  | while saved <= goal:
+  |     weeks = weeks + 1
+  |     saved = saved + 200
+  | print(weeks)
+  stdout: '1\n'
+  exit: 0
+  expected: '0\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/04-loops.json item python.loops.transfer-1 (fix_bug, transfer) rejects must_fail #1
+RESULT: PASS  python-fundamentals/lessons/04-loops.json item python.loops.transfer-1 (fix_bug, transfer) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/04-loops.json item python.loops.probe-1 (predict_output, probe)
+$ python -I -X utf8 sample.py
+  | for i in range(1, 5):
+  |     print(i)
+  stdout: '1\n2\n3\n4\n'
+  exit: 0
+  correct choice A: '1\n2\n3\n4'; actual: '1\n2\n3\n4'
+RESULT: PASS  python-fundamentals/lessons/04-loops.json item python.loops.probe-1 (predict_output, probe)
+RESULT: PASS  python-fundamentals/lessons/04-loops.json item python.loops.probe-1 (predict_output, probe) hints: no answer in levels 1-2, no solution line in any level
+
+==============================================================================
+LESSON python-fundamentals/lessons/05-lists.json  id=lesson.python.lists  concept=python.lists  shape=story-trace
+==============================================================================
+--- python-fundamentals/lessons/05-lists.json program
+$ python -I -X utf8 sample.py
+  | groceries = ["rice", "eggs", "milk", "tofu"]
+  | print(groceries[1])
+  | print(len(groceries))
+  | print(groceries[-1])
+  | print(groceries[1:3])
+  | shared = groceries
+  | shared.append("bread")
+  | print(len(groceries))
+  stdout: "eggs\n4\ntofu\n['eggs', 'milk']\n5\n"
+  exit: 0
+  expected: "eggs\n4\ntofu\n['eggs', 'milk']\n5\n" -> match
+RESULT: PASS  python-fundamentals/lessons/05-lists.json program
+
+--- python-fundamentals/lessons/05-lists.json step s2 'Pick by position' predict python.lists.s2.p
+  question: What does line 2 print?
+  answer: 'eggs'
+$ python -I -X utf8 sample.py
+  | groceries = ["rice", "eggs", "milk", "tofu"]
+  | print(groceries[1])
+  stdout: 'eggs\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/05-lists.json step s2 'Pick by position' predict python.lists.s2.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/05-lists.json step s3 'How long is it?' predict python.lists.s3.p
+  question: What does line 3 print?
+  answer: '4'
+$ python -I -X utf8 sample.py
+  | groceries = ["rice", "eggs", "milk", "tofu"]
+  | print(len(groceries))
+  stdout: '4\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/05-lists.json step s3 'How long is it?' predict python.lists.s3.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/05-lists.json step s4 'Count from the end' predict python.lists.s4.p
+  question: What does line 4 print?
+  answer: 'tofu'
+$ python -I -X utf8 sample.py
+  | groceries = ["rice", "eggs", "milk", "tofu"]
+  | print(groceries[-1])
+  stdout: 'tofu\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/05-lists.json step s4 'Count from the end' predict python.lists.s4.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/05-lists.json step s5 'A slice' predict python.lists.s5.p
+  question: What does line 5 print?
+  answer: "['eggs', 'milk']"
+$ python -I -X utf8 sample.py
+  | groceries = ["rice", "eggs", "milk", "tofu"]
+  | print(groceries[1:3])
+  stdout: "['eggs', 'milk']\n"
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/05-lists.json step s5 'A slice' predict python.lists.s5.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/05-lists.json step s6 'Pat's copy' predict python.lists.s6.p
+  question: Line 8 prints the length of Nok's list, groceries. What is it?
+  answer: '5'
+$ python -I -X utf8 sample.py
+  | groceries = ["rice", "eggs", "milk", "tofu"]
+  | shared = groceries
+  | shared.append("bread")
+  | print(len(groceries))
+  stdout: '5\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/05-lists.json step s6 'Pat's copy' predict python.lists.s6.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/05-lists.json step s7 'A real copy' predict python.lists.s7.p
+  question: With .copy(), what is the length of Nok's list now?
+  answer: '4'
+$ python -I -X utf8 sample.py
+  | groceries = ["rice", "eggs", "milk", "tofu"]
+  | shared = groceries.copy()
+  | shared.append("bread")
+  | print(len(groceries))
+  stdout: '4\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/05-lists.json step s7 'A real copy' predict python.lists.s7.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/05-lists.json step s8 'Walk the list' predict python.lists.s8.p
+  question: What is the first line this loop prints?
+  answer: 'rice'
+$ python -I -X utf8 sample.py
+  | groceries = ["rice", "eggs", "milk", "tofu"]
+  | for item in groceries:
+  |     print(item)
+  |     break
+  stdout: 'rice\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/05-lists.json step s8 'Walk the list' predict python.lists.s8.p (verify output equals the answer)
+RESULT: PASS  python-fundamentals/lessons/05-lists.json step names never show a pending predict answer
+RESULT: PASS  python-fundamentals/lessons/05-lists.json has 7 predict points and 2 case steps (min 3 and 1)
+
+--- python-fundamentals/lessons/05-lists.json item python.lists.apply-1 (write_code, apply)
+  >> reference solution (must pass every case)
+  [case 1/3]
+$ python -I -X utf8 sample.py  <<< 'Ann Bo Chai\n'
+  | queue = input().split()
+  | first = queue[0]
+  | queue = queue[1:]
+  | queue.append(first)
+  | print(queue)
+  stdout: "['Bo', 'Chai', 'Ann']\n"
+  exit: 0
+  expected: "['Bo', 'Chai', 'Ann']\n" -> match
+  [case 2/3]
+$ python -I -X utf8 sample.py  <<< 'Dee\n'
+  | queue = input().split()
+  | first = queue[0]
+  | queue = queue[1:]
+  | queue.append(first)
+  | print(queue)
+  stdout: "['Dee']\n"
+  exit: 0
+  expected: "['Dee']\n" -> match
+  [case 3/3]
+$ python -I -X utf8 sample.py  <<< 'X Y\n'
+  | queue = input().split()
+  | first = queue[0]
+  | queue = queue[1:]
+  | queue.append(first)
+  | print(queue)
+  stdout: "['Y', 'X']\n"
+  exit: 0
+  expected: "['Y', 'X']\n" -> match
+RESULT: PASS  python-fundamentals/lessons/05-lists.json item python.lists.apply-1 (write_code, apply) reference passes
+  >> starter code untouched (must fail at least one case)
+  [case 1/3]
+$ python -I -X utf8 sample.py  <<< 'Ann Bo Chai\n'
+  | queue = input().split()
+  | # move the first name to the end of the queue
+  | print(queue)
+  stdout: "['Ann', 'Bo', 'Chai']\n"
+  exit: 0
+  expected: "['Bo', 'Chai', 'Ann']\n" -> NO MATCH
+  [case 2/3]
+$ python -I -X utf8 sample.py  <<< 'Dee\n'
+  | queue = input().split()
+  | # move the first name to the end of the queue
+  | print(queue)
+  stdout: "['Dee']\n"
+  exit: 0
+  expected: "['Dee']\n" -> match
+  [case 3/3]
+$ python -I -X utf8 sample.py  <<< 'X Y\n'
+  | queue = input().split()
+  | # move the first name to the end of the queue
+  | print(queue)
+  stdout: "['X', 'Y']\n"
+  exit: 0
+  expected: "['Y', 'X']\n" -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/05-lists.json item python.lists.apply-1 (write_code, apply) rejects starter code untouched
+  >> must_fail #1: takes position 1 as the first person (must fail at least one case)
+  [case 1/3]
+$ python -I -X utf8 sample.py  <<< 'Ann Bo Chai\n'
+  | queue = input().split()
+  | first = queue[1]
+  | queue = queue[1:]
+  | queue.append(first)
+  | print(queue)
+  stdout: "['Bo', 'Chai', 'Bo']\n"
+  exit: 0
+  expected: "['Bo', 'Chai', 'Ann']\n" -> NO MATCH
+  [case 2/3]
+$ python -I -X utf8 sample.py  <<< 'Dee\n'
+  | queue = input().split()
+  | first = queue[1]
+  | queue = queue[1:]
+  | queue.append(first)
+  | print(queue)
+  stdout: ''
+  exit: 1
+  stderr (last line): IndexError: list index out of range
+  expected: "['Dee']\n" -> NO MATCH
+  [case 3/3]
+$ python -I -X utf8 sample.py  <<< 'X Y\n'
+  | queue = input().split()
+  | first = queue[1]
+  | queue = queue[1:]
+  | queue.append(first)
+  | print(queue)
+  stdout: "['Y', 'Y']\n"
+  exit: 0
+  expected: "['Y', 'X']\n" -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/05-lists.json item python.lists.apply-1 (write_code, apply) rejects must_fail #1
+  >> must_fail #2: adds to the back but never removes from the front (must fail at least one case)
+  [case 1/3]
+$ python -I -X utf8 sample.py  <<< 'Ann Bo Chai\n'
+  | queue = input().split()
+  | queue.append(queue[0])
+  | print(queue)
+  stdout: "['Ann', 'Bo', 'Chai', 'Ann']\n"
+  exit: 0
+  expected: "['Bo', 'Chai', 'Ann']\n" -> NO MATCH
+  [case 2/3]
+$ python -I -X utf8 sample.py  <<< 'Dee\n'
+  | queue = input().split()
+  | queue.append(queue[0])
+  | print(queue)
+  stdout: "['Dee', 'Dee']\n"
+  exit: 0
+  expected: "['Dee']\n" -> NO MATCH
+  [case 3/3]
+$ python -I -X utf8 sample.py  <<< 'X Y\n'
+  | queue = input().split()
+  | queue.append(queue[0])
+  | print(queue)
+  stdout: "['X', 'Y', 'X']\n"
+  exit: 0
+  expected: "['Y', 'X']\n" -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/05-lists.json item python.lists.apply-1 (write_code, apply) rejects must_fail #2
+RESULT: PASS  python-fundamentals/lessons/05-lists.json item python.lists.apply-1 (write_code, apply) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/05-lists.json item python.lists.explain-1 (explain, explain)
+  not run: python-fundamentals/lessons/05-lists.json item python.lists.explain-1 (explain, explain): rubric-graded by an LLM (3 criteria), nothing to run
+RESULT: PASS  python-fundamentals/lessons/05-lists.json item python.lists.explain-1 (explain, explain) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/05-lists.json item python.lists.transfer-1 (fix_bug, transfer)
+  >> reference solution (must pass every case)
+  [case 1/3]
+$ python -I -X utf8 sample.py  <<< 'Ann Bo Chai Dee Ek\n'
+  | names = input().split()
+  | print(names[0:3])
+  stdout: "['Ann', 'Bo', 'Chai']\n"
+  exit: 0
+  expected: "['Ann', 'Bo', 'Chai']\n" -> match
+  [case 2/3]
+$ python -I -X utf8 sample.py  <<< 'Fah Gun Hong\n'
+  | names = input().split()
+  | print(names[0:3])
+  stdout: "['Fah', 'Gun', 'Hong']\n"
+  exit: 0
+  expected: "['Fah', 'Gun', 'Hong']\n" -> match
+  [case 3/3]
+$ python -I -X utf8 sample.py  <<< 'Ink Jo\n'
+  | names = input().split()
+  | print(names[0:3])
+  stdout: "['Ink', 'Jo']\n"
+  exit: 0
+  expected: "['Ink', 'Jo']\n" -> match
+RESULT: PASS  python-fundamentals/lessons/05-lists.json item python.lists.transfer-1 (fix_bug, transfer) reference passes
+  >> buggy code as given (must fail at least one case)
+  [case 1/3]
+$ python -I -X utf8 sample.py  <<< 'Ann Bo Chai Dee Ek\n'
+  | names = input().split()
+  | print(names[1:3])
+  stdout: "['Bo', 'Chai']\n"
+  exit: 0
+  expected: "['Ann', 'Bo', 'Chai']\n" -> NO MATCH
+  [case 2/3]
+$ python -I -X utf8 sample.py  <<< 'Fah Gun Hong\n'
+  | names = input().split()
+  | print(names[1:3])
+  stdout: "['Gun', 'Hong']\n"
+  exit: 0
+  expected: "['Fah', 'Gun', 'Hong']\n" -> NO MATCH
+  [case 3/3]
+$ python -I -X utf8 sample.py  <<< 'Ink Jo\n'
+  | names = input().split()
+  | print(names[1:3])
+  stdout: "['Jo']\n"
+  exit: 0
+  expected: "['Ink', 'Jo']\n" -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/05-lists.json item python.lists.transfer-1 (fix_bug, transfer) rejects buggy code as given
+  >> must_fail #1: still starts at position 1 (must fail at least one case)
+  [case 1/3]
+$ python -I -X utf8 sample.py  <<< 'Ann Bo Chai Dee Ek\n'
+  | names = input().split()
+  | print(names[1:4])
+  stdout: "['Bo', 'Chai', 'Dee']\n"
+  exit: 0
+  expected: "['Ann', 'Bo', 'Chai']\n" -> NO MATCH
+  [case 2/3]
+$ python -I -X utf8 sample.py  <<< 'Fah Gun Hong\n'
+  | names = input().split()
+  | print(names[1:4])
+  stdout: "['Gun', 'Hong']\n"
+  exit: 0
+  expected: "['Fah', 'Gun', 'Hong']\n" -> NO MATCH
+  [case 3/3]
+$ python -I -X utf8 sample.py  <<< 'Ink Jo\n'
+  | names = input().split()
+  | print(names[1:4])
+  stdout: "['Jo']\n"
+  exit: 0
+  expected: "['Ink', 'Jo']\n" -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/05-lists.json item python.lists.transfer-1 (fix_bug, transfer) rejects must_fail #1
+RESULT: PASS  python-fundamentals/lessons/05-lists.json item python.lists.transfer-1 (fix_bug, transfer) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/05-lists.json item python.lists.probe-1 (predict_output, probe)
+$ python -I -X utf8 sample.py
+  | a = [1, 2, 3]
+  | b = a
+  | b.append(4)
+  | print(a)
+  stdout: '[1, 2, 3, 4]\n'
+  exit: 0
+  correct choice B: '[1, 2, 3, 4]'; actual: '[1, 2, 3, 4]'
+RESULT: PASS  python-fundamentals/lessons/05-lists.json item python.lists.probe-1 (predict_output, probe)
+RESULT: PASS  python-fundamentals/lessons/05-lists.json item python.lists.probe-1 (predict_output, probe) hints: no answer in levels 1-2, no solution line in any level
+
+==============================================================================
+LESSON python-fundamentals/lessons/06-functions.json  id=lesson.python.functions  concept=python.functions  shape=story-trace
+==============================================================================
+--- python-fundamentals/lessons/06-functions.json program
+$ python -I -X utf8 sample.py
+  | def wash_price(kg):
+  |     return kg * 40 + 20
+  | 
+  | first = wash_price(3)
+  | second = wash_price(1)
+  | print(first)
+  | print(second)
+  | print(first + second)
+  stdout: '140\n60\n200\n'
+  exit: 0
+  expected: '140\n60\n200\n' -> match
+RESULT: PASS  python-fundamentals/lessons/06-functions.json program
+
+--- python-fundamentals/lessons/06-functions.json step s2 'Define the rule' predict python.functions.s2.p
+  question: When Python runs lines 1-2, does it work out a price?
+  answer: 'No, it only remembers the rule until it is called'
+$ python -I -X utf8 sample.py
+  | ran = "No, it only remembers the rule until it is called"
+  | def wash_price(kg):
+  |     global ran
+  |     ran = "Yes, it works out a price straight away"
+  |     return kg * 40 + 20
+  | print(ran)
+  stdout: 'No, it only remembers the rule until it is called\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/06-functions.json step s2 'Define the rule' predict python.functions.s2.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/06-functions.json step s3 'First customer' predict python.functions.s3.p
+  question: What does line 6 print?
+  answer: '140'
+$ python -I -X utf8 sample.py
+  | def wash_price(kg):
+  |     return kg * 40 + 20
+  | print(wash_price(3))
+  stdout: '140\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/06-functions.json step s3 'First customer' predict python.functions.s3.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/06-functions.json step s4 'Second customer' predict python.functions.s4.p
+  question: What does line 7 print?
+  answer: '60'
+$ python -I -X utf8 sample.py
+  | def wash_price(kg):
+  |     return kg * 40 + 20
+  | print(wash_price(1))
+  stdout: '60\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/06-functions.json step s4 'Second customer' predict python.functions.s4.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/06-functions.json step s5 'The day's total' predict python.functions.s5.p
+  question: What does line 8 print?
+  answer: '200'
+$ python -I -X utf8 sample.py
+  | def wash_price(kg):
+  |     return kg * 40 + 20
+  | 
+  | first = wash_price(3)
+  | second = wash_price(1)
+  | print(first + second)
+  stdout: '200\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/06-functions.json step s5 'The day's total' predict python.functions.s5.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/06-functions.json step s6 'print instead of return' predict python.functions.s6.p
+  question: The call shows 140 on screen. What does the last line, print(first), show?
+  answer: 'None'
+$ python -I -X utf8 sample.py
+  | import contextlib, io
+  | def wash_price(kg):
+  |     print(kg * 40 + 20)
+  | with contextlib.redirect_stdout(io.StringIO()):
+  |     first = wash_price(3)
+  | print(first)
+  stdout: 'None\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/06-functions.json step s6 'print instead of return' predict python.functions.s6.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/06-functions.json step s7 'Reach inside from outside' predict python.functions.s7.p
+  question: What happens on the last line?
+  answer: 'NameError'
+$ python -I -X utf8 sample.py
+  | def wash_price(kg):
+  |     price = kg * 40 + 20
+  |     return price
+  | wash_price(3)
+  | try:
+  |     print(price)
+  | except NameError:
+  |     print("NameError")
+  stdout: 'NameError\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/06-functions.json step s7 'Reach inside from outside' predict python.functions.s7.p (verify output equals the answer)
+RESULT: PASS  python-fundamentals/lessons/06-functions.json step names never show a pending predict answer
+RESULT: PASS  python-fundamentals/lessons/06-functions.json has 6 predict points and 2 case steps (min 3 and 1)
+
+--- python-fundamentals/lessons/06-functions.json item python.functions.apply-1 (write_code, apply)
+  >> reference solution (must pass every case)
+$ python -I -X utf8 harness.py solution.py cases.json bus_fare
+  | def bus_fare(stops):
+  |     return 15 + 5 * stops
+  raw: {"results": [{"args": [0], "expected": 15, "ok": true, "got": 15}, {"args": [1], "expected": 20, "ok": true, "got": 20}, {"args": [4], "expected": 35, "ok": true, "got": 35}, {"args": [10], "expected": 65, "ok": true, "got": 65}]}
+  case bus_fare(*[0]) -> 15 | expected 15 | ok
+  case bus_fare(*[1]) -> 20 | expected 20 | ok
+  case bus_fare(*[4]) -> 35 | expected 35 | ok
+  case bus_fare(*[10]) -> 65 | expected 65 | ok
+RESULT: PASS  python-fundamentals/lessons/06-functions.json item python.functions.apply-1 (write_code, apply) reference passes
+  >> starter code untouched (must fail at least one case)
+$ python -I -X utf8 harness.py solution.py cases.json bus_fare
+  | def bus_fare(stops):
+  |     # give back the fare: 15 baht to board plus 5 baht per stop
+  |     pass
+  raw: {"results": [{"args": [0], "expected": 15, "ok": false, "got": null}, {"args": [1], "expected": 20, "ok": false, "got": null}, {"args": [4], "expected": 35, "ok": false, "got": null}, {"args": [10], "expected": 65, "ok": false, "got": null}]}
+  case bus_fare(*[0]) -> null | expected 15 | WRONG
+  case bus_fare(*[1]) -> null | expected 20 | WRONG
+  case bus_fare(*[4]) -> null | expected 35 | WRONG
+  case bus_fare(*[10]) -> null | expected 65 | WRONG
+RESULT: PASS  python-fundamentals/lessons/06-functions.json item python.functions.apply-1 (write_code, apply) rejects starter code untouched
+  >> must_fail #1: prints instead of returning (must fail at least one case)
+$ python -I -X utf8 harness.py solution.py cases.json bus_fare
+  | def bus_fare(stops):
+  |     print(15 + 5 * stops)
+  raw: {"results": [{"args": [0], "expected": 15, "ok": false, "got": null}, {"args": [1], "expected": 20, "ok": false, "got": null}, {"args": [4], "expected": 35, "ok": false, "got": null}, {"args": [10], "expected": 65, "ok": false, "got": null}]}
+  case bus_fare(*[0]) -> null | expected 15 | WRONG
+  case bus_fare(*[1]) -> null | expected 20 | WRONG
+  case bus_fare(*[4]) -> null | expected 35 | WRONG
+  case bus_fare(*[10]) -> null | expected 65 | WRONG
+RESULT: PASS  python-fundamentals/lessons/06-functions.json item python.functions.apply-1 (write_code, apply) rejects must_fail #1
+  >> must_fail #2: hardcodes the example (must fail at least one case)
+$ python -I -X utf8 harness.py solution.py cases.json bus_fare
+  | def bus_fare(stops):
+  |     return 35
+  raw: {"results": [{"args": [0], "expected": 15, "ok": false, "got": 35}, {"args": [1], "expected": 20, "ok": false, "got": 35}, {"args": [4], "expected": 35, "ok": true, "got": 35}, {"args": [10], "expected": 65, "ok": false, "got": 35}]}
+  case bus_fare(*[0]) -> 35 | expected 15 | WRONG
+  case bus_fare(*[1]) -> 35 | expected 20 | WRONG
+  case bus_fare(*[4]) -> 35 | expected 35 | ok
+  case bus_fare(*[10]) -> 35 | expected 65 | WRONG
+RESULT: PASS  python-fundamentals/lessons/06-functions.json item python.functions.apply-1 (write_code, apply) rejects must_fail #2
+RESULT: PASS  python-fundamentals/lessons/06-functions.json item python.functions.apply-1 (write_code, apply) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/06-functions.json item python.functions.explain-1 (explain, explain)
+  not run: python-fundamentals/lessons/06-functions.json item python.functions.explain-1 (explain, explain): rubric-graded by an LLM (3 criteria), nothing to run
+RESULT: PASS  python-fundamentals/lessons/06-functions.json item python.functions.explain-1 (explain, explain) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/06-functions.json item python.functions.transfer-1 (fix_bug, transfer)
+  >> reference solution (must pass every case)
+$ python -I -X utf8 harness.py solution.py cases.json label
+  | student = "Ann"
+  | 
+  | def label(name):
+  |     return "Name: " + name
+  raw: {"results": [{"args": ["Bo"], "expected": "Name: Bo", "ok": true, "got": "Name: Bo"}, {"args": ["Ann"], "expected": "Name: Ann", "ok": true, "got": "Name: Ann"}, {"args": ["Chai"], "expected": "Name: Chai", "ok": true, "got": "Name: Chai"}]}
+  case label(*["Bo"]) -> "Name: Bo" | expected "Name: Bo" | ok
+  case label(*["Ann"]) -> "Name: Ann" | expected "Name: Ann" | ok
+  case label(*["Chai"]) -> "Name: Chai" | expected "Name: Chai" | ok
+RESULT: PASS  python-fundamentals/lessons/06-functions.json item python.functions.transfer-1 (fix_bug, transfer) reference passes
+  >> buggy code as given (must fail at least one case)
+$ python -I -X utf8 harness.py solution.py cases.json label
+  | student = "Ann"
+  | 
+  | def label(name):
+  |     return "Name: " + student
+  raw: {"results": [{"args": ["Bo"], "expected": "Name: Bo", "ok": false, "got": "Name: Ann"}, {"args": ["Ann"], "expected": "Name: Ann", "ok": true, "got": "Name: Ann"}, {"args": ["Chai"], "expected": "Name: Chai", "ok": false, "got": "Name: Ann"}]}
+  case label(*["Bo"]) -> "Name: Ann" | expected "Name: Bo" | WRONG
+  case label(*["Ann"]) -> "Name: Ann" | expected "Name: Ann" | ok
+  case label(*["Chai"]) -> "Name: Ann" | expected "Name: Chai" | WRONG
+RESULT: PASS  python-fundamentals/lessons/06-functions.json item python.functions.transfer-1 (fix_bug, transfer) rejects buggy code as given
+  >> must_fail #1: uses the text "name" instead of the parameter (must fail at least one case)
+$ python -I -X utf8 harness.py solution.py cases.json label
+  | student = "Ann"
+  | 
+  | def label(name):
+  |     return "Name: " + "name"
+  raw: {"results": [{"args": ["Bo"], "expected": "Name: Bo", "ok": false, "got": "Name: name"}, {"args": ["Ann"], "expected": "Name: Ann", "ok": false, "got": "Name: name"}, {"args": ["Chai"], "expected": "Name: Chai", "ok": false, "got": "Name: name"}]}
+  case label(*["Bo"]) -> "Name: name" | expected "Name: Bo" | WRONG
+  case label(*["Ann"]) -> "Name: name" | expected "Name: Ann" | WRONG
+  case label(*["Chai"]) -> "Name: name" | expected "Name: Chai" | WRONG
+RESULT: PASS  python-fundamentals/lessons/06-functions.json item python.functions.transfer-1 (fix_bug, transfer) rejects must_fail #1
+RESULT: PASS  python-fundamentals/lessons/06-functions.json item python.functions.transfer-1 (fix_bug, transfer) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/06-functions.json item python.functions.probe-1 (predict_output, probe)
+$ python -I -X utf8 sample.py
+  | def double(n):
+  |     print(n * 2)
+  | 
+  | result = double(5)
+  | print(result)
+  stdout: '10\nNone\n'
+  exit: 0
+  correct choice B: '10\nNone'; actual: '10\nNone'
+RESULT: PASS  python-fundamentals/lessons/06-functions.json item python.functions.probe-1 (predict_output, probe)
+RESULT: PASS  python-fundamentals/lessons/06-functions.json item python.functions.probe-1 (predict_output, probe) hints: no answer in levels 1-2, no solution line in any level
+
+==============================================================================
+LESSON python-fundamentals/lessons/07-dictionaries.json  id=lesson.python.dictionaries  concept=python.dictionaries  shape=story-trace
+==============================================================================
+--- python-fundamentals/lessons/07-dictionaries.json program
+$ python -I -X utf8 sample.py
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | print(stock["A15"])
+  | stock["P8"] = stock["P8"] - 1
+  | print(stock["P8"])
+  | stock["X100"] = 6
+  | print(len(stock))
+  | print("S23" in stock)
+  | print(stock.get("Z9", 0))
+  stdout: '4\n1\n4\nTrue\n0\n'
+  exit: 0
+  expected: '4\n1\n4\nTrue\n0\n' -> match
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json program
+
+--- python-fundamentals/lessons/07-dictionaries.json step s2 'Look up a model' predict python.dictionaries.s2.p
+  question: What does line 2 print?
+  answer: '4'
+$ python -I -X utf8 sample.py
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | print(stock["A15"])
+  stdout: '4\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json step s2 'Look up a model' predict python.dictionaries.s2.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/07-dictionaries.json step s3 'Sell one case' predict python.dictionaries.s3.p
+  question: What does line 4 print?
+  answer: '1'
+$ python -I -X utf8 sample.py
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | stock["P8"] = stock["P8"] - 1
+  | print(stock["P8"])
+  stdout: '1\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json step s3 'Sell one case' predict python.dictionaries.s3.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/07-dictionaries.json step s4 'A new model arrives' predict python.dictionaries.s4.p
+  question: How many entries does stock have now (line 6)?
+  answer: '4'
+$ python -I -X utf8 sample.py
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | stock["X100"] = 6
+  | print(len(stock))
+  stdout: '4\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json step s4 'A new model arrives' predict python.dictionaries.s4.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/07-dictionaries.json step s5 'Look up by position' predict python.dictionaries.s5.p
+  question: What happens?
+  answer: 'KeyError'
+$ python -I -X utf8 sample.py
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | try:
+  |     print(stock[0])
+  | except KeyError:
+  |     print("KeyError")
+  stdout: 'KeyError\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json step s5 'Look up by position' predict python.dictionaries.s5.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/07-dictionaries.json step s6 'A model Fon never had' predict python.dictionaries.s6.p
+  question: What does line 8 print?
+  answer: '0'
+$ python -I -X utf8 sample.py
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | print(stock.get("Z9", 0))
+  stdout: '0\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json step s6 'A model Fon never had' predict python.dictionaries.s6.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/07-dictionaries.json step s7 'Is it in stock?' predict python.dictionaries.s7.p
+  question: What does line 7 print?
+  answer: 'True'
+$ python -I -X utf8 sample.py
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | print("S23" in stock)
+  stdout: 'True\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json step s7 'Is it in stock?' predict python.dictionaries.s7.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/07-dictionaries.json step s8 'Walk the stall' predict python.dictionaries.s8.p
+  question: What is the first line the loop prints?
+  answer: 'A15'
+$ python -I -X utf8 sample.py
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | for model in stock:
+  |     print(model)
+  |     break
+  stdout: 'A15\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json step s8 'Walk the stall' predict python.dictionaries.s8.p (verify output equals the answer)
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json step names never show a pending predict answer
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json has 7 predict points and 2 case steps (min 3 and 1)
+
+--- python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.apply-1 (write_code, apply)
+  >> reference solution (must pass every case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< 'A15\n'
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | model = input()
+  | print(stock.get(model, 0))
+  stdout: '4\n'
+  exit: 0
+  expected: '4\n' -> match
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< 'S23\n'
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | model = input()
+  | print(stock.get(model, 0))
+  stdout: '0\n'
+  exit: 0
+  expected: '0\n' -> match
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< 'Z9\n'
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | model = input()
+  | print(stock.get(model, 0))
+  stdout: '0\n'
+  exit: 0
+  expected: '0\n' -> match
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< 'P8\n'
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | model = input()
+  | print(stock.get(model, 0))
+  stdout: '2\n'
+  exit: 0
+  expected: '2\n' -> match
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.apply-1 (write_code, apply) reference passes
+  >> starter code untouched (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< 'A15\n'
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | model = input()
+  | # print how many cases of that model are left (0 if the stall doesn't carry it)
+  stdout: ''
+  exit: 0
+  expected: '4\n' -> NO MATCH
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< 'S23\n'
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | model = input()
+  | # print how many cases of that model are left (0 if the stall doesn't carry it)
+  stdout: ''
+  exit: 0
+  expected: '0\n' -> NO MATCH
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< 'Z9\n'
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | model = input()
+  | # print how many cases of that model are left (0 if the stall doesn't carry it)
+  stdout: ''
+  exit: 0
+  expected: '0\n' -> NO MATCH
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< 'P8\n'
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | model = input()
+  | # print how many cases of that model are left (0 if the stall doesn't carry it)
+  stdout: ''
+  exit: 0
+  expected: '2\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.apply-1 (write_code, apply) rejects starter code untouched
+  >> must_fail #1: square brackets crash on Z9 (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< 'A15\n'
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | model = input()
+  | print(stock[model])
+  stdout: '4\n'
+  exit: 0
+  expected: '4\n' -> match
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< 'S23\n'
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | model = input()
+  | print(stock[model])
+  stdout: '0\n'
+  exit: 0
+  expected: '0\n' -> match
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< 'Z9\n'
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | model = input()
+  | print(stock[model])
+  stdout: ''
+  exit: 1
+  stderr (last line): KeyError: 'Z9'
+  expected: '0\n' -> NO MATCH
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< 'P8\n'
+  | stock = {"A15": 4, "S23": 0, "P8": 2}
+  | model = input()
+  | print(stock[model])
+  stdout: '2\n'
+  exit: 0
+  expected: '2\n' -> match
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.apply-1 (write_code, apply) rejects must_fail #1
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.apply-1 (write_code, apply) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.explain-1 (explain, explain)
+  not run: python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.explain-1 (explain, explain): rubric-graded by an LLM (3 criteria), nothing to run
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.explain-1 (explain, explain) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.transfer-1 (write_code, transfer)
+  >> reference solution (must pass every case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< 'sea hill sea\n'
+  | votes = input().split()
+  | counts = {}
+  | for place in votes:
+  |     counts[place] = counts.get(place, 0) + 1
+  | for place in counts:
+  |     print(place, counts[place])
+  stdout: 'sea 2\nhill 1\n'
+  exit: 0
+  expected: 'sea 2\nhill 1\n' -> match
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< 'park\n'
+  | votes = input().split()
+  | counts = {}
+  | for place in votes:
+  |     counts[place] = counts.get(place, 0) + 1
+  | for place in counts:
+  |     print(place, counts[place])
+  stdout: 'park 1\n'
+  exit: 0
+  expected: 'park 1\n' -> match
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< 'zoo zoo zoo mall\n'
+  | votes = input().split()
+  | counts = {}
+  | for place in votes:
+  |     counts[place] = counts.get(place, 0) + 1
+  | for place in counts:
+  |     print(place, counts[place])
+  stdout: 'zoo 3\nmall 1\n'
+  exit: 0
+  expected: 'zoo 3\nmall 1\n' -> match
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< 'a b c b a\n'
+  | votes = input().split()
+  | counts = {}
+  | for place in votes:
+  |     counts[place] = counts.get(place, 0) + 1
+  | for place in counts:
+  |     print(place, counts[place])
+  stdout: 'a 2\nb 2\nc 1\n'
+  exit: 0
+  expected: 'a 2\nb 2\nc 1\n' -> match
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.transfer-1 (write_code, transfer) reference passes
+  >> starter code untouched (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< 'sea hill sea\n'
+  | votes = input().split()
+  | counts = {}
+  | # count each place, then print each place and its count
+  stdout: ''
+  exit: 0
+  expected: 'sea 2\nhill 1\n' -> NO MATCH
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< 'park\n'
+  | votes = input().split()
+  | counts = {}
+  | # count each place, then print each place and its count
+  stdout: ''
+  exit: 0
+  expected: 'park 1\n' -> NO MATCH
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< 'zoo zoo zoo mall\n'
+  | votes = input().split()
+  | counts = {}
+  | # count each place, then print each place and its count
+  stdout: ''
+  exit: 0
+  expected: 'zoo 3\nmall 1\n' -> NO MATCH
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< 'a b c b a\n'
+  | votes = input().split()
+  | counts = {}
+  | # count each place, then print each place and its count
+  stdout: ''
+  exit: 0
+  expected: 'a 2\nb 2\nc 1\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.transfer-1 (write_code, transfer) rejects starter code untouched
+  >> must_fail #1: overwrites the count instead of adding (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< 'sea hill sea\n'
+  | votes = input().split()
+  | counts = {}
+  | for place in votes:
+  |     counts[place] = 1
+  | for place in counts:
+  |     print(place, counts[place])
+  stdout: 'sea 1\nhill 1\n'
+  exit: 0
+  expected: 'sea 2\nhill 1\n' -> NO MATCH
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< 'park\n'
+  | votes = input().split()
+  | counts = {}
+  | for place in votes:
+  |     counts[place] = 1
+  | for place in counts:
+  |     print(place, counts[place])
+  stdout: 'park 1\n'
+  exit: 0
+  expected: 'park 1\n' -> match
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< 'zoo zoo zoo mall\n'
+  | votes = input().split()
+  | counts = {}
+  | for place in votes:
+  |     counts[place] = 1
+  | for place in counts:
+  |     print(place, counts[place])
+  stdout: 'zoo 1\nmall 1\n'
+  exit: 0
+  expected: 'zoo 3\nmall 1\n' -> NO MATCH
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< 'a b c b a\n'
+  | votes = input().split()
+  | counts = {}
+  | for place in votes:
+  |     counts[place] = 1
+  | for place in counts:
+  |     print(place, counts[place])
+  stdout: 'a 1\nb 1\nc 1\n'
+  exit: 0
+  expected: 'a 2\nb 2\nc 1\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.transfer-1 (write_code, transfer) rejects must_fail #1
+  >> must_fail #2: reads a key before it exists: KeyError (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< 'sea hill sea\n'
+  | votes = input().split()
+  | counts = {}
+  | for place in votes:
+  |     counts[place] = counts[place] + 1
+  | for place in counts:
+  |     print(place, counts[place])
+  stdout: ''
+  exit: 1
+  stderr (last line): KeyError: 'sea'
+  expected: 'sea 2\nhill 1\n' -> NO MATCH
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< 'park\n'
+  | votes = input().split()
+  | counts = {}
+  | for place in votes:
+  |     counts[place] = counts[place] + 1
+  | for place in counts:
+  |     print(place, counts[place])
+  stdout: ''
+  exit: 1
+  stderr (last line): KeyError: 'park'
+  expected: 'park 1\n' -> NO MATCH
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< 'zoo zoo zoo mall\n'
+  | votes = input().split()
+  | counts = {}
+  | for place in votes:
+  |     counts[place] = counts[place] + 1
+  | for place in counts:
+  |     print(place, counts[place])
+  stdout: ''
+  exit: 1
+  stderr (last line): KeyError: 'zoo'
+  expected: 'zoo 3\nmall 1\n' -> NO MATCH
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< 'a b c b a\n'
+  | votes = input().split()
+  | counts = {}
+  | for place in votes:
+  |     counts[place] = counts[place] + 1
+  | for place in counts:
+  |     print(place, counts[place])
+  stdout: ''
+  exit: 1
+  stderr (last line): KeyError: 'a'
+  expected: 'a 2\nb 2\nc 1\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.transfer-1 (write_code, transfer) rejects must_fail #2
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.transfer-1 (write_code, transfer) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.probe-1 (predict_output, probe)
+$ python -I -X utf8 sample.py
+  | ages = {"Ann": 25, "Bo": 31}
+  | print(ages.get(25))
+  stdout: 'None\n'
+  exit: 0
+  correct choice B: 'None'; actual: 'None'
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.probe-1 (predict_output, probe)
+RESULT: PASS  python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.probe-1 (predict_output, probe) hints: no answer in levels 1-2, no solution line in any level
+
+==============================================================================
+LESSON python-fundamentals/lessons/08-debugging.json  id=lesson.python.debugging  concept=python.debugging  shape=debugging-hunt
+==============================================================================
+--- python-fundamentals/lessons/08-debugging.json program
+$ python -I -X utf8 sample.py
+  | def free_drinks(visits):
+  |     count = 0
+  |     for v in range(1, visits):
+  |         if v % 5 == 0:
+  |             count = count + 1
+  |     return count
+  | 
+  | print(free_drinks(5))
+  | print(free_drinks(10))
+  stdout: '0\n1\n'
+  exit: 0
+  expected: '0\n1\n' -> match
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json program
+
+--- python-fundamentals/lessons/08-debugging.json step s2 'Reproduce it' predict python.debugging.s2.p
+  question: What does `print(free_drinks(5))` show?
+  answer: '0'
+$ python -I -X utf8 sample.py
+  | def free_drinks(visits):
+  |     count = 0
+  |     for v in range(1, visits):
+  |         if v % 5 == 0:
+  |             count = count + 1
+  |     return count
+  | print(free_drinks(5))
+  stdout: '0\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json step s2 'Reproduce it' predict python.debugging.s2.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/08-debugging.json step s3 'Expected vs actual' predict python.debugging.s3.p
+  question: What does `print(free_drinks(10))` show?
+  answer: '1'
+$ python -I -X utf8 sample.py
+  | def free_drinks(visits):
+  |     count = 0
+  |     for v in range(1, visits):
+  |         if v % 5 == 0:
+  |             count = count + 1
+  |     return count
+  | print(free_drinks(10))
+  stdout: '1\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json step s3 'Expected vs actual' predict python.debugging.s3.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/08-debugging.json step s4 'Look inside the loop' predict python.debugging.s4.p
+  question: For 5 visits, what is the last value of v the loop visits?
+  answer: '4'
+$ python -I -X utf8 sample.py
+  | visits = 5
+  | last = None
+  | for v in range(1, visits):
+  |     last = v
+  | print(last)
+  stdout: '4\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json step s4 'Look inside the loop' predict python.debugging.s4.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/08-debugging.json step s5 'Name the cause' predict python.debugging.s5.p
+  question: Which sentence names the cause?
+  answer: 'range(1, visits) stops before the last visit, so it is never checked'
+  not run: Conceptual question; steps 4 and 6 check it against real runs.
+
+--- python-fundamentals/lessons/08-debugging.json step s6 'Fix and rerun' predict python.debugging.s6.p
+  question: After the fix, what does free_drinks(10) give?
+  answer: '2'
+$ python -I -X utf8 sample.py
+  | def free_drinks(visits):
+  |     count = 0
+  |     for v in range(1, visits + 1):
+  |         if v % 5 == 0:
+  |             count = count + 1
+  |     return count
+  | print(free_drinks(10))
+  stdout: '2\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json step s6 'Fix and rerun' predict python.debugging.s6.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/08-debugging.json step s7 'Check an edge' predict python.debugging.s7.p
+  question: What does free_drinks(4) give with the fix?
+  answer: '0'
+$ python -I -X utf8 sample.py
+  | def free_drinks(visits):
+  |     count = 0
+  |     for v in range(1, visits + 1):
+  |         if v % 5 == 0:
+  |             count = count + 1
+  |     return count
+  | print(free_drinks(4))
+  stdout: '0\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json step s7 'Check an edge' predict python.debugging.s7.p (verify output equals the answer)
+
+--- python-fundamentals/lessons/08-debugging.json step s8 'Read the error message' predict python.debugging.s8.p
+  question: What kind of error stops this program?
+  answer: 'TypeError'
+$ python -I -X utf8 sample.py
+  | daily = [1, 2, "3"]
+  | total = 0
+  | try:
+  |     for d in daily:
+  |         total = total + d
+  |     print(total)
+  | except Exception as e:
+  |     print(type(e).__name__)
+  stdout: 'TypeError\n'
+  exit: 0
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json step s8 'Read the error message' predict python.debugging.s8.p (verify output equals the answer)
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json step names never show a pending predict answer
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json has 7 predict points and 3 case steps (min 3 and 1)
+
+--- python-fundamentals/lessons/08-debugging.json item python.debugging.apply-1 (fix_bug, apply)
+  >> reference solution (must pass every case)
+$ python -I -X utf8 harness.py solution.py cases.json count_passing
+  | def count_passing(scores):
+  |     count = 0
+  |     for i in range(len(scores)):
+  |         if scores[i] >= 50:
+  |             count = count + 1
+  |     return count
+  raw: {"results": [{"args": [[50, 40, 70]], "expected": 2, "ok": true, "got": 2}, {"args": [[]], "expected": 0, "ok": true, "got": 0}, {"args": [[90]], "expected": 1, "ok": true, "got": 1}, {"args": [[10, 20]], "expected": 0, "ok": true, "got": 0}, {"args": [[49, 50]], "expected": 1, "ok": true, "got": 1}]}
+  case count_passing(*[[50, 40, 70]]) -> 2 | expected 2 | ok
+  case count_passing(*[[]]) -> 0 | expected 0 | ok
+  case count_passing(*[[90]]) -> 1 | expected 1 | ok
+  case count_passing(*[[10, 20]]) -> 0 | expected 0 | ok
+  case count_passing(*[[49, 50]]) -> 1 | expected 1 | ok
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json item python.debugging.apply-1 (fix_bug, apply) reference passes
+  >> buggy code as given (must fail at least one case)
+$ python -I -X utf8 harness.py solution.py cases.json count_passing
+  | def count_passing(scores):
+  |     count = 0
+  |     for i in range(len(scores) - 1):
+  |         if scores[i] >= 50:
+  |             count = count + 1
+  |     return count
+  raw: {"results": [{"args": [[50, 40, 70]], "expected": 2, "ok": false, "got": 1}, {"args": [[]], "expected": 0, "ok": true, "got": 0}, {"args": [[90]], "expected": 1, "ok": false, "got": 0}, {"args": [[10, 20]], "expected": 0, "ok": true, "got": 0}, {"args": [[49, 50]], "expected": 1, "ok": false, "got": 0}]}
+  case count_passing(*[[50, 40, 70]]) -> 1 | expected 2 | WRONG
+  case count_passing(*[[]]) -> 0 | expected 0 | ok
+  case count_passing(*[[90]]) -> 0 | expected 1 | WRONG
+  case count_passing(*[[10, 20]]) -> 0 | expected 0 | ok
+  case count_passing(*[[49, 50]]) -> 0 | expected 1 | WRONG
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json item python.debugging.apply-1 (fix_bug, apply) rejects buggy code as given
+  >> must_fail #1: changes the comparison instead of the cause (must fail at least one case)
+$ python -I -X utf8 harness.py solution.py cases.json count_passing
+  | def count_passing(scores):
+  |     count = 0
+  |     for i in range(len(scores) - 1):
+  |         if scores[i] > 50:
+  |             count = count + 1
+  |     return count
+  raw: {"results": [{"args": [[50, 40, 70]], "expected": 2, "ok": false, "got": 0}, {"args": [[]], "expected": 0, "ok": true, "got": 0}, {"args": [[90]], "expected": 1, "ok": false, "got": 0}, {"args": [[10, 20]], "expected": 0, "ok": true, "got": 0}, {"args": [[49, 50]], "expected": 1, "ok": false, "got": 0}]}
+  case count_passing(*[[50, 40, 70]]) -> 0 | expected 2 | WRONG
+  case count_passing(*[[]]) -> 0 | expected 0 | ok
+  case count_passing(*[[90]]) -> 0 | expected 1 | WRONG
+  case count_passing(*[[10, 20]]) -> 0 | expected 0 | ok
+  case count_passing(*[[49, 50]]) -> 0 | expected 1 | WRONG
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json item python.debugging.apply-1 (fix_bug, apply) rejects must_fail #1
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json item python.debugging.apply-1 (fix_bug, apply) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/08-debugging.json item python.debugging.explain-1 (explain, explain)
+  not run: python-fundamentals/lessons/08-debugging.json item python.debugging.explain-1 (explain, explain): rubric-graded by an LLM (4 criteria), nothing to run
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json item python.debugging.explain-1 (explain, explain) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/08-debugging.json item python.debugging.transfer-1 (fix_bug, transfer)
+  >> reference solution (must pass every case)
+$ python -I -X utf8 harness.py solution.py cases.json add_tag
+  | def add_tag(tags, new_tag):
+  |     result = tags.copy()
+  |     result.append(new_tag)
+  |     return result
+  raw: {"results": [{"args": [["beach", "sun"], "family"], "expected": ["beach", "sun", "family"], "ok": true, "got": ["beach", "sun", "family"]}, {"args": [[], "cat"], "expected": ["cat"], "ok": true, "got": ["cat"]}, {"args": [["x"], "y"], "expected": ["x", "y"], "ok": true, "got": ["x", "y"]}]}
+  case add_tag(*[["beach", "sun"], "family"]) -> ["beach", "sun", "family"] | expected ["beach", "sun", "family"] | ok
+  case add_tag(*[[], "cat"]) -> ["cat"] | expected ["cat"] | ok
+  case add_tag(*[["x"], "y"]) -> ["x", "y"] | expected ["x", "y"] | ok
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json item python.debugging.transfer-1 (fix_bug, transfer) reference passes
+  >> buggy code as given (must fail at least one case)
+$ python -I -X utf8 harness.py solution.py cases.json add_tag
+  | def add_tag(tags, new_tag):
+  |     result = tags
+  |     result.append(new_tag)
+  |     return result
+  raw: {"results": [{"args": [["beach", "sun"], "family"], "expected": ["beach", "sun", "family"], "ok": false, "got": ["beach", "sun", "family"], "note": "argument was changed by the call"}, {"args": [[], "cat"], "expected": ["cat"], "ok": false, "got": ["cat"], "note": "argument was changed by the call"}, {"args": [["x"], "y"], "expected": ["x", "y"], "ok": false, "got": ["x", "y"], "note": "argument was changed by the call"}]}
+  case add_tag(*[["beach", "sun"], "family"]) -> ["beach", "sun", "family"] | expected ["beach", "sun", "family"] | WRONG (argument was changed by the call)
+  case add_tag(*[[], "cat"]) -> ["cat"] | expected ["cat"] | WRONG (argument was changed by the call)
+  case add_tag(*[["x"], "y"]) -> ["x", "y"] | expected ["x", "y"] | WRONG (argument was changed by the call)
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json item python.debugging.transfer-1 (fix_bug, transfer) rejects buggy code as given
+  >> must_fail #1: copies after changing the original (must fail at least one case)
+$ python -I -X utf8 harness.py solution.py cases.json add_tag
+  | def add_tag(tags, new_tag):
+  |     tags.append(new_tag)
+  |     return tags.copy()
+  raw: {"results": [{"args": [["beach", "sun"], "family"], "expected": ["beach", "sun", "family"], "ok": false, "got": ["beach", "sun", "family"], "note": "argument was changed by the call"}, {"args": [[], "cat"], "expected": ["cat"], "ok": false, "got": ["cat"], "note": "argument was changed by the call"}, {"args": [["x"], "y"], "expected": ["x", "y"], "ok": false, "got": ["x", "y"], "note": "argument was changed by the call"}]}
+  case add_tag(*[["beach", "sun"], "family"]) -> ["beach", "sun", "family"] | expected ["beach", "sun", "family"] | WRONG (argument was changed by the call)
+  case add_tag(*[[], "cat"]) -> ["cat"] | expected ["cat"] | WRONG (argument was changed by the call)
+  case add_tag(*[["x"], "y"]) -> ["x", "y"] | expected ["x", "y"] | WRONG (argument was changed by the call)
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json item python.debugging.transfer-1 (fix_bug, transfer) rejects must_fail #1
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json item python.debugging.transfer-1 (fix_bug, transfer) hints: no answer in levels 1-2, no solution line in any level
+
+--- python-fundamentals/lessons/08-debugging.json item python.debugging.probe-1 (multiple_choice, probe)
+  not run: python-fundamentals/lessons/08-debugging.json item python.debugging.probe-1 (multiple_choice, probe): recognition item, answer key B, nothing to run
+RESULT: PASS  python-fundamentals/lessons/08-debugging.json item python.debugging.probe-1 (multiple_choice, probe) hints: no answer in levels 1-2, no solution line in any level
+
+==============================================================================
+ASSESSMENT python-fundamentals/assessment/placement.json  id=assessment.python-fundamentals.placement  items=15
+==============================================================================
+
+--- python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-01 (predict_output, placement)
+  [case 1/1]
+$ python -I -X utf8 sample.py
+  | a = 3
+  | b = a + 2
+  | a = 10
+  | print(b)
+  stdout: '5\n'
+  exit: 0
+  expected: '5\n' -> match
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-01 (predict_output, placement)
+
+--- python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-02 (predict_output, placement)
+$ python -I -X utf8 sample.py
+  | print(type(3.14))
+  stdout: "<class 'float'>\n"
+  exit: 0
+  correct choice B: "<class 'float'>"; actual: "<class 'float'>"
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-02 (predict_output, placement)
+
+--- python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-03 (predict_output, placement)
+  [case 1/1]
+$ python -I -X utf8 sample.py
+  | print("5" + "5")
+  stdout: '55\n'
+  exit: 0
+  expected: '55\n' -> match
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-03 (predict_output, placement)
+
+--- python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-04 (predict_output, placement)
+$ python -I -X utf8 sample.py
+  | x = 5
+  | if x > 3:
+  |     print("A")
+  | elif x > 1:
+  |     print("B")
+  | else:
+  |     print("C")
+  stdout: 'A\n'
+  exit: 0
+  correct choice A: 'A'; actual: 'A'
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-04 (predict_output, placement)
+
+--- python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-05 (predict_output, placement)
+  [case 1/1]
+$ python -I -X utf8 sample.py
+  | score = 50
+  | if score > 50:
+  |     print("pass")
+  | else:
+  |     print("try again")
+  stdout: 'try again\n'
+  exit: 0
+  expected: 'try again\n' -> match
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-05 (predict_output, placement)
+
+--- python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-06 (predict_output, placement)
+  [case 1/1]
+$ python -I -X utf8 sample.py
+  | count = 0
+  | while count < 3:
+  |     count = count + 1
+  | print(count)
+  stdout: '3\n'
+  exit: 0
+  expected: '3\n' -> match
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-06 (predict_output, placement)
+
+--- python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-07 (predict_output, placement)
+  [case 1/1]
+$ python -I -X utf8 sample.py
+  | for i in range(3):
+  |     print("hello")
+  stdout: 'hello\nhello\nhello\n'
+  exit: 0
+  expected: 'hello\nhello\nhello\n' -> match
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-07 (predict_output, placement)
+
+--- python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-08 (write_code, placement)
+  >> reference solution (must pass every case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '6\n'
+  | n = int(input())
+  | for k in range(1, n + 1):
+  |     if k % 2 == 0:
+  |         print(k)
+  stdout: '2\n4\n6\n'
+  exit: 0
+  expected: '2\n4\n6\n' -> match
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '1\n'
+  | n = int(input())
+  | for k in range(1, n + 1):
+  |     if k % 2 == 0:
+  |         print(k)
+  stdout: ''
+  exit: 0
+  expected: '' -> match
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '7\n'
+  | n = int(input())
+  | for k in range(1, n + 1):
+  |     if k % 2 == 0:
+  |         print(k)
+  stdout: '2\n4\n6\n'
+  exit: 0
+  expected: '2\n4\n6\n' -> match
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '10\n'
+  | n = int(input())
+  | for k in range(1, n + 1):
+  |     if k % 2 == 0:
+  |         print(k)
+  stdout: '2\n4\n6\n8\n10\n'
+  exit: 0
+  expected: '2\n4\n6\n8\n10\n' -> match
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-08 (write_code, placement) reference passes
+  >> starter code untouched (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '6\n'
+  | n = int(input())
+  | # print the even numbers from 2 to n
+  stdout: ''
+  exit: 0
+  expected: '2\n4\n6\n' -> NO MATCH
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '1\n'
+  | n = int(input())
+  | # print the even numbers from 2 to n
+  stdout: ''
+  exit: 0
+  expected: '' -> match
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '7\n'
+  | n = int(input())
+  | # print the even numbers from 2 to n
+  stdout: ''
+  exit: 0
+  expected: '2\n4\n6\n' -> NO MATCH
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '10\n'
+  | n = int(input())
+  | # print the even numbers from 2 to n
+  stdout: ''
+  exit: 0
+  expected: '2\n4\n6\n8\n10\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-08 (write_code, placement) rejects starter code untouched
+  >> must_fail #1: stops before n (must fail at least one case)
+  [case 1/4]
+$ python -I -X utf8 sample.py  <<< '6\n'
+  | n = int(input())
+  | for k in range(2, n, 2):
+  |     print(k)
+  stdout: '2\n4\n'
+  exit: 0
+  expected: '2\n4\n6\n' -> NO MATCH
+  [case 2/4]
+$ python -I -X utf8 sample.py  <<< '1\n'
+  | n = int(input())
+  | for k in range(2, n, 2):
+  |     print(k)
+  stdout: ''
+  exit: 0
+  expected: '' -> match
+  [case 3/4]
+$ python -I -X utf8 sample.py  <<< '7\n'
+  | n = int(input())
+  | for k in range(2, n, 2):
+  |     print(k)
+  stdout: '2\n4\n6\n'
+  exit: 0
+  expected: '2\n4\n6\n' -> match
+  [case 4/4]
+$ python -I -X utf8 sample.py  <<< '10\n'
+  | n = int(input())
+  | for k in range(2, n, 2):
+  |     print(k)
+  stdout: '2\n4\n6\n8\n'
+  exit: 0
+  expected: '2\n4\n6\n8\n10\n' -> NO MATCH
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-08 (write_code, placement) rejects must_fail #1
+
+--- python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-09 (predict_output, placement)
+  [case 1/1]
+$ python -I -X utf8 sample.py
+  | my_list = [1, 2]
+  | my_list.append(3)
+  | print(my_list[2])
+  stdout: '3\n'
+  exit: 0
+  expected: '3\n' -> match
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-09 (predict_output, placement)
+
+--- python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-10 (predict_output, placement)
+  [case 1/1]
+$ python -I -X utf8 sample.py
+  | a = [1, 2]
+  | b = a
+  | b.append(3)
+  | print(len(a))
+  stdout: '3\n'
+  exit: 0
+  expected: '3\n' -> match
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-10 (predict_output, placement)
+
+--- python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-11 (predict_output, placement)
+  [case 1/1]
+$ python -I -X utf8 sample.py
+  | def process(n):
+  |     return n * 2
+  | 
+  | print(process(3))
+  stdout: '6\n'
+  exit: 0
+  expected: '6\n' -> match
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-11 (predict_output, placement)
+
+--- python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-12 (write_code, placement)
+  >> reference solution (must pass every case)
+$ python -I -X utf8 harness.py solution.py cases.json bigger
+  | def bigger(a, b):
+  |     if a > b:
+  |         return a
+  |     return b
+  raw: {"results": [{"args": [3, 5], "expected": 5, "ok": true, "got": 5}, {"args": [9, 2], "expected": 9, "ok": true, "got": 9}, {"args": [4, 4], "expected": 4, "ok": true, "got": 4}, {"args": [-1, -7], "expected": -1, "ok": true, "got": -1}]}
+  case bigger(*[3, 5]) -> 5 | expected 5 | ok
+  case bigger(*[9, 2]) -> 9 | expected 9 | ok
+  case bigger(*[4, 4]) -> 4 | expected 4 | ok
+  case bigger(*[-1, -7]) -> -1 | expected -1 | ok
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-12 (write_code, placement) reference passes
+  >> starter code untouched (must fail at least one case)
+$ python -I -X utf8 harness.py solution.py cases.json bigger
+  | def bigger(a, b):
+  |     pass
+  raw: {"results": [{"args": [3, 5], "expected": 5, "ok": false, "got": null}, {"args": [9, 2], "expected": 9, "ok": false, "got": null}, {"args": [4, 4], "expected": 4, "ok": false, "got": null}, {"args": [-1, -7], "expected": -1, "ok": false, "got": null}]}
+  case bigger(*[3, 5]) -> null | expected 5 | WRONG
+  case bigger(*[9, 2]) -> null | expected 9 | WRONG
+  case bigger(*[4, 4]) -> null | expected 4 | WRONG
+  case bigger(*[-1, -7]) -> null | expected -1 | WRONG
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-12 (write_code, placement) rejects starter code untouched
+  >> must_fail #1: prints instead of returning (must fail at least one case)
+$ python -I -X utf8 harness.py solution.py cases.json bigger
+  | def bigger(a, b):
+  |     if a > b:
+  |         print(a)
+  |     else:
+  |         print(b)
+  raw: {"results": [{"args": [3, 5], "expected": 5, "ok": false, "got": null}, {"args": [9, 2], "expected": 9, "ok": false, "got": null}, {"args": [4, 4], "expected": 4, "ok": false, "got": null}, {"args": [-1, -7], "expected": -1, "ok": false, "got": null}]}
+  case bigger(*[3, 5]) -> null | expected 5 | WRONG
+  case bigger(*[9, 2]) -> null | expected 9 | WRONG
+  case bigger(*[4, 4]) -> null | expected 4 | WRONG
+  case bigger(*[-1, -7]) -> null | expected -1 | WRONG
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-12 (write_code, placement) rejects must_fail #1
+  >> must_fail #2: ignores b (must fail at least one case)
+$ python -I -X utf8 harness.py solution.py cases.json bigger
+  | def bigger(a, b):
+  |     return a
+  raw: {"results": [{"args": [3, 5], "expected": 5, "ok": false, "got": 3}, {"args": [9, 2], "expected": 9, "ok": true, "got": 9}, {"args": [4, 4], "expected": 4, "ok": true, "got": 4}, {"args": [-1, -7], "expected": -1, "ok": true, "got": -1}]}
+  case bigger(*[3, 5]) -> 3 | expected 5 | WRONG
+  case bigger(*[9, 2]) -> 9 | expected 9 | ok
+  case bigger(*[4, 4]) -> 4 | expected 4 | ok
+  case bigger(*[-1, -7]) -> -1 | expected -1 | ok
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-12 (write_code, placement) rejects must_fail #2
+
+--- python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-13 (predict_output, placement)
+  [case 1/1]
+$ python -I -X utf8 sample.py
+  | stock = {"pen": 5, "ink": 2}
+  | stock["ink"] = stock["ink"] + 3
+  | print(stock["ink"])
+  stdout: '5\n'
+  exit: 0
+  expected: '5\n' -> match
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-13 (predict_output, placement)
+
+--- python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-14 (fix_bug, placement)
+  >> reference solution (must pass every case)
+$ python -I -X utf8 harness.py solution.py cases.json last_item
+  | def last_item(items):
+  |     return items[-1]
+  raw: {"results": [{"args": [[1, 2, 3]], "expected": 3, "ok": true, "got": 3}, {"args": [["a"]], "expected": "a", "ok": true, "got": "a"}, {"args": [[7, 8]], "expected": 8, "ok": true, "got": 8}]}
+  case last_item(*[[1, 2, 3]]) -> 3 | expected 3 | ok
+  case last_item(*[["a"]]) -> "a" | expected "a" | ok
+  case last_item(*[[7, 8]]) -> 8 | expected 8 | ok
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-14 (fix_bug, placement) reference passes
+  >> buggy code as given (must fail at least one case)
+$ python -I -X utf8 harness.py solution.py cases.json last_item
+  | def last_item(items):
+  |     return items[len(items)]
+  raw: {"results": [{"args": [[1, 2, 3]], "expected": 3, "ok": false, "error": "IndexError: list index out of range"}, {"args": [["a"]], "expected": "a", "ok": false, "error": "IndexError: list index out of range"}, {"args": [[7, 8]], "expected": 8, "ok": false, "error": "IndexError: list index out of range"}]}
+  case last_item(*[[1, 2, 3]]) -> IndexError: list index out of range | expected 3 | WRONG
+  case last_item(*[["a"]]) -> IndexError: list index out of range | expected "a" | WRONG
+  case last_item(*[[7, 8]]) -> IndexError: list index out of range | expected 8 | WRONG
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-14 (fix_bug, placement) rejects buggy code as given
+  >> must_fail #1: returns the first item (must fail at least one case)
+$ python -I -X utf8 harness.py solution.py cases.json last_item
+  | def last_item(items):
+  |     return items[0]
+  raw: {"results": [{"args": [[1, 2, 3]], "expected": 3, "ok": false, "got": 1}, {"args": [["a"]], "expected": "a", "ok": true, "got": "a"}, {"args": [[7, 8]], "expected": 8, "ok": false, "got": 7}]}
+  case last_item(*[[1, 2, 3]]) -> 1 | expected 3 | WRONG
+  case last_item(*[["a"]]) -> "a" | expected "a" | ok
+  case last_item(*[[7, 8]]) -> 7 | expected 8 | WRONG
+RESULT: PASS  python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-14 (fix_bug, placement) rejects must_fail #1
+
+--- python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-15 (explain, placement)
+  not run: python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-15 (explain, placement): rubric-graded by an LLM (2 criteria), nothing to run
+
+##############################################################################
+# SUMMARY
+##############################################################################
+passed checks: 207
+failed checks: 0
+not run (no code to run): 12
+  - python-fundamentals/lessons/01-variables.json step s2 'Two names, two values' predict python.variables.s2.p: conceptual, not run (Conceptual question; step 3 checks the same idea against the real run.)
+  - python-fundamentals/lessons/01-variables.json item python.variables.explain-1 (explain, explain): rubric-graded by an LLM (3 criteria), nothing to run
+  - python-fundamentals/lessons/02-types-expressions.json item python.types-expressions.explain-1 (explain, explain): rubric-graded by an LLM (3 criteria), nothing to run
+  - python-fundamentals/lessons/03-conditionals.json item python.conditionals.explain-1 (explain, explain): rubric-graded by an LLM (3 criteria), nothing to run
+  - python-fundamentals/lessons/04-loops.json item python.loops.explain-1 (explain, explain): rubric-graded by an LLM (3 criteria), nothing to run
+  - python-fundamentals/lessons/05-lists.json item python.lists.explain-1 (explain, explain): rubric-graded by an LLM (3 criteria), nothing to run
+  - python-fundamentals/lessons/06-functions.json item python.functions.explain-1 (explain, explain): rubric-graded by an LLM (3 criteria), nothing to run
+  - python-fundamentals/lessons/07-dictionaries.json item python.dictionaries.explain-1 (explain, explain): rubric-graded by an LLM (3 criteria), nothing to run
+  - python-fundamentals/lessons/08-debugging.json step s5 'Name the cause' predict python.debugging.s5.p: conceptual, not run (Conceptual question; steps 4 and 6 check it against real runs.)
+  - python-fundamentals/lessons/08-debugging.json item python.debugging.explain-1 (explain, explain): rubric-graded by an LLM (4 criteria), nothing to run
+  - python-fundamentals/lessons/08-debugging.json item python.debugging.probe-1 (multiple_choice, probe): recognition item, answer key B, nothing to run
+  - python-fundamentals/assessment/placement.json item python-fundamentals.placement.pl-15 (explain, placement): rubric-graded by an LLM (2 criteria), nothing to run
+OVERALL: PASS
+# exit code: 0
