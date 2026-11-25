@@ -1148,3 +1148,235 @@ skipped (value equals the public .env.example placeholder): ['JWT_SECRET_KEY', '
 secrets checked: ['CREDENTIAL_ENCRYPTION_KEY', 'GEMINI_API_KEY', 'OPENROUTER_API_KEY', 'OPENWEBUI_API_KEY']
 result: no fragment of any secret found in 2 files
 exit=0
+
+# ════════════════════════════════════════════════════════════════════════════
+# Juno formal run — 2026-11-25 17:19 +07  (QA, last gate before M1 report)
+# ════════════════════════════════════════════════════════════════════════════
+$ git branch --show-current; git rev-parse --short HEAD; git status --short
+feat/m1-ai-gateway
+74a9ada4
+?? docs/m1-evidence/videos/m1-formal-run.mp4
+# servers: backend uvicorn :8011 (pid 71561, started 17:11, after c213db55; default DB backend/devbuddy.db), vite :5183, Ollama :11434 (qwen2.5:0.5b)
+
+# ── 1. Provider connection pings, full script (not --agents-only) ──
+$ ./.venv/bin/python scripts/stub_ai_server.py 8790 &   # Anthropic/OpenAI stub, accepts only 'stub-key' — stub, not live
+$ ss -ltnp | grep -E ':(8011|8790|11434) '
+LISTEN 0      5                                   127.0.0.1:8790       0.0.0.0:*    users:(("python",pid=78461,fd=4))
+LISTEN 0      4096                                127.0.0.1:11434      0.0.0.0:*   
+LISTEN 0      2048                                127.0.0.1:8011       0.0.0.0:*    users:(("uvicorn",pid=71561,fd=13))
+$ PYTHONPATH=. ./.venv/bin/python scripts/m1_evidence_connections.py
+# GEMINI_API_KEY in .env: set (value not shown)
+# OPENROUTER_API_KEY in .env: set (value not shown)
+# OPENWEBUI_API_KEY in .env: set (value not shown)
+# ANTHROPIC_API_KEY in .env: empty (value not shown)
+# OPENAI_API_KEY in .env: empty (value not shown)
+$ POST /api/v1/auth/register {"email": "ev_admin@example.com", "username": "ev_admin", "password": "evidence-pass-1"}
+-> HTTP 201 in 547 ms: (token response, 702 bytes, not shown)
+$ GET /api/ai/providers
+-> HTTP 200 in 6 ms: {"count": 8, "first_ids": ["anthropic", "openai", "gemini", "openrouter", "ollama"]}
+
+## gemini (LIVE)
+$ POST /api/v1/auth/register {"email": "ev_gemini@example.com", "username": "ev_gemini", "password": "evidence-pass-1"}
+-> HTTP 201 in 520 ms: (token response, 704 bytes, not shown)
+# model chosen from the live list (65 models): models/gemini-3.8-flash
+$ PUT /api/ai/credentials/text {"provider": "gemini", "model": "models/gemini-3.8-flash", "api_key": "<GEMINI_API_KEY from .env>"}
+-> HTTP 200 in 36 ms: {"id": "608debb4-b125-485a-94b7-8b2d96b80a8f", "slot": "text", "provider": "gemini", "model": "models/gemini-3.8-flash", "base_url": null, "key_hint": "…Y614", "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 310 ms: {"ok": true, "latency_ms": 274, "model_count": 65, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 210 ms: {"count": 65, "first_ids": ["models/antigravity-preview-05-2026", "models/antigravity-preview-09-2026", "models/antigravity-preview-latest", "models/aqa", "models/deep-research-max-preview-04-2026"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 7 ms: {"count": 1, "first_ids": ["608debb4-b125-485a-94b7-8b2d96b80a8f"]}
+$ POST /api/ai/test-draft {"provider": "gemini", "api_key": "bad-key-for-evidence-0000"}
+-> HTTP 200 in 278 ms: {"ok": false, "latency_ms": 259, "model_count": 0, "error_code": "auth_failed", "message": "The provider rejected the API key. (HTTP 400)", "models": []}
+
+## openrouter (LIVE)
+$ POST /api/v1/auth/register {"email": "ev_openrouter@example.com", "username": "ev_openrouter", "password": "evidence-pass-1"}
+-> HTTP 201 in 549 ms: (token response, 712 bytes, not shown)
+# model chosen from the live list (437 models): google/gemma-4-31b-it:free
+$ PUT /api/ai/credentials/text {"provider": "openrouter", "model": "google/gemma-4-31b-it:free", "api_key": "<OPENROUTER_API_KEY from .env>"}
+-> HTTP 200 in 21 ms: {"id": "b71c9fbc-d25f-40a4-b0db-4bcc61d3ed04", "slot": "text", "provider": "openrouter", "model": "google/gemma-4-31b-it:free", "base_url": null, "key_hint": "…2edf", "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 391 ms: {"ok": true, "latency_ms": 362, "model_count": 437, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 260 ms: {"count": 437, "first_ids": ["aion-labs/aion-2.0", "aion-labs/aion-3.0", "aion-labs/aion-3.0-mini", "aion-labs/aion-3.5", "aion-labs/aion-3.5-mini"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 5 ms: {"count": 1, "first_ids": ["b71c9fbc-d25f-40a4-b0db-4bcc61d3ed04"]}
+$ POST /api/ai/test-draft {"provider": "openrouter", "api_key": "bad-key-for-evidence-0000"}
+-> HTTP 200 in 583 ms: {"ok": false, "latency_ms": 566, "model_count": 0, "error_code": "auth_failed", "message": "The provider rejected the API key. (HTTP 401)", "models": []}
+
+## ollama (LIVE, local, qwen2.5:0.5b)
+$ POST /api/v1/auth/register {"email": "ev_ollama@example.com", "username": "ev_ollama", "password": "evidence-pass-1"}
+-> HTTP 201 in 542 ms: (token response, 704 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "ollama", "model": "qwen2.5:0.5b"}
+-> HTTP 200 in 15 ms: {"id": "51e9d170-fe45-4cca-aea9-ccd423798858", "slot": "text", "provider": "ollama", "model": "qwen2.5:0.5b", "base_url": null, "key_hint": null, "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 31 ms: {"ok": true, "latency_ms": 10, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 23 ms: {"count": 1, "first_ids": ["qwen2.5:0.5b"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 6 ms: {"count": 1, "first_ids": ["51e9d170-fe45-4cca-aea9-ccd423798858"]}
+
+## ollama in the live slot (LIVE, local)
+$ POST /api/v1/auth/register {"email": "ev_ollama@example.com", "username": "ev_ollama", "password": "evidence-pass-1"}
+-> HTTP 400 in 5 ms: {"detail": "Email or username already taken"}
+$ POST /api/v1/auth/login {"email": "ev_ollama@example.com", "password": "evidence-pass-1"}
+-> HTTP 200 in 526 ms: (token response, 704 bytes, not shown)
+$ PUT /api/ai/credentials/live {"provider": "ollama", "model": "qwen2.5:0.5b"}
+-> HTTP 200 in 15 ms: {"id": "af1902d7-07a9-4f4b-959e-20484e830db6", "slot": "live", "provider": "ollama", "model": "qwen2.5:0.5b", "base_url": null, "key_hint": null, "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/live/test
+-> HTTP 200 in 42 ms: {"ok": true, "latency_ms": 12, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/live/models
+-> HTTP 200 in 25 ms: {"count": 1, "first_ids": ["qwen2.5:0.5b"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 7 ms: {"count": 2, "first_ids": ["af1902d7-07a9-4f4b-959e-20484e830db6", "51e9d170-fe45-4cca-aea9-ccd423798858"]}
+
+## lmstudio (LIVE via the OpenAI-compatible path, against Ollama /v1)
+$ POST /api/v1/auth/register {"email": "ev_lmstudio@example.com", "username": "ev_lmstudio", "password": "evidence-pass-1"}
+-> HTTP 201 in 538 ms: (token response, 708 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "lmstudio", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1"}
+-> HTTP 200 in 13 ms: {"id": "0e1aee8c-b78c-464e-b996-92cf041464d8", "slot": "text", "provider": "lmstudio", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1", "key_hint": null, "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 34 ms: {"ok": true, "latency_ms": 12, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 23 ms: {"count": 1, "first_ids": ["qwen2.5:0.5b"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 6 ms: {"count": 1, "first_ids": ["0e1aee8c-b78c-464e-b996-92cf041464d8"]}
+
+## vllm (LIVE via the OpenAI-compatible path, against Ollama /v1)
+$ POST /api/v1/auth/register {"email": "ev_vllm@example.com", "username": "ev_vllm", "password": "evidence-pass-1"}
+-> HTTP 201 in 555 ms: (token response, 700 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "vllm", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1"}
+-> HTTP 200 in 13 ms: {"id": "ba582795-b307-4ac4-9df1-5401239b5568", "slot": "text", "provider": "vllm", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1", "key_hint": null, "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 30 ms: {"ok": true, "latency_ms": 8, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 25 ms: {"count": 1, "first_ids": ["qwen2.5:0.5b"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 6 ms: {"count": 1, "first_ids": ["ba582795-b307-4ac4-9df1-5401239b5568"]}
+
+## openai_compatible (LIVE via the OpenAI-compatible path, against Ollama /v1)
+$ POST /api/v1/auth/register {"email": "ev_openai_compatible@example.com", "username": "ev_openai_compatible", "password": "evidence-pass-1"}
+-> HTTP 201 in 545 ms: (token response, 726 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "openai_compatible", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1"}
+-> HTTP 200 in 14 ms: {"id": "255b2725-37f1-42eb-bc56-3cae19f07dd5", "slot": "text", "provider": "openai_compatible", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1", "key_hint": null, "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 30 ms: {"ok": true, "latency_ms": 9, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 26 ms: {"count": 1, "first_ids": ["qwen2.5:0.5b"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 6 ms: {"count": 1, "first_ids": ["255b2725-37f1-42eb-bc56-3cae19f07dd5"]}
+
+## anthropic (stub, not live)
+$ POST /api/v1/auth/register {"email": "ev_anthropic@example.com", "username": "ev_anthropic", "password": "evidence-pass-1"}
+-> HTTP 201 in 554 ms: (token response, 710 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "anthropic", "model": "claude-stub-1", "api_key": "stub-key", "base_url": "http://127.0.0.1:8790"}
+-> HTTP 200 in 16 ms: {"id": "4f0190d2-6e3c-40f2-9994-18a09ce75f68", "slot": "text", "provider": "anthropic", "model": "claude-stub-1", "base_url": "http://127.0.0.1:8790", "key_hint": "…-key", "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 51 ms: {"ok": true, "latency_ms": 17, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 30 ms: {"count": 1, "first_ids": ["claude-stub-1"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 5 ms: {"count": 1, "first_ids": ["4f0190d2-6e3c-40f2-9994-18a09ce75f68"]}
+$ POST /api/ai/test-draft {"provider": "anthropic", "api_key": "bad-key-for-evidence-0000", "base_url": "http://127.0.0.1:8790"}
+-> HTTP 200 in 31 ms: {"ok": false, "latency_ms": 15, "model_count": 0, "error_code": "auth_failed", "message": "The provider rejected the API key. (HTTP 401)", "models": []}
+
+## openai (stub, not live)
+$ POST /api/v1/auth/register {"email": "ev_openai@example.com", "username": "ev_openai", "password": "evidence-pass-1"}
+-> HTTP 201 in 534 ms: (token response, 704 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "openai", "model": "gpt-stub-1", "api_key": "stub-key", "base_url": "http://127.0.0.1:8790/v1"}
+-> HTTP 200 in 12 ms: {"id": "5ddefd6d-b9cc-4d06-b0ab-e7b42e7ce8e1", "slot": "text", "provider": "openai", "model": "gpt-stub-1", "base_url": "http://127.0.0.1:8790/v1", "key_hint": "…-key", "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 28 ms: {"ok": true, "latency_ms": 7, "model_count": 2, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 20 ms: {"count": 2, "first_ids": ["gpt-stub-1", "gpt-stub-2"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 7 ms: {"count": 1, "first_ids": ["5ddefd6d-b9cc-4d06-b0ab-e7b42e7ce8e1"]}
+$ POST /api/ai/test-draft {"provider": "openai", "api_key": "bad-key-for-evidence-0000", "base_url": "http://127.0.0.1:8790/v1"}
+-> HTTP 200 in 25 ms: {"ok": false, "latency_ms": 6, "model_count": 0, "error_code": "auth_failed", "message": "The provider rejected the API key. (HTTP 401)", "models": []}
+
+## unreachable host gives a typed error, not a crash
+$ POST /api/ai/test-draft {"provider": "openai_compatible", "base_url": "http://127.0.0.1:9/v1"}
+-> HTTP 200 in 871 ms: {"ok": false, "latency_ms": 854, "model_count": 0, "error_code": "unreachable", "message": "Could not reach the provider. Check the base URL and that it is running.", "models": []}
+
+## user isolation over HTTP: ev_admin has no credentials and cannot use ev_gemini's
+$ GET /api/ai/credentials
+-> HTTP 200 in 7 ms: []
+$ GET /api/ai/credentials/text/models
+-> HTTP 404 in 7 ms: {"detail": "No credential saved for this slot."}
+
+# leak check of every raw API response (full key and inner fragment) against .env keys: none found
+exit=0
+# summary: saved-credential test ok=true for gemini (LIVE, models/gemini-3.8-flash), openrouter (LIVE, google/gemma-4-31b-it:free),
+#   ollama text + live slot, lmstudio, vllm, openai_compatible (LIVE local via Ollama /v1), anthropic + openai (stub, not live).
+#   bad key -> auth_failed on gemini/openrouter/anthropic/openai; unreachable host -> unreachable; user isolation holds.
+
+# ── 2. UI run recorded: docs/m1-evidence/videos/m1-formal-run.mp4 ──
+$ cd /tmp/pw && node juno-formal.mjs   # playwright-core, Chromium 1217, real clicks; desktop 1280x800 then 390x844 (hasTouch)
+# keys typed: 'wrong-key-juno-0000' (fake, error case) and 'juno-fake-local-key-9c4d' (fake, Ollama ignores it). No .env key used.
+# test data: one lesson seeded for the new user with docs/m1-evidence/seed_demo_lesson.py (direct DB write, test data only)
+# CHECK times are seconds into the mp4 (mob times include the desk offset)
+# user juno-formal-mwvyxfg8@example.com (test account, made in this run)
+CHECK desk 7.5s register -> signed in PASS http://localhost:5183/dashboard
+# seeded lesson 277d0dbc-1b6b-434b-b458-9e7c5ef3dff1
+CHECK desk 10.3s logout leaves the app PASS http://localhost:5183/
+CHECK desk 15.9s login -> dashboard PASS http://localhost:5183/dashboard
+CHECK desk 17.6s settings shows Text mentor + Live mentor PASS 
+CHECK desk 17.6s provider select lists the gateway providers PASS ["Choose a provider","Anthropic (Claude)","OpenAI","Google Gemini","OpenRouter","Ollama (local)","LM Studio (local)","vLLM","Custom (OpenAI-compatible)"]
+CHECK desk 20s key field is password type PASS 
+CHECK desk 23.3s wrong key -> readable error PASS "The provider turned down this key. Check that you copied all of it, or make a new one.\n\nThe provider rejected the API key. (HTTP 400)"
+CHECK desk 26.6s Ollama test ok, models listed PASS "Connected in 72 ms. 1 model found. Pick one, then save."
+CHECK desk 29.9s saved PASS "Saved."
+CHECK desk 32.3s after reload: Ollama + qwen2.5:0.5b kept PASS ["ollama","qwen2.5:0.5b"]
+CHECK desk 55s mentor reply streamed back PASS "Why does the loop print each fruit on its own line? The loop is printing each fruit on its own line because the print function takes a single argument (the current fruit), and each fruit is printed on a separate line."
+CHECK desk 66.1s custom + fake key saved PASS "Saved."
+CHECK desk 69.1s after reload: key_hint shown, key never re-shown PASS {"hint":"Saved, ends …9c4d","inputs":[{"type":"text","v":"http://localhost:11434/v1"}]}
+CHECK desk 73s delete -> falls back to default AI PASS "Removed. Nexora uses its default AI until you set one."
+CHECK desk 75.4s fallback holds after reload PASS 
+CHECK desk 75.4s no key in localStorage/sessionStorage/cookies PASS 
+CHECK desk 75.4s no key in any /api response or console line PASS []
+CHECK desk 75.4s no console errors PASS []
+CHECK mob 81.2s login -> dashboard PASS http://localhost:5183/dashboard
+CHECK mob 83.7s settings shows Text mentor + Live mentor PASS 
+CHECK mob 83.8s provider select lists the gateway providers PASS ["Choose a provider","Anthropic (Claude)","OpenAI","Google Gemini","OpenRouter","Ollama (local)","LM Studio (local)","vLLM","Custom (OpenAI-compatible)"]
+CHECK mob 86.1s key field is password type PASS 
+CHECK mob 89.4s wrong key -> readable error PASS "The provider turned down this key. Check that you copied all of it, or make a new one.\n\nThe provider rejected the API key. (HTTP 400)"
+CHECK mob 92.6s Ollama test ok, models listed PASS "Connected in 20 ms. 1 model found. Pick one, then save."
+CHECK mob 95.9s saved PASS "Saved."
+CHECK mob 98.3s after reload: Ollama + qwen2.5:0.5b kept PASS ["ollama","qwen2.5:0.5b"]
+CHECK mob 105.8s custom + fake key saved PASS "Saved."
+CHECK mob 108.7s after reload: key_hint shown, key never re-shown PASS {"hint":"Saved, ends …9c4d","inputs":[{"type":"text","v":"http://localhost:11434/v1"}]}
+CHECK mob 112.5s delete -> falls back to default AI PASS "Removed. Nexora uses its default AI until you set one."
+CHECK mob 114.9s fallback holds after reload PASS 
+CHECK mob 114.9s no key in localStorage/sessionStorage/cookies PASS 
+CHECK mob 114.9s no key in any /api response or console line PASS []
+CHECK mob 114.9s no console errors PASS []
+
+# mentor reply went through the gateway with the user's Ollama credential (ai_usage row, no prompt/response stored):
+$ sqlite3 backend/devbuddy.db "select started_at,slot,provider,model,agent,source,latency_ms,output_tokens,ok,error_code from ai_usage join users on users.id=ai_usage.user_id where users.email='juno-formal-mwvyxfg8@example.com'"
+2026-11-25 10:16:41.838121|text|ollama|qwen2.5:0.5b|socratic_mentor|user|13587|36|1|
+exit=$?
+
+# ── 3. Video file ──
+$ ffmpeg -i desk.webm -i mob.webm -filter_complex '<scale+pad 1280x800, fps 25, concat>' -c:v libx264 -crf 23 -pix_fmt yuv420p -movflags +faststart docs/m1-evidence/videos/m1-formal-run.mp4
+$ ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt,width,height -show_entries format=duration -of default=nw=1 docs/m1-evidence/videos/m1-formal-run.mp4
+codec_name=h264
+width=1280
+height=800
+pix_fmt=yuv420p
+duration=114.640000
+$ ls -l docs/m1-evidence/videos/m1-formal-run.mp4
+1724874 bytes
+# video map: 0:00-0:08 register, 0:08-0:16 logout+login, 0:16-0:23 settings + wrong key error, 0:23-0:30 Ollama test ok + model + save,
+#   0:30-0:33 reload, 0:33-0:56 lesson mentor reply, 0:56-1:15 fake key save, reload key_hint …9c4d, delete -> default AI;
+#   1:15-1:55 same Settings flow at 390px
+
+# RESULT: 33 UI checks passed, 0 failed; 9/9 provider connection tests ok; bad-key and unreachable paths typed. Verdict: PASS
+$ python /tmp/nexora-leakcheck.py .env <this Juno section>
+skipped (value equals the public .env.example placeholder): ['JWT_SECRET_KEY', 'SECRET_KEY']
+secrets checked: ['CREDENTIAL_ENCRYPTION_KEY', 'GEMINI_API_KEY', 'OPENROUTER_API_KEY', 'OPENWEBUI_API_KEY']
+result: no fragment of any secret found in 1 files
+exit=0
+$ git status --short
+ M docs/m1-evidence/backend-tests.log
+?? docs/m1-evidence/videos/m1-formal-run.mp4
