@@ -19,7 +19,7 @@ from app.ai_gateway.credentials import (
 from app.ai_gateway.crypto import CredentialKeyError, decrypt_secret
 from app.ai_gateway.errors import GatewayError
 from app.ai_gateway.gateway import AIGateway
-from app.ai_gateway.providers import build_adapter, effective_base_url, get_spec, list_specs
+from app.ai_gateway.providers import build_checked_adapter, effective_base_url, get_spec, list_specs
 from app.ai_gateway.types import ConnectionStatus, ResolvedConfig
 from app.database import get_db
 from app.models.ai import AICredential
@@ -66,10 +66,25 @@ def _test_out(s: ConnectionStatus) -> TestResultOut:
     )
 
 
+_MAX_MODELS = 500
+_MAX_MODEL_TEXT = 200
+
+
+def _models_out(models: list) -> list[ModelOut]:
+    """Only parsed id/label/context fields go back, never a provider body, and
+    capped, so a base URL cannot be used to pull bulk data through (Vex F1)."""
+    return [
+        ModelOut(id=m.id[:_MAX_MODEL_TEXT], label=m.label[:_MAX_MODEL_TEXT] if m.label else None,
+                 context_window=m.context_window)
+        for m in models[:_MAX_MODELS]
+    ]
+
+
 async def _check(cfg: ResolvedConfig) -> ConnectionStatus:
-    """Run a connection check on a fresh adapter (not the shared cache) and close it."""
+    """Run a connection check on a fresh adapter (not the shared cache) and close it.
+    build_checked_adapter applies the base URL guard (url_guard.py)."""
     try:
-        adapter = build_adapter(cfg)
+        adapter = await build_checked_adapter(cfg)
     except GatewayError as err:
         return ConnectionStatus(ok=False, latency_ms=0, error_code=err.code, message=err.message)
     try:
@@ -143,7 +158,7 @@ async def credential_models(
 ) -> list[ModelOut]:
     _, cfg = await _stored_config(db, current_user, slot)
     try:
-        adapter = build_adapter(cfg)
+        adapter = await build_checked_adapter(cfg)
     except GatewayError as err:
         raise _http_error(err)
     try:
@@ -152,7 +167,7 @@ async def credential_models(
         raise _http_error(err)
     finally:
         await adapter.aclose()
-    return [ModelOut(id=m.id, label=m.label, context_window=m.context_window) for m in models]
+    return _models_out(models)
 
 
 @router.delete("/credentials/{slot}", status_code=204)
@@ -199,5 +214,5 @@ async def test_draft(
     out = _test_out(status)
     return DraftTestResultOut(
         **out.model_dump(),
-        models=[ModelOut(id=m.id, label=m.label, context_window=m.context_window) for m in status.models],
+        models=_models_out(status.models),
     )

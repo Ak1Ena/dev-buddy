@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.ai_gateway.crypto import ensure_credential_key
 from app.ai_gateway.usage import flush_usage
-from app.config import get_settings
+from app.config import check_app_secrets, get_settings
 from app.database import init_db
 from app.routers import auth, assessment, learning, chat, analytics, scenes, ai
 
@@ -15,8 +15,9 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Fail at startup, not at first save, if the credential key is missing
-    # outside development.
+    # Fail at startup, not at first save or first forged token, if the credential
+    # key is missing or the JWT/app secret is a placeholder outside development.
+    check_app_secrets(settings)
     ensure_credential_key()
     await init_db()
     yield
@@ -36,6 +37,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     # Defaults plus ALLOWED_ORIGINS from .env (e.g. a worktree frontend on another port).
+    # cors_origins drops "*", which is unsafe with allow_credentials=True.
     allow_origins=sorted({"http://localhost:5173", "http://localhost:3000", *settings.cors_origins}),
     allow_credentials=True,
     allow_methods=["*"],

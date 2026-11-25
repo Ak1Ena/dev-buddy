@@ -21,9 +21,11 @@ from app.ai_gateway.types import (
     GenerateRequest,
     GenerateResult,
     ModelInfo,
+    Timeouts,
 )
 
 __all__ = [
     "AIGateway", "AgentLLM", "agent_llm", "get_gateway", "GatewayError", "JSONOutputError",
     "AIEvent", "Capabilities", "ConnectionStatus", "GenerateRequest", "GenerateResult", "ModelInfo",
+    "Timeouts",
 ]

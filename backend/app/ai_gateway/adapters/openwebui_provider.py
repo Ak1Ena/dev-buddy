@@ -14,11 +14,13 @@ class OpenWebUIProvider(LLMProvider):
     endpoint and x-api-key authentication.
     """
 
-    def __init__(self, api_key: str, model: str, base_url: str):
+    def __init__(self, api_key: str, model: str, base_url: str,
+                 timeout: httpx.Timeout | float = 60.0):
         self.api_key = api_key
         self.model = model
         self.base_url = base_url.rstrip("/")
         self.client = httpx.AsyncClient()
+        self.timeout = timeout
 
     def _build_payload(self, messages: list[dict], system: str, max_tokens: int, stream: bool) -> dict:
         # Transform the standard messages format to the expected payload
@@ -54,7 +56,7 @@ class OpenWebUIProvider(LLMProvider):
         }
         payload = self._build_payload(messages, system, max_tokens, stream=False)
 
-        response = await self.client.post(url, headers=headers, json=payload, timeout=60.0)
+        response = await self.client.post(url, headers=headers, json=payload, timeout=self.timeout)
         response.raise_for_status() # Raise an exception for bad status codes
 
         data = response.json()
@@ -92,7 +94,7 @@ class OpenWebUIProvider(LLMProvider):
         }
         payload = self._build_payload(messages, system, max_tokens, stream=True)
 
-        async with self.client.stream("POST", url, headers=headers, json=payload, timeout=60.0) as response:
+        async with self.client.stream("POST", url, headers=headers, json=payload, timeout=self.timeout) as response:
             response.raise_for_status()
             async for line in response.aiter_lines():
                 if line.startswith("data:"):

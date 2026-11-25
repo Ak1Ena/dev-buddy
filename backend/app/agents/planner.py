@@ -4,9 +4,9 @@ grounded in the user's submitted code.
 """
 import logging
 import asyncio
-from app.ai_gateway import AIGateway, agent_llm
-from app.agents.utils import extract_json
+from app.ai_gateway import AIGateway, JSONOutputError, agent_llm
 from app.agents.code_analyzer import CodeAnalyzerAgent
+from app.agents.output_schemas import LearningPathPlan, LessonContent
 
 logger = logging.getLogger(__name__)
 
@@ -285,31 +285,44 @@ Skill level: {skill_level}
 Rules for this path:
 {path_type_instruction}"""
 
-        for attempt, max_tok in enumerate([4000, 2000], start=1):
+        result = await self._plan_path(prompt, PLANNER_SYSTEM, [4000, 2000],
+                                       "Your Personalized Learning Path", "Learning path")
+        if result is not None:
+            return result
+        logger.warning("All LLM attempts failed — using deterministic fallback path")
+        return _build_fallback_path(concepts, weak_areas, language)
+
+    async def _plan_path(
+        self, prompt: str, system: str, token_budgets: list[int], default_title: str, label: str
+    ) -> dict | None:
+        """One path request through complete_json, or None so the caller uses its fallback.
+
+        The first attempt already retries once with the validation error (bad JSON,
+        no lessons, a lesson without title/topic/order_index). A timeout or provider
+        error gets one more attempt with the smaller token budget, as before.
+        """
+        for attempt, max_tok in enumerate(token_budgets, start=1):
             try:
-                raw = await asyncio.wait_for(
-                    self.llm.complete(
+                plan = await asyncio.wait_for(
+                    self.llm.complete_json(
                         messages=[{"role": "user", "content": prompt}],
-                        system=PLANNER_SYSTEM,
+                        schema=LearningPathPlan,
+                        system=system,
                         max_tokens=max_tok,
+                        retries=1 if attempt == 1 else 0,
                     ),
                     timeout=180.0,
                 )
-                if not raw or not raw.strip():
-                    raise ValueError("empty response")
-                result = extract_json(raw)
-                if isinstance(result, list):
-                    result = {"title": "Your Personalized Learning Path", "description": "", "lessons": result}
-                elif "lessons" not in result and isinstance(result.get("order_index"), int):
-                    result = {"title": "Your Personalized Learning Path", "description": "", "lessons": [result]}
-                if len(result.get("lessons", [])) >= 1:
-                    return result
-                raise ValueError("no lessons returned")
+                result = plan.to_dict()
+                result.setdefault("title", default_title)
+                result.setdefault("description", "")
+                return result
+            except JSONOutputError as exc:
+                logger.warning("%s LLM attempt %d failed: %s", label, attempt, exc)
+                return None
             except Exception as exc:
-                logger.warning("Learning path LLM attempt %d failed: %s", attempt, exc)
-
-        logger.warning("All LLM attempts failed — using deterministic fallback path")
-        return _build_fallback_path(concepts, weak_areas, language)
+                logger.warning("%s LLM attempt %d failed: %s", label, attempt, exc)
+        return None
 
     async def generate_topic_path(
         self,
@@ -324,26 +337,10 @@ Student level: {skill_level}
 
 Design a clear progression of lessons that teaches this topic starting from the student's current level."""
 
-        for attempt, max_tok in enumerate([3000, 1500], start=1):
-            try:
-                raw = await asyncio.wait_for(
-                    self.llm.complete(
-                        messages=[{"role": "user", "content": prompt}],
-                        system=TOPIC_PLANNER_SYSTEM,
-                        max_tokens=max_tok,
-                    ),
-                    timeout=180.0,
-                )
-                if not raw or not raw.strip():
-                    raise ValueError("empty response")
-                result = extract_json(raw)
-                if isinstance(result, list):
-                    result = {"title": f"Learning {topic}", "description": "", "lessons": result}
-                if len(result.get("lessons", [])) >= 1:
-                    return result
-                raise ValueError("no lessons returned")
-            except Exception as exc:
-                logger.warning("Topic path LLM attempt %d failed: %s", attempt, exc)
+        result = await self._plan_path(prompt, TOPIC_PLANNER_SYSTEM, [3000, 1500],
+                                       f"Learning {topic}", "Topic path")
+        if result is not None:
+            return result
 
         # Deterministic fallback
         fallback_topics = ["variables", "data_types", "conditionals", "loops", "functions"]
@@ -392,26 +389,16 @@ Focus on the {topic} concept as it appears in their code. Reference their actual
 names, function names, and line numbers."""
 
         try:
-            raw = await asyncio.wait_for(
-                self.llm.complete(
+            content = await asyncio.wait_for(
+                self.llm.complete_json(
                     messages=[{"role": "user", "content": prompt}],
+                    schema=LessonContent,
                     system=CONTENT_SYSTEM,
                     max_tokens=6000,
                 ),
                 timeout=300.0,
             )
-            if not raw or not raw.strip():
-                raise ValueError("LLM returned empty response for lesson content")
-            result = extract_json(raw)
-            if isinstance(result, list):
-                # Sibling objects — pick the one that looks like lesson content
-                for item in result:
-                    if isinstance(item, dict) and any(k in item for k in ("concept_hook", "key_concepts", "explanation")):
-                        return item
-                if result and isinstance(result[0], dict):
-                    return result[0]
-                raise ValueError("LLM returned a list with no valid lesson content object")
-            return result
+            return content.to_dict()
         except asyncio.TimeoutError:
             logger.warning("Lesson content generation timed out after 300s for topic=%s", topic)
             return _fallback_lesson_content(topic, language, code_snippet)

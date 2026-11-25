@@ -864,3 +864,287 @@ skipped (value equals the public .env.example placeholder): ['JWT_SECRET_KEY', '
 secrets checked: ['CREDENTIAL_ENCRYPTION_KEY', 'GEMINI_API_KEY', 'OPENROUTER_API_KEY', 'OPENWEBUI_API_KEY']
 result: no fragment of any secret found in 2 files
 exit=0
+
+==================================================================
+# 2026-11-25T10:05:18Z Rio, assignment cc8ba9e0: timeouts, complete_json in all JSON agents, streamed usage, Vex F1-F8
+# worktree /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend/.. on feat/m1-ai-gateway @ ae34f694 + uncommitted changes (this commit)
+
+$ .venv/bin/python -m pytest -v
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-8.3.4, pluggy-1.7.0 -- /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.16.0, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=function
+collecting ... collected 98 items
+
+tests/test_agent_schemas.py::test_code_analyzer_keeps_extra_keys_and_prompt PASSED [  1%]
+tests/test_agent_schemas.py::test_code_analyzer_non_code_passes_through PASSED [  2%]
+tests/test_agent_schemas.py::test_code_analyzer_retries_then_falls_back_to_static PASSED [  3%]
+tests/test_agent_schemas.py::test_misconceptions_accept_wrapped_object_and_filter PASSED [  4%]
+tests/test_agent_schemas.py::test_assessment_bare_list_is_accepted PASSED [  5%]
+tests/test_agent_schemas.py::test_assessment_salvages_questions_from_malformed_reply PASSED [  6%]
+tests/test_agent_schemas.py::test_planner_bare_list_gets_default_title_and_keeps_lesson_keys PASSED [  7%]
+tests/test_agent_schemas.py::test_planner_retries_lesson_missing_topic_with_reason PASSED [  8%]
+tests/test_agent_schemas.py::test_planner_learning_path_falls_back_when_replies_stay_bad PASSED [  9%]
+tests/test_agent_schemas.py::test_lesson_content_picks_content_object_from_siblings PASSED [ 10%]
+tests/test_agent_schemas.py::test_designer_bare_frames_list_is_wrapped PASSED [ 11%]
+tests/test_agent_schemas.py::test_designer_falls_back_on_empty_object PASSED [ 12%]
+tests/test_agent_schemas.py::test_choreographer_keeps_scene_shape_and_falls_back PASSED [ 13%]
+tests/test_agent_schemas.py::test_lesson_suggester_shapes PASSED         [ 14%]
+tests/test_agent_schemas.py::test_no_agent_uses_extract_json PASSED      [ 15%]
+tests/test_ai_api.py::test_requires_login PASSED                         [ 16%]
+tests/test_ai_api.py::test_providers_list_has_m1_ids_and_no_dev_only PASSED [ 17%]
+tests/test_ai_api.py::test_key_never_in_any_response PASSED              [ 18%]
+tests/test_ai_api.py::test_connection_test_updates_status_with_typed_error PASSED [ 19%]
+tests/test_ai_api.py::test_models_error_maps_to_502_not_401 PASSED       [ 20%]
+tests/test_ai_api.py::test_revoke_deletes_row_and_ciphertext PASSED      [ 21%]
+tests/test_ai_api.py::test_user_b_cannot_see_test_use_or_delete_user_a_credential PASSED [ 22%]
+tests/test_ai_api.py::test_omitting_key_keeps_it_only_for_same_provider_and_url PASSED [ 23%]
+tests/test_ai_api.py::test_validation_rejects_bad_slot_provider_and_url PASSED [ 24%]
+tests/test_ai_api.py::test_local_provider_saves_without_key PASSED       [ 25%]
+tests/test_crypto.py::test_round_trip_and_ciphertext_hides_key PASSED    [ 26%]
+tests/test_crypto.py::test_same_key_encrypts_differently_each_time PASSED [ 27%]
+tests/test_crypto.py::test_wrong_server_key_cannot_decrypt PASSED        [ 28%]
+tests/test_crypto.py::test_key_hint_shows_only_last_four PASSED          [ 29%]
+tests/test_crypto.py::test_dev_generates_key_file_with_mode_600 PASSED   [ 30%]
+tests/test_crypto.py::test_missing_key_outside_development_is_an_error PASSED [ 31%]
+tests/test_gateway.py::test_no_user_credential_uses_env_default PASSED   [ 32%]
+tests/test_gateway.py::test_user_credential_wins_over_env PASSED         [ 33%]
+tests/test_gateway.py::test_other_users_credential_is_not_used PASSED    [ 34%]
+tests/test_gateway.py::test_live_slot_has_no_env_default PASSED          [ 35%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc0-auth_failed] PASSED [ 36%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc1-auth_failed] PASSED [ 37%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc2-auth_failed] PASSED [ 38%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc3-not_found] PASSED [ 39%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc4-rate_limited] PASSED [ 40%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc5-rate_limited] PASSED [ 41%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc6-bad_request] PASSED [ 42%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc7-auth_failed] PASSED [ 43%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc8-provider_error] PASSED [ 44%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc9-unreachable] PASSED [ 45%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc10-unreachable] PASSED [ 46%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc11-timeout] PASSED [ 47%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc12-timeout] PASSED [ 48%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc13-unreachable] PASSED [ 50%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc14-timeout] PASSED [ 51%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc15-auth_failed] PASSED [ 52%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc16-provider_error] PASSED [ 53%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc17-provider_error] PASSED [ 54%]
+tests/test_gateway.py::test_gateway_errors_have_no_silent_fallback PASSED [ 55%]
+tests/test_gateway.py::test_stream_error_becomes_error_event PASSED      [ 56%]
+tests/test_gateway.py::test_validate_connection_reports_models_and_failures PASSED [ 57%]
+tests/test_gateway.py::test_complete_json_first_try PASSED               [ 58%]
+tests/test_gateway.py::test_complete_json_retries_with_reason_then_succeeds PASSED [ 59%]
+tests/test_gateway.py::test_complete_json_schema_mismatch_retries_then_fails PASSED [ 60%]
+tests/test_gateway.py::test_usage_row_per_call_without_prompt_or_reply PASSED [ 61%]
+tests/test_gateway.py::test_mentor_uses_gateway_with_unchanged_system_prompt PASSED [ 62%]
+tests/test_gateway.py::test_mentor_stream_through_gateway PASSED         [ 63%]
+tests/test_gateway.py::test_agent_stream_raises_gateway_error PASSED     [ 64%]
+tests/test_gateway.py::test_no_agent_or_router_imports_a_provider_sdk_or_old_factory PASSED [ 65%]
+tests/test_security_fixes.py::test_link_local_is_refused_even_when_private_is_allowed[169.254.169.254] PASSED [ 66%]
+tests/test_security_fixes.py::test_link_local_is_refused_even_when_private_is_allowed[fe80::1] PASSED [ 67%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[127.0.0.1] PASSED [ 68%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[10.1.2.3] PASSED [ 69%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[192.168.1.5] PASSED [ 70%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[172.16.0.1] PASSED [ 71%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[100.64.0.1] PASSED [ 72%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[0.0.0.0] PASSED [ 73%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[::1] PASSED [ 74%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[fd00::1] PASSED [ 75%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[::ffff:127.0.0.1] PASSED [ 76%]
+tests/test_security_fixes.py::test_public_address_allowed PASSED         [ 77%]
+tests/test_security_fixes.py::test_private_urls_allowed_by_default_only_in_development PASSED [ 78%]
+tests/test_security_fixes.py::test_metadata_host_and_ip_refused_in_development PASSED [ 79%]
+tests/test_security_fixes.py::test_save_and_draft_test_refuse_loopback_when_not_allowed PASSED [ 80%]
+tests/test_security_fixes.py::test_env_default_is_admin_config_and_not_checked PASSED [ 81%]
+tests/test_security_fixes.py::test_redirect_is_not_followed PASSED       [ 82%]
+tests/test_security_fixes.py::test_model_list_to_browser_is_capped PASSED [ 83%]
+tests/test_security_fixes.py::test_scenes_require_login_and_owner PASSED [ 84%]
+tests/test_security_fixes.py::test_env_example_has_empty_credential_key PASSED [ 85%]
+tests/test_security_fixes.py::test_placeholder_secrets_refused_outside_development PASSED [ 86%]
+tests/test_security_fixes.py::test_lifespan_refuses_to_start PASSED      [ 87%]
+tests/test_security_fixes.py::test_sqlite_secure_delete_is_on PASSED     [ 88%]
+tests/test_security_fixes.py::test_revoke_and_replace_evict_cached_adapter PASSED [ 89%]
+tests/test_security_fixes.py::test_cors_star_dropped_with_warning PASSED [ 90%]
+tests/test_security_fixes.py::test_dev_key_file_with_wide_mode_warns PASSED [ 91%]
+tests/test_timeouts.py::test_no_first_token_ends_with_timeout_error_inside_the_limit PASSED [ 92%]
+tests/test_timeouts.py::test_stream_that_stalls_midway_hits_the_total_limit PASSED [ 93%]
+tests/test_timeouts.py::test_complete_hits_total_limit PASSED            [ 94%]
+tests/test_timeouts.py::test_timeout_is_logged_as_failed_usage_row PASSED [ 95%]
+tests/test_timeouts.py::test_limits_per_provider_kind_and_sdk_retries_low PASSED [ 96%]
+tests/test_timeouts.py::test_stalled_http_stream_ends_with_typed_timeout_inside_the_limit PASSED [ 97%]
+tests/test_timeouts.py::test_stream_usage_read_from_final_chunk_when_supported PASSED [ 98%]
+tests/test_timeouts.py::test_stream_usage_stays_null_when_provider_not_marked_supported PASSED [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:295
+  /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend/.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:295: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 98 passed, 1 warning in 12.57s ========================
+exit=0
+
+$ .venv/bin/python -m pytest -v --durations=5 tests/test_timeouts.py
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-8.3.4, pluggy-1.7.0 -- /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend
+configfile: pytest.ini
+plugins: anyio-4.16.0, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=function
+collecting ... collected 8 items
+
+tests/test_timeouts.py::test_no_first_token_ends_with_timeout_error_inside_the_limit PASSED [ 12%]
+tests/test_timeouts.py::test_stream_that_stalls_midway_hits_the_total_limit PASSED [ 25%]
+tests/test_timeouts.py::test_complete_hits_total_limit PASSED            [ 37%]
+tests/test_timeouts.py::test_timeout_is_logged_as_failed_usage_row PASSED [ 50%]
+tests/test_timeouts.py::test_limits_per_provider_kind_and_sdk_retries_low PASSED [ 62%]
+tests/test_timeouts.py::test_stalled_http_stream_ends_with_typed_timeout_inside_the_limit PASSED [ 75%]
+tests/test_timeouts.py::test_stream_usage_read_from_final_chunk_when_supported PASSED [ 87%]
+tests/test_timeouts.py::test_stream_usage_stays_null_when_provider_not_marked_supported PASSED [100%]
+
+============================= slowest 5 durations ==============================
+1.01s call     tests/test_timeouts.py::test_stream_that_stalls_midway_hits_the_total_limit
+0.55s call     tests/test_timeouts.py::test_no_first_token_ends_with_timeout_error_inside_the_limit
+0.51s call     tests/test_timeouts.py::test_stalled_http_stream_ends_with_typed_timeout_inside_the_limit
+0.51s call     tests/test_timeouts.py::test_timeout_is_logged_as_failed_usage_row
+0.50s call     tests/test_timeouts.py::test_complete_hits_total_limit
+============================== 8 passed in 3.96s ===============================
+exit=0
+
+$ .venv/bin/python -m pytest -v --durations=5 tests/test_security_fixes.py
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-8.3.4, pluggy-1.7.0 -- /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend
+configfile: pytest.ini
+plugins: anyio-4.16.0, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=function
+collecting ... collected 26 items
+
+tests/test_security_fixes.py::test_link_local_is_refused_even_when_private_is_allowed[169.254.169.254] PASSED [  3%]
+tests/test_security_fixes.py::test_link_local_is_refused_even_when_private_is_allowed[fe80::1] PASSED [  7%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[127.0.0.1] PASSED [ 11%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[10.1.2.3] PASSED [ 15%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[192.168.1.5] PASSED [ 19%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[172.16.0.1] PASSED [ 23%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[100.64.0.1] PASSED [ 26%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[0.0.0.0] PASSED [ 30%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[::1] PASSED [ 34%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[fd00::1] PASSED [ 38%]
+tests/test_security_fixes.py::test_private_addresses_refused_when_not_allowed[::ffff:127.0.0.1] PASSED [ 42%]
+tests/test_security_fixes.py::test_public_address_allowed PASSED         [ 46%]
+tests/test_security_fixes.py::test_private_urls_allowed_by_default_only_in_development PASSED [ 50%]
+tests/test_security_fixes.py::test_metadata_host_and_ip_refused_in_development PASSED [ 53%]
+tests/test_security_fixes.py::test_save_and_draft_test_refuse_loopback_when_not_allowed PASSED [ 57%]
+tests/test_security_fixes.py::test_env_default_is_admin_config_and_not_checked PASSED [ 61%]
+tests/test_security_fixes.py::test_redirect_is_not_followed PASSED       [ 65%]
+tests/test_security_fixes.py::test_model_list_to_browser_is_capped PASSED [ 69%]
+tests/test_security_fixes.py::test_scenes_require_login_and_owner PASSED [ 73%]
+tests/test_security_fixes.py::test_env_example_has_empty_credential_key PASSED [ 76%]
+tests/test_security_fixes.py::test_placeholder_secrets_refused_outside_development PASSED [ 80%]
+tests/test_security_fixes.py::test_lifespan_refuses_to_start PASSED      [ 84%]
+tests/test_security_fixes.py::test_sqlite_secure_delete_is_on PASSED     [ 88%]
+tests/test_security_fixes.py::test_revoke_and_replace_evict_cached_adapter PASSED [ 92%]
+tests/test_security_fixes.py::test_cors_star_dropped_with_warning PASSED [ 96%]
+tests/test_security_fixes.py::test_dev_key_file_with_wide_mode_warns PASSED [100%]
+
+============================= slowest 5 durations ==============================
+0.48s call     tests/test_security_fixes.py::test_env_default_is_admin_config_and_not_checked
+0.21s call     tests/test_security_fixes.py::test_redirect_is_not_followed
+0.13s call     tests/test_security_fixes.py::test_revoke_and_replace_evict_cached_adapter
+0.10s setup    tests/test_security_fixes.py::test_save_and_draft_test_refuse_loopback_when_not_allowed
+0.07s setup    tests/test_security_fixes.py::test_revoke_and_replace_evict_cached_adapter
+============================== 26 passed in 2.19s ==============================
+exit=0
+
+$ .venv/bin/python -m pytest -v --durations=5 tests/test_agent_schemas.py
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-8.3.4, pluggy-1.7.0 -- /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend
+configfile: pytest.ini
+plugins: anyio-4.16.0, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=function
+collecting ... collected 15 items
+
+tests/test_agent_schemas.py::test_code_analyzer_keeps_extra_keys_and_prompt PASSED [  6%]
+tests/test_agent_schemas.py::test_code_analyzer_non_code_passes_through PASSED [ 13%]
+tests/test_agent_schemas.py::test_code_analyzer_retries_then_falls_back_to_static PASSED [ 20%]
+tests/test_agent_schemas.py::test_misconceptions_accept_wrapped_object_and_filter PASSED [ 26%]
+tests/test_agent_schemas.py::test_assessment_bare_list_is_accepted PASSED [ 33%]
+tests/test_agent_schemas.py::test_assessment_salvages_questions_from_malformed_reply PASSED [ 40%]
+tests/test_agent_schemas.py::test_planner_bare_list_gets_default_title_and_keeps_lesson_keys PASSED [ 46%]
+tests/test_agent_schemas.py::test_planner_retries_lesson_missing_topic_with_reason PASSED [ 53%]
+tests/test_agent_schemas.py::test_planner_learning_path_falls_back_when_replies_stay_bad PASSED [ 60%]
+tests/test_agent_schemas.py::test_lesson_content_picks_content_object_from_siblings PASSED [ 66%]
+tests/test_agent_schemas.py::test_designer_bare_frames_list_is_wrapped PASSED [ 73%]
+tests/test_agent_schemas.py::test_designer_falls_back_on_empty_object PASSED [ 80%]
+tests/test_agent_schemas.py::test_choreographer_keeps_scene_shape_and_falls_back PASSED [ 86%]
+tests/test_agent_schemas.py::test_lesson_suggester_shapes PASSED         [ 93%]
+tests/test_agent_schemas.py::test_no_agent_uses_extract_json PASSED      [100%]
+
+============================= slowest 5 durations ==============================
+0.04s setup    tests/test_agent_schemas.py::test_assessment_salvages_questions_from_malformed_reply
+0.04s setup    tests/test_agent_schemas.py::test_planner_learning_path_falls_back_when_replies_stay_bad
+0.04s call     tests/test_agent_schemas.py::test_code_analyzer_keeps_extra_keys_and_prompt
+0.04s setup    tests/test_agent_schemas.py::test_designer_falls_back_on_empty_object
+0.04s setup    tests/test_agent_schemas.py::test_code_analyzer_keeps_extra_keys_and_prompt
+============================== 15 passed in 0.71s ==============================
+exit=0
+
+$ grep -rn extract_json app/agents
+exit=1 (1 = no match)
+
+# Ollama smoke run, every converted agent (local CPU, qwen2.5:0.5b). Streamed calls should now log token counts.
+$ DATABASE_URL=sqlite+aiosqlite:////tmp/nexora-m1-evidence.db PYTHONPATH=. .venv/bin/python scripts/m1_evidence_flows.py ev_ollama --agents-only
+## smoke run of every agent flow through the gateway, as user ev_ollama: ollama / qwen2.5:0.5b (source=user). Outputs trimmed.
+$ CodeAnalyzerAgent(user).analyze(CODE)
+-> ok in 7401 ms: {"is_code": false, "language": "none", "concepts": [], "difficulty": "beginner", "line_count": 10, "summary": "Return the average of a list of numbers.", "concept_locations": {"concept": "lines 3-5"}}
+$ AssessmentGeneratorAgent(user).generate_questions(CODE, concepts, language, question_count=3)
+-> ok in 26794 ms: [{"id": "q1", "question": "What is the output when the function average([3, 4, 5])] returns an error?", "options": [{"key": "A", "text": "4"}, {"key": "B", "text": "5"}, {"key": "C", "text": "Division by zero"}, {"key": "D", "text": "50"}], "correct": "C", "topic": "functions", "difficulty": "beginner", "code_reference": "line 1", "explanation": "This question tests understanding of the function's behavior and variable changes. The function is designed to return the average of a list of numbers, … [1741 more chars trimmed]
+$ PlannerAgent(user).generate_space_name(...)
+-> ok in 854 ms: Number Line Navigator
+$ PlannerAgent(user).generate_learning_path(...)
+-> ok in 50872 ms: {"lessons": [{"order_index": 1, "title": "Lesson title referencing their code", "topic": "average", "description": "What this lesson covers, referencing their code", "estimated_minutes": 25, "difficulty": "beginner"}, {"order_index": 2, "title": "Lesson title referencing the average function", "topic": "average function", "description": "What the average function does, referencing their code", "estimated_minutes": 30, "difficulty": "beginner"}, {"order_index": 3, "title": "Lesson title referenci … [3335 more chars trimmed]
+$ PlannerAgent(user).generate_lesson_content(...)
+-> ok in 19148 ms: {"concept_hook": "An empty list is a canvas where no shapes can be placed, and the operation of division is a tool for dividing, but it's essential to ensure that the operation does not produce an unintended result.", "code_walkthrough": [{"code": "def average(nums):\n total = 0\n for n in nums:\n total += n\n return total / len(nums)\n print(average([3, 4, 5]))\n print(average([]))\n", "plain_english": "The code is dividing the elements of a list, but it's important to ensure that the operation … [987 more chars trimmed]
+$ DesignerAgent(user).generate_animation(...)
+-> ok in 85068 ms: {"deep_dive": {"title": "Understanding Loops", "cards": [{"title": "Average Function", "content": "The function `average` takes a list of numbers as input, calculates the average, and returns the result. It's a fundamental concept in functional programming where we can think about the computation as a process.", "icon": "brain|zap|shield|database|cpu", "related_nodes": ["code_view-id-or-node-id"]}, {"title": "For Loop", "content": "The for loop is a common technique used to iterate over a sequen … [2245 more chars trimmed]
+$ ChoreographerAgent(user).choreograph(CODE)
+-> ok in 26604 ms: {"timeline": [{"id": "average_node", "type": "box", "start": 1, "duration": 1, "props": {"data": 3, "labels": ["Node A", "Node B", "Node C", "Node D"], "position": [500, 100], "colors": ["fuchsia", "sky", "emerald", "amber"], "isActive": true, "direction": "center"}}, {"id": "average_gate", "type": "gate", "start": 5, "duration": 2, "props": {"feedback": "Node B has the higher average.", "correctAnswer": "Node B"}}, {"id": "average_node", "type": "box", "start": 6, "duration": 1, "props": {"data … [833 more chars trimmed]
+$ LessonSuggesterAgent(user).suggest(convo)
+-> ok in 5679 ms: {"should_create": true, "topic": "loops", "title": "Following a loop step by step", "description": "A mini-lesson to walk through what happens each iteration, using your own code", "why": "You needed the full worked example for the loop step — this lesson will build that mental model", "difficulty": "beginner", "estimated_minutes": 15}
+$ SocraticMentorAgent(user).chat('my code crashes on [], fix it for me', hint_level=0)
+-> ok in 10849 ms: ``` def average(nums): total = 0 for n in nums: total += n return total / len(nums) print(average([3, 4, 5])) print(average([])) ``` ``` def average(nums): total = 0 for n in nums: total += n return total / len(nums) print(average([3, 4, 5])) print(average([])) ```
+$ SocraticMentorAgent(user).stream_chat('why does average([]) crash?', hint_level=1)
+-> ok in 2528 ms: 45 chunks: ``` def average(nums): total = 0 for n in nums: total += n return total / len(nums) print(average([3, 4, 5])) print(average([])) ```
+
+## ai_usage rows written by this run (no prompt, reply or key is stored)
+agent | provider | model | source | ok | error_code | in/out tokens | latency_ms
+code_analyzer | ollama | qwen2.5:0.5b | user | True | None | 359/77 | 7400
+assessment_generator | ollama | qwen2.5:0.5b | user | True | None | 588/683 | 26793
+planner | ollama | qwen2.5:0.5b | user | True | None | 111/6 | 853
+code_analyzer | ollama | qwen2.5:0.5b | user | True | None | 377/78 | 4545
+planner | ollama | qwen2.5:0.5b | user | True | None | 565/1117 | 46323
+planner | ollama | qwen2.5:0.5b | user | True | None | 474/51 | 4837
+planner | ollama | qwen2.5:0.5b | user | True | None | 554/433 | 14309
+designer | ollama | qwen2.5:0.5b | user | True | None | 3541/961 | 85066
+choreographer | ollama | qwen2.5:0.5b | user | True | None | 829/568 | 26586
+lesson_suggester | ollama | qwen2.5:0.5b | user | True | None | 352/92 | 5677
+socratic_mentor | ollama | qwen2.5:0.5b | user | True | None | 1129/98 | 10849
+socratic_mentor | ollama | qwen2.5:0.5b | user | True | None | 1127/49 | 2528
+
+# leak check of this output against the .env key values: none found
+exit=0
+
+# leak check of the staged diff and this log against every secret in the worktree .env
+$ python /tmp/nexora-leakcheck.py .env /tmp/nexora-staged.diff docs/m1-evidence/backend-tests.log
+skipped (value equals the public .env.example placeholder): ['JWT_SECRET_KEY', 'SECRET_KEY']
+secrets checked: ['CREDENTIAL_ENCRYPTION_KEY', 'GEMINI_API_KEY', 'OPENROUTER_API_KEY', 'OPENWEBUI_API_KEY']
+result: no fragment of any secret found in 2 files
+exit=0

@@ -11,9 +11,11 @@ from datetime import datetime
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai_gateway.crypto import decrypt_secret, encrypt_secret, key_hint
+from app.ai_gateway.adapter_cache import clear_adapter_cache, evict_key
+from app.ai_gateway.crypto import CredentialKeyError, decrypt_secret, encrypt_secret, key_hint
 from app.ai_gateway.errors import GatewayError
-from app.ai_gateway.providers import get_spec
+from app.ai_gateway.providers import effective_base_url, get_spec
+from app.ai_gateway.url_guard import check_base_url
 from app.ai_gateway.types import SLOTS, ConnectionStatus, ResolvedConfig
 from app.models.ai import AICredential
 
@@ -61,8 +63,9 @@ async def upsert_credential(
     if not spec.user_selectable:
         raise GatewayError("bad_request", f"{spec.label} cannot be saved as a user credential.")
     base_url = _norm_url(base_url)
-    if spec.needs_base_url and not (base_url or spec.default_base_url):
-        raise GatewayError("bad_request", f"{spec.label} needs a base URL.")
+    # Needs-URL check plus the SSRF guard, so a blocked host is refused at save,
+    # not only later at first use.
+    await check_base_url(effective_base_url(provider, base_url))
 
     cred = await get_credential(db, user_id, slot)
     if cred is None:
@@ -71,6 +74,8 @@ async def upsert_credential(
 
     same_target = cred.provider == provider and _norm_url(cred.base_url) == base_url
     new_key = (api_key or "").strip()
+    if cred.key_ciphertext and (new_key or not same_target):
+        _evict_cached(cred)  # the old key is being replaced or dropped
     if new_key:
         cred.key_ciphertext = encrypt_secret(new_key)
         cred.key_hint = key_hint(new_key)
@@ -93,8 +98,20 @@ async def upsert_credential(
     return cred
 
 
+def _evict_cached(cred: AICredential) -> None:
+    """Drop cached adapters holding this row's plain key (Vex F6)."""
+    try:
+        evict_key(decrypt_secret(cred.key_ciphertext))
+    except CredentialKeyError:
+        clear_adapter_cache()  # can't tell which entry is this key's: drop them all
+
+
 async def delete_credential(db: AsyncSession, user_id: str, slot: str) -> bool:
-    """Revoke: the row (and with it the ciphertext) is deleted."""
+    """Revoke: the row (and with it the ciphertext) is deleted, cached adapters
+    built from it are dropped, and SQLite zeroes the freed bytes (database.py)."""
+    existing = await get_credential(db, user_id, slot)
+    if existing is not None and existing.key_ciphertext:
+        _evict_cached(existing)
     result = await db.execute(
         delete(AICredential).where(AICredential.user_id == user_id, AICredential.slot == slot)
     )

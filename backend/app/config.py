@@ -1,10 +1,24 @@
+import logging
+
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
+
 # Resolve .env from repo root regardless of where uvicorn is launched from
 _ENV_FILE = Path(__file__).resolve().parent.parent.parent / ".env"
+
+# Public values: the defaults below and the ones in .env.example. A server
+# outside development refuses to start with any of these (see insecure_secrets).
+_PLACEHOLDER_SECRETS = {
+    "dev-secret-change-in-production",
+    "jwt-secret-change-in-production",
+    "your-super-secret-key-change-in-production",
+    "your-jwt-secret-key-change-in-production",
+}
+_MIN_SECRET_LEN = 32
 
 
 class Settings(BaseSettings):
@@ -42,6 +56,12 @@ class Settings(BaseSettings):
     # generated once into backend/.credential_key (gitignored, mode 600).
     credential_encryption_key: SecretStr = SecretStr("")
 
+    # ── User base URLs (SSRF guard, app/ai_gateway/url_guard.py) ─────────────
+    # May a user's provider base URL point at loopback/private/CGNAT addresses?
+    # Unset = yes only when APP_ENV=development (local Ollama/LM Studio work);
+    # link-local and cloud metadata addresses are refused either way.
+    ai_allow_private_base_urls: bool | None = None
+
     # ── Local OpenAI-compatible servers (defaults for user credentials) ──────
     lmstudio_base_url: str = "http://localhost:1234/v1"
     vllm_base_url: str = "http://localhost:8000/v1"
@@ -68,7 +88,40 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins(self) -> list[str]:
-        return [o.strip() for o in self.allowed_origins.split(",")]
+        origins = [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
+        if "*" in origins:
+            # CORS runs with allow_credentials=True, where "*" would echo any origin
+            # back and let any site make logged-in requests.
+            logger.warning("ALLOWED_ORIGINS contains '*', which is ignored: list the origins instead.")
+            origins = [o for o in origins if o != "*"]
+        return origins
+
+    @property
+    def allow_private_base_urls(self) -> bool:
+        if self.ai_allow_private_base_urls is not None:
+            return self.ai_allow_private_base_urls
+        return self.app_env == "development"
+
+    def insecure_secrets(self) -> list[str]:
+        """Names of app secrets that are a public placeholder or too short."""
+        return [
+            name for name, value in (("SECRET_KEY", self.secret_key), ("JWT_SECRET_KEY", self.jwt_secret_key))
+            if value.strip() in _PLACEHOLDER_SECRETS or len(value.strip()) < _MIN_SECRET_LEN
+        ]
+
+
+def check_app_secrets(settings: "Settings") -> None:
+    """Startup guard: outside development, refuse placeholder JWT / app secrets.
+    With M1 a forged JWT can use, replace or delete any user's saved provider key."""
+    if settings.app_env == "development":
+        return
+    bad = settings.insecure_secrets()
+    if bad:
+        raise RuntimeError(
+            f"Refusing to start with APP_ENV={settings.app_env}: {', '.join(bad)} is a public placeholder "
+            f"or shorter than {_MIN_SECRET_LEN} characters. Generate one with: "
+            "python -c \"import secrets; print(secrets.token_urlsafe(48))\""
+        )
 
 
 @lru_cache

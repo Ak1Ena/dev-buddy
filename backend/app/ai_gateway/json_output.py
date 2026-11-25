@@ -184,7 +184,13 @@ def _collect_json_objects(text: str) -> list[dict]:
 
 
 class JSONOutputError(ValueError):
-    """The model's reply could not be parsed or did not match the schema."""
+    """The model's reply could not be parsed or did not match the schema.
+
+    raw_text holds the last reply so a caller can salvage part of it. It is never
+    part of str(exc), so logging the error does not log the reply.
+    """
+
+    raw_text: str = ""
 
 
 def parse_into(text: str, schema: type[BaseModel]) -> BaseModel:

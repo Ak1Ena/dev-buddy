@@ -37,7 +37,18 @@ class AIGateway:
 ```
 `get_gateway(user_id: str | None, slot="text")` builds it from the user's credential or the `.env` default (text slot only; the `live` slot has no `.env` default). Agents take `(user_id, gateway=None)` and call the gateway through `agent_llm(...)`, which keeps the old `complete/stream` call shape so prompts did not change; nobody imports `get_llm_provider` after M1.
 
-As built (Rio, 2026-11-25): `get_capabilities()` is async because the provider is only known after resolving the user's credential. Code lives in `backend/app/ai_gateway/` (adapters/, gateway.py, credentials.py, crypto.py, errors.py, usage.py, json_output.py).
+As built (Rio, 2026-11-25): `get_capabilities()` is async because the provider is only known after resolving the user's credential. Code lives in `backend/app/ai_gateway/` (adapters/, gateway.py, adapter_cache.py, credentials.py, crypto.py, errors.py, usage.py, json_output.py, url_guard.py).
+
+Agents' JSON (step 4, done): planner (path, topic path, lesson content), assessment_generator, code_analyzer (analysis, misconceptions), designer, choreographer and lesson_suggester call `AgentLLM.complete_json` with a schema from `backend/app/agents/output_schemas.py`. Schemas allow extra keys and dump with `exclude_unset`, so the JSON the frontend gets has the same keys as before; only fields the backend reads are required. Agent prompts are unchanged (`describe_schema=False`): the schema validates, and a bad reply is retried once with the reason. Each agent keeps its old fallback. `assessment_agent` has no LLM call, so nothing to convert. `extract_json` is no longer used by any agent (the `agents/utils.py` shim is removed).
+
+### Timeouts (per provider kind, `providers.py`)
+
+| Kind | connect | first token | total |
+|---|---|---|---|
+| Hosted (anthropic, openai, gemini, openrouter, openwebui) | 10 s | 90 s | 300 s |
+| Self-hosted (ollama, lmstudio, vllm, openai_compatible) | 5 s | 300 s | 600 s |
+
+Connect and total go to the SDK's httpx client; SDK `max_retries=1`. The gateway enforces first token and total itself (the whole call, retries included), and a model list or connection check gets the first-token limit. A connect timeout maps to `unreachable`; any other timeout maps to `timeout`. The local limits are long because the designer agent took 108 s on CPU qwen2.5:0.5b.
 
 ## HTTP API (contract for Kit; Rio may adjust names, then update this file)
 
@@ -55,15 +66,20 @@ All under `/api/ai`, JWT required, user-scoped. Secrets never appear in any resp
 
 Rules as built:
 - PUT without `api_key` keeps the stored key only if provider and base URL are unchanged; otherwise 400 (a saved key is never sent to a new host without being re-entered).
-- `base_url` must be http(s), no spaces, no `user:pass@`, no query or fragment (422 otherwise). Any host is allowed on purpose, so local LLMs work; that also means the server will call any URL a logged-in user saves (SSRF risk to review before multi-tenant hosting).
+- `base_url` must be http(s), no spaces, no `user:pass@`, no query or fragment (422 otherwise).
+- SSRF guard (Vex F1, `ai_gateway/url_guard.py`): on save, test, model list and first use, the host of a user-chosen URL (provider defaults included) is resolved. Link-local and cloud metadata (169.254.0.0/16, fe80::/10, metadata.google.internal) are always refused. Loopback, private, CGNAT, unique-local and reserved addresses are refused unless `AI_ALLOW_PRIVATE_BASE_URLS` is true; unset means true only when `APP_ENV=development`, so local Ollama/LM Studio work in dev. A refusal is 400 `bad_request` on PUT and `ok:false, error_code:"bad_request"` on tests. The server `.env` default is admin config and is not checked. The SDK clients do not follow redirects. Model lists sent to the browser hold only parsed id/label/context, capped at 500 entries and 200 chars.
+- **Open question for multi-user hosting (no fix now):** DNS can change between the check and the SDK's own connect (rebinding), so a hostile hostname could still reach an internal address. Before Nexora is hosted for people we don't know, pin the resolved IP in the HTTP transport, run provider calls from an egress-restricted network, and rate-limit `/test-draft` and `/credentials/{slot}/test` (their `ok`/`latency_ms` still work as a slow port probe on public hosts).
 - `openwebui` is dev `.env` only: not in `/providers`, PUT rejects it.
+- `/api/v1/scenes/analyze` and `/scene/{id}` need a login (Vex F2); the scene runs on the user's own AI settings and only its owner can read it (404 otherwise).
 
-Error codes: `auth_failed`, `not_found`, `rate_limited`, `unreachable`, `bad_request`, `provider_error` (plus `cancelled` in the usage log when a call is dropped mid-way).
+Error codes: `auth_failed`, `not_found`, `rate_limited`, `unreachable`, `timeout`, `bad_request`, `provider_error` (plus `cancelled` in the usage log when a call is dropped mid-way). `timeout` is new (2026-11-25): the provider accepted the connection but did not answer within the limits above.
 Error shape for `/models`, PUT and other non-test routes: HTTP **400** for `bad_request`, **502** for every provider-side error (not 401, because the frontend treats 401 as logout), body `{"detail": {"error_code": "...", "message": "..."}}`. Messages are fixed text per code plus the HTTP status; provider error bodies are never passed through (some echo the key).
 
 ## Usage log (step 5)
 
-Table `ai_usage`: user_id, slot, provider, model, agent (caller name), source (user/env/draft), started_at, latency_ms, input_tokens?, output_tokens?, ok, error_code. No prompt or response bodies. No keys, headers or full URLs with query strings. Written in the background so a slow write never delays a lesson. Streamed calls on OpenAI-compatible providers log no token counts yet.
+Table `ai_usage`: user_id, slot, provider, model, agent (caller name), source (user/env/draft), started_at, latency_ms, input_tokens?, output_tokens?, ok, error_code. No prompt or response bodies. No keys, headers or full URLs with query strings. Written in the background so a slow write never delays a lesson. Streamed calls send `stream_options.include_usage` where the provider is known to accept it (openai, gemini, openrouter, ollama, vllm; anthropic reports usage natively) and log the counts from the final chunk. LM Studio, custom and OpenWebUI streams are not sent the option and log null tokens.
+
+Server safety (Vex F3-F8): outside development the server refuses to start when `SECRET_KEY` or `JWT_SECRET_KEY` is a public placeholder or shorter than 32 chars, or `CREDENTIAL_ENCRYPTION_KEY` is missing (listed, empty, in `.env.example`). SQLite runs with `secure_delete=ON`, so a revoked key's ciphertext is zeroed in the file. Save/revoke drops cached adapters that hold the old plain key. `*` in `ALLOWED_ORIGINS` is ignored with a warning (credentials are on). A dev key file with group/other permissions logs a warning.
 
 ## Logging rules
 

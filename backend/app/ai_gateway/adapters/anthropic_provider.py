@@ -17,9 +17,16 @@ _API_VERSION = "2023-06-01"
 
 
 class AnthropicProvider(LLMProvider):
-    def __init__(self, api_key: str, model: str, base_url: str | None = None):
+    def __init__(self, api_key: str, model: str, base_url: str | None = None,
+                 timeout: httpx.Timeout | float | None = None, max_retries: int = 1):
         self.base_url = (base_url or _DEFAULT_BASE_URL).rstrip("/")
-        self.client = anthropic.AsyncAnthropic(api_key=api_key, base_url=self.base_url)
+        # The SDK default is 600 s and 2 retries; the gateway passes its per-provider limits.
+        # follow_redirects=False for the same reason as openai_provider.py (SSRF via 302).
+        limits = {"timeout": timeout} if timeout is not None else {}
+        self.client = anthropic.AsyncAnthropic(
+            api_key=api_key, base_url=self.base_url, max_retries=max_retries,
+            http_client=anthropic.DefaultAsyncHttpxClient(follow_redirects=False, **limits), **limits,
+        )
         self._api_key = api_key
         self.model = model
 

@@ -5,8 +5,8 @@ import logging
 import re
 import asyncio
 import json
-from app.ai_gateway import AIGateway, agent_llm
-from app.agents.utils import extract_json
+from app.ai_gateway import AIGateway, JSONOutputError, agent_llm
+from app.agents.output_schemas import QuestionSet
 
 logger = logging.getLogger(__name__)
 
@@ -296,25 +296,25 @@ INSTEAD, ask about:
 
 Use the actual function names and variable names from the code. Ensure the questions progress from simple data checks to complex logical flow analysis."""
 
-        raw = ""
         try:
-            raw = await asyncio.wait_for(
-                self.llm.complete(
+            question_set = await asyncio.wait_for(
+                self.llm.complete_json(
                     messages=[{"role": "user", "content": prompt}],
+                    schema=QuestionSet,
                     system=SYSTEM.format(count=question_count),
                     max_tokens=6000,
                 ),
                 timeout=60.0,
             )
-            if raw and raw.strip():
-                data = extract_json(raw)
-                questions = _normalize_questions(data, question_count)
-                if len(questions) >= (question_count // 2 + 1): # Expect at least half
-                    return questions[:question_count]
-                logger.warning("LLM returned only %d questions, using static fallback", len(questions))
+            questions = _normalize_questions(question_set.questions, question_count)
+            if len(questions) >= (question_count // 2 + 1): # Expect at least half
+                return questions[:question_count]
+            logger.warning("LLM returned only %d questions, using static fallback", len(questions))
         except asyncio.TimeoutError:
             logger.warning("Question generation exceeded timeout — using static fallback")
-        except ValueError:
+        except JSONOutputError as exc:
+            # Both tries were malformed: keep the whole question objects from the last reply.
+            raw = exc.raw_text
             salvaged = _salvage_questions_from_text(raw, question_count)
             if len(salvaged) >= (question_count // 2 + 1):
                 logger.info(

@@ -6,7 +6,7 @@ import asyncio
 import re
 import logging
 from app.ai_gateway import AIGateway, agent_llm
-from app.agents.utils import extract_json
+from app.agents.output_schemas import CodeAnalysis, Misconceptions
 
 logger = logging.getLogger(__name__)
 
@@ -301,27 +301,24 @@ class CodeAnalyzerAgent:
         primary_chunk = code_snippet[:4000]
         
         try:
-            raw = await asyncio.wait_for(
-                self.llm.complete(
+            analysis = await asyncio.wait_for(
+                self.llm.complete_json(
                     messages=[{"role": "user", "content": f"Analyze this code:\n```\n{primary_chunk}\n```"}],
+                    schema=CodeAnalysis,
                     system=SYSTEM,
                     max_tokens=4000,
                 ),
                 timeout=180.0,
             )
-            logger.debug("CodeAnalyzer raw LLM response: %r", raw[:500] if raw else "<empty>")
-            if raw and raw.strip():
-                result = extract_json(raw)
-                # Return immediately for non-code — don't fall through to static fallback
-                if result.get("is_code") is False:
-                    return result
-                if result.get("language") and result.get("concepts"):
-                    # If snippet was truncated, merge with static results for the rest
-                    if len(code_snippet) > 4000:
-                        static_rest = _static_analyze(code_snippet[4000:])
-                        result["concepts"] = list(set(result["concepts"] + static_rest["concepts"]))
-                        result["line_count"] = code_snippet.count("\n") + 1
-                    return result
+            result = analysis.to_dict()
+            # Non-code comes back as is — don't fall through to static fallback.
+            # The schema guarantees language + concepts when is_code is true.
+            if analysis.is_code and len(code_snippet) > 4000:
+                # If snippet was truncated, merge with static results for the rest
+                static_rest = _static_analyze(code_snippet[4000:])
+                result["concepts"] = list(set(result["concepts"] + static_rest["concepts"]))
+                result["line_count"] = code_snippet.count("\n") + 1
+            return result
         except asyncio.TimeoutError:
             logger.warning("Code analysis exceeded 10s SLA — using static fallback")
         except Exception as exc:
@@ -339,11 +336,10 @@ class CodeAnalyzerAgent:
         """
         # For misconceptions, focus on the first 5000 chars where the core logic usually sits
         detect_chunk = code_snippet[:5000]
-        raw = ""
-        
+
         try:
-            raw = await asyncio.wait_for(
-                self.llm.complete(
+            found = await asyncio.wait_for(
+                self.llm.complete_json(
                     messages=[{
                         "role": "user",
                         "content": (
@@ -352,20 +348,19 @@ class CodeAnalyzerAgent:
                             f"```\n{detect_chunk}\n```"
                         ),
                     }],
+                    schema=Misconceptions,
                     system=MISCONCEPTION_SYSTEM,
                     max_tokens=1500,
                 ),
                 timeout=180.0,
             )
-            logger.debug("MisconceptionDetector raw LLM response: %r", raw[:300] if raw else "<empty>")
-            if raw and raw.strip():
-                result = extract_json(raw)
-                return _valid_misconceptions(result)
+            return _valid_misconceptions(found.root)
         except asyncio.TimeoutError:
             logger.warning("Misconception detection exceeded 10s SLA — using static fallback")
         except ValueError as exc:
             logger.info("LLM misconception detector returned non-JSON; using static fallback")
-            logger.debug("MisconceptionDetector non-JSON response: %r", raw[:600] if raw else "<empty>")
+            logger.debug("MisconceptionDetector non-JSON response: %r",
+                         getattr(exc, "raw_text", "")[:600] or "<empty>")
         except Exception as exc:
             logger.warning("LLM misconception detection failed, using static fallback: %s", exc)
 

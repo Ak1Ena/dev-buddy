@@ -21,6 +21,7 @@ _MESSAGES: dict[str, str] = {
     "not_found": "The provider could not find that model or endpoint.",
     "rate_limited": "The provider is rate limiting requests. Try again shortly.",
     "unreachable": "Could not reach the provider. Check the base URL and that it is running.",
+    "timeout": "The provider took too long to answer.",
     "bad_request": "The provider rejected the request.",
     "provider_error": "The provider returned an error.",
 }
@@ -73,10 +74,16 @@ def map_exception(exc: BaseException) -> GatewayError:
 
     status: int | None = None
     code: ErrorCode
-    if isinstance(exc, (openai.APITimeoutError, anthropic.APITimeoutError,
-                        openai.APIConnectionError, anthropic.APIConnectionError,
-                        httpx.TimeoutException, httpx.ConnectError, httpx.NetworkError,
-                        asyncio.TimeoutError, ConnectionError)):
+    # Connect timeout = could not reach the host; any other timeout = it answered too slowly.
+    # The SDKs wrap httpx timeouts in APITimeoutError and keep the httpx error as __cause__.
+    if isinstance(exc, (openai.APITimeoutError, anthropic.APITimeoutError)):
+        code = "unreachable" if isinstance(exc.__cause__, httpx.ConnectTimeout) else "timeout"
+    elif isinstance(exc, httpx.ConnectTimeout):
+        code = "unreachable"
+    elif isinstance(exc, (httpx.TimeoutException, asyncio.TimeoutError)):
+        code = "timeout"
+    elif isinstance(exc, (openai.APIConnectionError, anthropic.APIConnectionError,
+                          httpx.ConnectError, httpx.NetworkError, ConnectionError)):
         code = "unreachable"
     elif isinstance(exc, (openai.APIStatusError, anthropic.APIStatusError)):
         status = exc.status_code

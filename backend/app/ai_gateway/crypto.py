@@ -36,6 +36,9 @@ def _load_key(key_file: Path) -> bytes:
             "Fernet; print(Fernet.generate_key().decode())\""
         )
     if key_file.exists():
+        if key_file.stat().st_mode & 0o077:
+            # We create it 0600; a wider mode means someone changed it. Warn, still start (dev only).
+            logger.warning("%s is readable by other users; run: chmod 600 %s", key_file.name, key_file)
         return key_file.read_bytes().strip()
     key = Fernet.generate_key()
     # O_EXCL so two workers starting at once don't overwrite each other's key.

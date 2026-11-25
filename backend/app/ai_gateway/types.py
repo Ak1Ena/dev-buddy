@@ -17,6 +17,7 @@ ErrorCode = Literal[
     "not_found",
     "rate_limited",
     "unreachable",
+    "timeout",
     "bad_request",
     "provider_error",
 ]
@@ -83,6 +84,18 @@ class Capabilities:
     tools: bool = False
     realtime: bool = False
     local: bool = False
+    # Server accepts stream_options.include_usage, so streamed calls get token counts.
+    stream_usage: bool = False
+
+
+@dataclass(frozen=True)
+class Timeouts:
+    """Seconds. connect: TCP/TLS setup. first_token: until the first streamed text
+    (for non-streamed calls only `total` applies). total: the whole call."""
+
+    connect: float
+    first_token: float
+    total: float
 
 
 @dataclass(frozen=True)

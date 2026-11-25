@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 ErrorCodeLiteral = Literal[
-    "auth_failed", "not_found", "rate_limited", "unreachable", "bad_request", "provider_error"
+    "auth_failed", "not_found", "rate_limited", "unreachable", "timeout", "bad_request", "provider_error"
 ]
 
 

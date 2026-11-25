@@ -4,7 +4,7 @@ Choreographer Agent — generates a SceneJSON from code + AST.
 import asyncio
 import logging
 from app.ai_gateway import AIGateway, agent_llm
-from app.agents.utils import extract_json
+from app.agents.output_schemas import Scene
 from app.core.ast_analyzer import ASTAnalyzer
 
 logger = logging.getLogger(__name__)
@@ -70,12 +70,13 @@ class ChoreographerAgent:
         )
         
         try:
-            raw = await self.llm.complete(
+            scene = await self.llm.complete_json(
                 messages=[{"role": "user", "content": prompt}],
+                schema=Scene,
                 system=SYSTEM_PROMPT,
                 max_tokens=4000,
             )
-            return extract_json(raw)
+            return scene.to_dict()
         except Exception as e:
             logger.error(f"Choreographer failed: {e}")
             return {

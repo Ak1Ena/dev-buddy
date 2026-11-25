@@ -5,7 +5,7 @@ mini-lesson specification for the Planner to flesh out.
 """
 import logging
 from app.ai_gateway import AIGateway, agent_llm
-from app.agents.utils import extract_json
+from app.agents.output_schemas import LessonSuggestion
 
 logger = logging.getLogger(__name__)
 
@@ -58,17 +58,13 @@ Conversation:
 Should a remedial mini-lesson be created? If yes, design it."""
 
         try:
-            raw = await self.llm.complete(
+            suggestion = await self.llm.complete_json(
                 messages=[{"role": "user", "content": prompt}],
+                schema=LessonSuggestion,
                 system=SUGGESTER_SYSTEM,
                 max_tokens=600,
             )
-            if not raw or not raw.strip():
-                return None
-            result = extract_json(raw)
-            if isinstance(result, dict) and result.get("should_create"):
-                return result
-            return None
+            return suggestion.to_dict() if suggestion.should_create else None
         except Exception as exc:
             logger.warning("LessonSuggester failed: %s", exc)
             return None

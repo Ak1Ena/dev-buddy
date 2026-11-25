@@ -13,6 +13,7 @@ import io
 import json
 import sys
 import time
+from datetime import datetime
 
 from sqlalchemy import select
 
@@ -38,7 +39,10 @@ _out = io.StringIO()
 
 # OpenRouter's free gemma-4-31b (same family as the .env default). On 2026-11-25 Gemini 3.8-flash
 # answered 503 "high demand" and the Ollama cloud model answered 401, so neither could carry the flows.
-FLOW_USER = sys.argv[1] if len(sys.argv) > 1 else "ev_openrouter"
+_ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
+FLOW_USER = _ARGS[0] if _ARGS else "ev_openrouter"
+# --agents-only: skip the per-provider pings (cloud hosts can stall) and run just the agent flows.
+AGENTS_ONLY = "--agents-only" in sys.argv
 CODE = '''def average(nums):
     total = 0
     for n in nums:
@@ -91,6 +95,29 @@ async def step(title: str, coro) -> None:
 
 
 async def main() -> int:
+    run_started = datetime.utcnow()
+    if not AGENTS_ONLY:
+        await pings()
+    await flows()
+    await flush_usage()
+    say()
+    say("## ai_usage rows written by this run (no prompt, reply or key is stored)")
+    async with database.AsyncSessionLocal() as db:
+        rows = (await db.execute(select(AIUsage).where(AIUsage.started_at >= run_started)
+                                 .order_by(AIUsage.started_at))).scalars().all()
+    say("agent | provider | model | source | ok | error_code | in/out tokens | latency_ms")
+    for r in rows:
+        say(f"{r.agent} | {r.provider} | {r.model} | {r.source} | {r.ok} | {r.error_code} | "
+            f"{r.input_tokens}/{r.output_tokens} | {r.latency_ms}")
+
+    leaked = any(k in _out.getvalue() or k[4:-4] in _out.getvalue() for k in KEYS)
+    say()
+    say(f"# leak check of this output against the .env key values: {'FOUND' if leaked else 'none found'}")
+    await database.engine.dispose()
+    return 3 if leaked else 0
+
+
+async def pings() -> None:
     say("## one real generation per saved provider credential (user's text slot)")
     for name, label in [("ev_gemini", "gemini LIVE"), ("ev_openrouter", "openrouter LIVE"),
                         ("ev_ollama", "ollama LIVE"), ("ev_lmstudio", "lmstudio LIVE via Ollama /v1"),
@@ -113,8 +140,10 @@ async def main() -> int:
         cfg = ResolvedConfig(provider="openwebui", model=status.models[0].id, base_url=s.openwebui_base_url,
                              api_key=s.openwebui_api_key.get_secret_value(), source="env")
         await ping(AIGateway(config=cfg), "openwebui from .env")
-
     say()
+
+
+async def flows() -> None:
     uid = await user_id(FLOW_USER)
     gw = get_gateway(uid)
     cfg = await gw.get_config()
@@ -155,22 +184,6 @@ async def main() -> int:
                                                        code_context=CODE, hint_level=1)]
         return f"{len(chunks)} chunks: " + "".join(chunks)
     await step("SocraticMentorAgent(user).stream_chat('why does average([]) crash?', hint_level=1)", stream())
-
-    await flush_usage()
-    say()
-    say("## ai_usage rows written by the calls above (no prompt, reply or key is stored)")
-    async with database.AsyncSessionLocal() as db:
-        rows = (await db.execute(select(AIUsage).order_by(AIUsage.started_at))).scalars().all()
-    say("agent | provider | model | source | ok | error_code | in/out tokens | latency_ms")
-    for r in rows:
-        say(f"{r.agent} | {r.provider} | {r.model} | {r.source} | {r.ok} | {r.error_code} | "
-            f"{r.input_tokens}/{r.output_tokens} | {r.latency_ms}")
-
-    leaked = any(k in _out.getvalue() or k[4:-4] in _out.getvalue() for k in KEYS)
-    say()
-    say(f"# leak check of this output against the .env key values: {'FOUND' if leaked else 'none found'}")
-    await database.engine.dispose()
-    return 3 if leaked else 0
 
 
 if __name__ == "__main__":

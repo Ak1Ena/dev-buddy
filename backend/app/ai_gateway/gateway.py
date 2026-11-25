@@ -11,21 +11,20 @@ LLMProvider had, so agent prompts and parsing did not have to change.
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import time
-from collections import OrderedDict
 from datetime import datetime
-from typing import AsyncGenerator, AsyncIterator
+from typing import AsyncGenerator, AsyncIterator, TypeVar
 
 from pydantic import BaseModel
 
 from app import database
+from app.ai_gateway.adapter_cache import clear_adapter_cache, get_adapter  # noqa: F401 (re-export)
 from app.ai_gateway.adapters.base import LLMProvider
 from app.ai_gateway.credentials import check_slot, config_from_credential, get_credential
 from app.ai_gateway.crypto import CredentialKeyError
 from app.ai_gateway.errors import GatewayError, map_exception
 from app.ai_gateway.json_output import JSONOutputError, parse_into, schema_instruction
-from app.ai_gateway.providers import build_adapter, env_default_config, get_spec
+from app.ai_gateway.providers import env_default_config, get_spec
 from app.ai_gateway.types import (
     AIEvent,
     Capabilities,
@@ -34,42 +33,17 @@ from app.ai_gateway.types import (
     GenerateResult,
     ModelInfo,
     ResolvedConfig,
+    Timeouts,
     Usage,
 )
 from app.ai_gateway.usage import UsageEntry, record_usage
 
-# ── Adapter cache ────────────────────────────────────────────────────────────
-# Agents are built per request; without a cache every request would open a new
-# HTTP client pool. Keyed by a hash of the key so the plain key is not a dict key.
-_ADAPTER_CACHE_SIZE = 32
-_adapter_cache: "OrderedDict[tuple, LLMProvider]" = OrderedDict()
+T = TypeVar("T", bound=BaseModel)
 
 
-def _cache_key(cfg: ResolvedConfig) -> tuple:
-    digest = hashlib.sha256(cfg.api_key.encode()).hexdigest()
-    return (cfg.provider, cfg.model, cfg.base_url, digest)
-
-
-def _get_adapter(cfg: ResolvedConfig) -> LLMProvider:
-    key = _cache_key(cfg)
-    adapter = _adapter_cache.get(key)
-    if adapter is not None:
-        _adapter_cache.move_to_end(key)
-        return adapter
-    adapter = build_adapter(cfg)
-    _adapter_cache[key] = adapter
-    if len(_adapter_cache) > _ADAPTER_CACHE_SIZE:
-        _, old = _adapter_cache.popitem(last=False)
-        try:
-            asyncio.get_running_loop().create_task(old.aclose())
-        except RuntimeError:
-            pass
-    return adapter
-
-
-def clear_adapter_cache() -> None:
-    _adapter_cache.clear()
-
+def _timeout_error(what: str, seconds: float) -> GatewayError:
+    # Fixed text plus the limit; nothing from the provider.
+    return GatewayError("timeout", f"The provider took too long to answer ({what} limit {seconds:g} s).")
 
 async def resolve_config(user_id: str | None, slot: str = "text") -> ResolvedConfig:
     check_slot(slot)
@@ -94,11 +68,14 @@ class AIGateway:
         *,
         config: ResolvedConfig | None = None,
         adapter: LLMProvider | None = None,
+        timeouts: Timeouts | None = None,
     ):
         self.user_id = user_id
         self.slot = slot
         self._config = config
         self._adapter = adapter
+        # None = the provider kind's limits (providers.py). Tests pass short ones.
+        self._timeouts = timeouts
         self._lock = asyncio.Lock()
 
     # ── resolution ──────────────────────────────────────────────────────────
@@ -107,7 +84,7 @@ class AIGateway:
             if self._config is None:
                 self._config = await resolve_config(self.user_id, self.slot)
             if self._adapter is None:
-                self._adapter = _get_adapter(self._config)
+                self._adapter = await get_adapter(self._config)
         return self._config, self._adapter
 
     @staticmethod
@@ -122,6 +99,34 @@ class AIGateway:
     async def get_capabilities(self) -> Capabilities:
         cfg, _ = await self._ensure()
         return get_spec(cfg.provider).capabilities
+
+    def _limits(self, cfg: ResolvedConfig) -> Timeouts:
+        return self._timeouts or get_spec(cfg.provider).timeouts
+
+    @staticmethod
+    async def _stream_with_deadlines(
+        chunks: AsyncGenerator[str, None], limits: Timeouts, t0: float
+    ) -> AsyncGenerator[str, None]:
+        """Yield chunks, raising GatewayError('timeout') when the first chunk takes longer
+        than first_token or the whole stream runs past total. Closes the adapter stream
+        (and so its HTTP response) on every exit path."""
+        first = True
+        try:
+            while True:
+                remaining = limits.total - (time.monotonic() - t0)
+                wait = min(limits.first_token, remaining) if first else remaining
+                try:
+                    chunk = await asyncio.wait_for(chunks.__anext__(), timeout=max(wait, 0.0))
+                except StopAsyncIteration:
+                    return
+                except asyncio.TimeoutError:
+                    if first and limits.first_token <= remaining:
+                        raise _timeout_error("first token", limits.first_token) from None
+                    raise _timeout_error("total", limits.total) from None
+                first = False
+                yield chunk
+        finally:
+            await chunks.aclose()
 
     def _log(self, agent: str, started: datetime, t0: float, usage: Usage, ok: bool, code: str | None) -> None:
         cfg = self._config
@@ -149,7 +154,8 @@ class AIGateway:
         try:
             cfg, adapter = await self._ensure()
             self._require_model(cfg)
-            async for chunk in adapter.stream(req.messages, req.system, req.max_tokens, usage=usage):
+            chunks = adapter.stream(req.messages, req.system, req.max_tokens, usage=usage)
+            async for chunk in self._stream_with_deadlines(chunks, self._limits(cfg), t0):
                 yield AIEvent("text_delta", text=chunk)
             ok, code = True, None
             yield AIEvent("done", usage=usage)
@@ -168,7 +174,12 @@ class AIGateway:
         try:
             cfg, adapter = await self._ensure()
             self._require_model(cfg)
-            text = await adapter.complete(req.messages, req.system, req.max_tokens, usage=usage)
+            limit = self._limits(cfg).total
+            try:
+                text = await asyncio.wait_for(
+                    adapter.complete(req.messages, req.system, req.max_tokens, usage=usage), timeout=limit)
+            except asyncio.TimeoutError:
+                raise _timeout_error("total", limit) from None
             ok, code = True, None
             return GenerateResult(
                 text=text, provider=cfg.provider, model=cfg.model, usage=usage,
@@ -182,13 +193,16 @@ class AIGateway:
             self._log(req.agent, started, t0, usage, ok, code)
 
     async def complete_json(
-        self, req: GenerateRequest, schema: type[BaseModel], retries: int = 1
-    ) -> BaseModel:
+        self, req: GenerateRequest, schema: type[T], retries: int = 1, describe_schema: bool = True
+    ) -> T:
         """Ask for JSON matching `schema`; on a bad reply, say what was wrong and retry.
 
-        Raises JSONOutputError after 1 + retries bad replies, GatewayError on provider errors.
+        describe_schema=False keeps the caller's system prompt unchanged, for prompts
+        that already spell out the exact JSON (the agents' prompts do).
+        Raises JSONOutputError after 1 + retries bad replies (its raw_text is the last
+        reply, for callers that salvage partial output), GatewayError on provider errors.
         """
-        system = (req.system or "") + schema_instruction(schema)
+        system = (req.system or "") + (schema_instruction(schema) if describe_schema else "")
         messages = list(req.messages)
         last_error: JSONOutputError | None = None
         for _ in range(retries + 1):
@@ -196,6 +210,7 @@ class AIGateway:
             try:
                 return parse_into(result.text, schema)
             except JSONOutputError as exc:
+                exc.raw_text = result.text
                 last_error = exc
                 messages = messages + [
                     {"role": "assistant", "content": result.text},
@@ -208,8 +223,8 @@ class AIGateway:
     # ── provider info ───────────────────────────────────────────────────────
     async def get_models(self) -> list[ModelInfo]:
         try:
-            _, adapter = await self._ensure()
-            models = await adapter.list_models()
+            cfg, adapter = await self._ensure()
+            models = await asyncio.wait_for(adapter.list_models(), timeout=self._limits(cfg).first_token)
         except Exception as exc:
             raise map_exception(exc) from None
         return sorted(models, key=lambda m: m.id)
@@ -219,16 +234,9 @@ class AIGateway:
         provider has no other way to check (OpenWebUI hosts without /api/models)."""
         t0 = time.monotonic()
         try:
-            _, adapter = await self._ensure()
-            has_own_check = type(adapter).check_auth is not LLMProvider.check_auth
-            models: list[ModelInfo] = []
-            try:
-                models = await adapter.list_models()
-            except Exception:
-                if not has_own_check:
-                    raise
-            if has_own_check:
-                await adapter.check_auth()
+            cfg, adapter = await self._ensure()
+            # A check is a model list or an auth probe, so the first-token limit is plenty.
+            models = await asyncio.wait_for(self._check(adapter), timeout=self._limits(cfg).first_token)
         except Exception as exc:
             err = map_exception(exc)
             return ConnectionStatus(
@@ -240,6 +248,19 @@ class AIGateway:
             ok=True, latency_ms=int((time.monotonic() - t0) * 1000),
             model_count=len(models), models=models,
         )
+
+    @staticmethod
+    async def _check(adapter: LLMProvider) -> list[ModelInfo]:
+        has_own_check = type(adapter).check_auth is not LLMProvider.check_auth
+        models: list[ModelInfo] = []
+        try:
+            models = await adapter.list_models()
+        except Exception:
+            if not has_own_check:
+                raise
+        if has_own_check:
+            await adapter.check_auth()
+        return models
 
     def for_agent(self, agent: str) -> "AgentLLM":
         return AgentLLM(self, agent)
@@ -255,6 +276,17 @@ class AgentLLM:
     async def complete(self, messages: list[dict], system: str = "", max_tokens: int = 1000) -> str:
         result = await self.gateway.complete(GenerateRequest(messages, system, max_tokens, self.agent))
         return result.text
+
+    async def complete_json(
+        self, messages: list[dict], schema: type[T], system: str = "", max_tokens: int = 1000,
+        retries: int = 1,
+    ) -> T:
+        """Agents' JSON calls. Their prompts already show the exact JSON, so the schema is
+        used to validate and to explain a bad reply on the retry, not added to the prompt."""
+        return await self.gateway.complete_json(
+            GenerateRequest(messages, system, max_tokens, self.agent), schema,
+            retries=retries, describe_schema=False,
+        )
 
     async def stream(
         self, messages: list[dict], system: str = "", max_tokens: int = 1000

@@ -6,7 +6,7 @@ its own model, prompt, and token budget.
 import logging
 import asyncio
 from app.ai_gateway import AIGateway, agent_llm
-from app.agents.utils import extract_json
+from app.agents.output_schemas import AnimationSpec
 
 logger = logging.getLogger(__name__)
 
@@ -278,22 +278,16 @@ Create 4-7 animation frames that walk through this code step by step.
 Focus on the {topic} concept. Use the student's actual variable names."""
 
         try:
-            raw = await asyncio.wait_for(
-                self.llm.complete(
+            spec = await asyncio.wait_for(
+                self.llm.complete_json(
                     messages=[{"role": "user", "content": prompt}],
+                    schema=AnimationSpec,
                     system=DESIGNER_SYSTEM,
                     max_tokens=8000,
                 ),
                 timeout=300.0,
             )
-            if not raw or not raw.strip():
-                raise ValueError("empty response")
-            result = extract_json(raw)
-            if isinstance(result, dict):
-                return result
-            if isinstance(result, list):
-                return {"animation_frames": result}
-            raise ValueError(f"unexpected structure: {type(result)}")
+            return spec.to_dict()
         except asyncio.TimeoutError:
             logger.warning("Designer agent timed out after 300s for topic=%s", topic)
             return _fallback_animation(topic, title, language, code_snippet)

@@ -5,7 +5,7 @@ import logging
 from typing import AsyncGenerator
 
 import httpx
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, DefaultAsyncHttpxClient
 
 from app.ai_gateway.adapters.base import LLMProvider
 from app.ai_gateway.types import ModelInfo, Usage
@@ -62,12 +62,23 @@ class OpenAIProvider(LLMProvider):
         base_url: str | None = None,
         extra_headers: dict | None = None,
         auth_check_url: str | None = None,
+        timeout: httpx.Timeout | float | None = None,
+        max_retries: int = 1,
+        stream_usage: bool = False,
     ):
         logger.debug("Initializing OpenAIProvider with base_url: %s", base_url)
 
-        self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        # The SDK default is 600 s and 2 retries; the gateway passes its per-provider limits.
+        # follow_redirects=False: the SDK's default client follows them, which would let a
+        # public base URL 302 the server to an internal host after the URL guard passed it.
+        limits = {"timeout": timeout} if timeout is not None else {}
+        self.client = AsyncOpenAI(
+            api_key=api_key, base_url=base_url, max_retries=max_retries,
+            http_client=DefaultAsyncHttpxClient(follow_redirects=False, **limits), **limits,
+        )
         self.model = model
         self.extra_headers = extra_headers or {}
+        self.stream_usage = stream_usage
         # Some hosts (OpenRouter) list models without auth, so a model list
         # alone does not prove the key works. They give an endpoint that does.
         self._auth_check_url = auth_check_url
@@ -108,15 +119,26 @@ class OpenAIProvider(LLMProvider):
         max_tokens: int = 1000,
         usage: Usage | None = None,
     ) -> AsyncGenerator[str, None]:
-        # Token usage is not requested when streaming: stream_options is not
-        # supported by every OpenAI-compatible server, so the log keeps None.
+        # Token usage arrives in one extra final chunk (with no choices) when
+        # stream_options.include_usage is sent. Not every OpenAI-compatible server
+        # accepts the option, so it is only sent where the provider spec says so;
+        # elsewhere the usage log keeps None.
+        extra = {"stream_options": {"include_usage": True}} if self.stream_usage else {}
         stream = await self.client.chat.completions.create(
             model=self.model,
             max_tokens=max_tokens,
             messages=self._build_messages(messages, system),
             extra_headers=self.extra_headers,
             stream=True,
+            **extra,
         )
+        # Closing the stream closes the HTTP response, also when the gateway
+        # cancels this generator on a timeout or the learner disconnects.
+        async with stream:
+            async for text in self._visible_text(stream, usage):
+                yield text
+
+    async def _visible_text(self, stream, usage: Usage | None) -> AsyncGenerator[str, None]:
         # Stream while skipping any <thought>…</thought> / <thinking>…</thinking>
         # block. Gemini-class models can emit these mid-stream; we buffer when
         # we see an opening tag and flush only what's outside the block.
@@ -126,6 +148,9 @@ class OpenAIProvider(LLMProvider):
         buf = ""
         skipping_tag: str | None = None
         async for chunk in stream:
+            if usage is not None and getattr(chunk, "usage", None) is not None:
+                usage.input_tokens = chunk.usage.prompt_tokens
+                usage.output_tokens = chunk.usage.completion_tokens
             # Some hosts send keep-alive / usage chunks with no choices.
             if not chunk.choices:
                 continue
