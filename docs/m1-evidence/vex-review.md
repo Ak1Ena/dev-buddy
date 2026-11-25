@@ -1,10 +1,11 @@
 # M1 security review (Vex) — 4e90b9a1 (frontend /settings) + 0432c800 (backend gateway)
 
-Reviewed 2026-11-25 on `feat/m1-ai-gateway`. Committed code only, plus a delta for e6e37671 (bottom).
-Cited line numbers were checked against `git show 0432c800:<file>`. Rio's uncommitted backend work in the
-worktree is not reviewed here; his fix commit gets a final delta.
+Reviewed 2026-11-25 on `feat/m1-ai-gateway`. Committed code only, plus deltas for e6e37671 and c213db55 (bottom).
+Cited line numbers in Findings were checked against `git show 0432c800:<file>`; the c213db55 delta cites `git show c213db55:<file>`.
 
-## Verdict
+**Final M1 verdict (after c213db55): secrets found: none. F1-F8 all PASS. No new findings above Info.**
+
+## Verdict (at 0432c800)
 
 **Secrets found: none.** No provider key, Fernet key or JWT secret in any API response, log line,
 exception detail, `ai_usage` row, git history or the frontend bundle.
@@ -249,11 +250,97 @@ Rio is fixing all eight. The final delta review covers his fix commit.
   for `bad_request`. Those messages are fixed text from `GatewayError` (`credentials.py`, `providers.py`) and never provider bodies.
 - **seed_demo_lesson.py**: dev-only, uses bound SQL params, and holds no secrets. It is placed under docs/ on purpose (writes to the DB directly).
 
+## Delta: c213db55 (Rio, timeouts, complete_json, streamed usage, F1-F8 fixes)
+
+**Secrets found: none.** **F1-F8: all PASS.** New issues: two Info notes only, so nothing goes back to Rio.
+
+Committed tree extracted with `git archive c213db55 | tar -x -C /tmp/vex-c213`. `pytest -q` → `98 passed`.
+The test that failed on the uncommitted tree earlier (`timeout` vs `unreachable`) now passes.
+
+### Secrets sweep
+
+Script: `m1-review/vex_secret_scan_c213.sh`. Like the first script, it prints names and counts only. Output is in `m1-review/scan-c213db55.out`:
+
+```
+OPENWEBUI_API_KEY: c213-diff=0  backend-tests.log=0  git-history-lines=0  worktree-files=0
+GEMINI_API_KEY: c213-diff=0  backend-tests.log=0  git-history-lines=0  worktree-files=0
+SECRET_KEY: c213-diff=1  backend-tests.log=0  git-history-lines=3  worktree-files=2
+CREDENTIAL_ENCRYPTION_KEY: c213-diff=0  backend-tests.log=0  git-history-lines=0  worktree-files=0
+JWT_SECRET_KEY: c213-diff=2  backend-tests.log=0  git-history-lines=5  worktree-files=4
+OPENROUTER_API_KEY: c213-diff=0  backend-tests.log=0  git-history-lines=0  worktree-files=0
+key-shaped strings in c213 diff (+ lines): 0
+key-shaped strings in backend-tests.log: 0
+Authorization/Bearer/x-api-key in backend-tests.log: 3
+.credential_key tracked by git: 0; ignored: yes
+```
+
+- **SECRET_KEY / JWT_SECRET_KEY hits:** the dev `.env` still holds the public placeholders (F4). The c213 diff hits are
+  the `_PLACEHOLDER_SECRETS` deny-list in `config.py:15-20` and its tests. That list is meant to be there, and the values are not real secrets.
+  Check: each `.env` value matched the placeholder list exactly (`known placeholder: 1`).
+- **3 Bearer lines in backend-tests.log:** lines 725, 737 and 752, all from 0432c800. The token text starts with `$`/`<`
+  (6/6/14 chars). These are shell placeholders, not tokens.
+
+### F1-F8 against Nova's decisions
+
+| # | Decision | Verdict | Where | Proof |
+|---|---|---|---|---|
+| F1 | No redirects, no reflected bodies, private URLs allowed by default only in development | **PASS** | `url_guard.py:41-65`; `providers.py:153-161` (every user config, defaults included); `credentials.py:68` (at save); `routers/ai.py:87,161` (test/models/draft); `openai_provider.py:77`, `anthropic_provider.py:28` (`follow_redirects=False`); `routers/ai.py:69-80` (model list capped at 500 × 200 chars, parsed fields only); `config.py:63,100-103` | See probes below |
+| F2 | Auth on scenes | **PASS** | `scenes.py:30,45` (`get_current_user`); `scenes.py:48` (owner check, same 404); `scenes.py:17` (cache capped at 500); runs on the user's own config via `ChoreographerAgent(current_user.id)` | `test_scenes_require_login_and_owner` passes |
+| F3 | `.env.example` key | **PASS** | `.env.example:34` `CREDENTIAL_ENCRYPTION_KEY=` (empty), `:38` documents `AI_ALLOW_PRIVATE_BASE_URLS` | diff |
+| F4 | Refuse placeholder secrets in production | **PASS** | `config.py:15-20,113-124`; `main.py:20` runs it in lifespan before `ensure_credential_key` | `production` + placeholder → `REFUSED`; `staging` + short → `REFUSED`; `production` + 48-char random → starts; `development` + placeholders → starts |
+| F5 | `secure_delete` | **PASS** | `database.py:15-24` (set on every SQLite connect) | `PRAGMA secure_delete via app engine = 1` (was 0) |
+| F6 | Evict cache | **PASS** | `adapter_cache.py:52-62`; `credentials.py:78` (replace / switch target), `:114` (revoke); falls back to clearing the whole cache when it can't decrypt | `test_revoke_and_replace_evict_cached_adapter` passes |
+| F7 | (Nova: fix) CORS `*` | **PASS** | `config.py:90-97` drops `*` and logs a warning | `cors_origins with '*': ['http://ok.example']` + `WARNING ALLOWED_ORIGINS contains '*', which is ignored` |
+| F8 | (Nova: fix) Key file mode | **PASS** | `crypto.py:39-41` warns when the mode has any group/other bits. The warning shows the file name and path, never the key | chmod 644 → `WARNING .credential_key is readable by other users; run: chmod 600 …` |
+
+**F1 probes** (`/tmp/vex-c213/guard_probe.py`, `probe2.py`):
+
+```
+APP_ENV development (allow_private=True)
+  http://169.254.169.254/v1            blocked:bad_request
+  http://[::ffff:169.254.169.254]/     blocked:bad_request
+  http://metadata.google.internal/     blocked:bad_request
+  http://169.254.169.254.nip.io/       blocked:bad_request   (DNS-resolved, so wildcard DNS doesn't help)
+  http://127.0.0.1:11434/v1            ALLOWED               (local Ollama keeps working, per decision)
+APP_ENV production (allow_private=False)
+  127.0.0.1, 0.0.0.0, 2130706433, 0x7f.1, localhost, 10/8, 100.64/10, fd00::1, [::], [::1]   all blocked:bad_request
+  https://api.openai.com/v1            ALLOWED
+
+redirect: public-style base URL → 302 → 127.0.0.1 model list
+  openai_compatible redirect NOT followed -> provider_error | The provider returned an error. (HTTP 302)
+  anthropic         redirect NOT followed -> provider_error | The provider returned an error. (HTTP 302)
+```
+
+Before c213db55 the same 302 returned the internal model ids. The OpenRouter `check_auth` client (`openai_provider.py:206`)
+and the OpenWebUI client both use plain `httpx.AsyncClient`, which doesn't follow redirects by default.
+
+### New in c213db55: checked
+
+- **Timeout errors don't leak provider text.** `gateway.py:44-46` builds fixed text plus the limit in seconds.
+  `errors.py:24,80` maps a connect timeout to `unreachable` and every other timeout to `timeout`. A 302 error says only `(HTTP 302)`.
+- **`JSONOutputError.raw_text`** holds the model's reply, not request data. It is not part of `str(exc)`. The only log of it is
+  the existing `code_analyzer.py:362` debug line, which logged the same reply before (`0432c800:code_analyzer.py:368`). No key is involved.
+- **Streamed usage** reads only token counts from the final chunk (`openai_provider.py:151-153`).
+- **Needs-URL check** at save is still enforced, via `effective_base_url` (`providers.py`). `check_base_url(None)` is a no-op only for providers with a built-in public default.
+
+### New in c213db55: Info notes (no action for M1)
+
+- **I1 (Info): IPv4-embedded IPv6 forms pass the guard.** `[::a9fe:a9fe]` (IPv4-compatible) and `[64:ff9b::a9fe:a9fe]` (NAT64)
+  are `ALLOWED` in both modes, because `url_guard.py:34-38` only unwraps `::ffff:` mapped addresses. On this host
+  neither form reaches IPv4: `connect ::7f00:1 -> TimeoutError`, `connect 64:ff9b::7f00:1 -> TimeoutError`.
+  They would matter only on an IPv6-only host behind NAT64. The fix is to also unwrap `ip.sixtofour`, `ip.teredo`
+  and `64:ff9b::/96` in `_ip()` (about 5 lines) whenever the hosted-for-strangers work happens, next to the DNS-pinning fix.
+- **I2 (Info): small eviction race.** `adapter_cache.get_adapter` (`adapter_cache.py:38-49`) awaits DNS in
+  `build_checked_adapter` before it caches. If a revoke runs during that await, the adapter built from the
+  old key is cached afterwards. The window is milliseconds and needs a request already in flight. The
+  key then lives on until LRU eviction (32 entries) or a restart. Fix if wanted: a cache generation counter that
+  revoke bumps, with `get_adapter` skipping the insert when the counter changed.
+- **Known gap, unchanged:** DNS rebinding between the guard and the SDK's connect. It is documented in `url_guard.py:13-16`
+  and accepted until public hosting.
+
 ## Not checked
 
-- The uncommitted worktree changes (backend `errors.py`, `providers.py`, `types.py`, both adapters, frontend
-  files). They currently break one committed test: `test_error_mapping_is_typed_and_never_echoes_provider_text[exc11-unreachable]`
-  (`assert 'timeout' == 'unreachable'`), i.e. Rio's new `timeout` code. This needs a delta review once committed.
+- Kit's in-flight frontend commit (timeout error code, scenes auth). It was not committed when this delta was written.
 - The frontend at runtime: I did not run it myself. I rely on Kit's e6e37671 video and the playwright CHECK lines, plus my frame review.
   Frames were sampled at 1 fps, so a sub-second flash of a plain key would not show. The field is `type="password"` throughout.
 - A full agent generation through chat with the echoing provider. The probe hit 404 (no session). The key-in-logs check
