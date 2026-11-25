@@ -171,7 +171,8 @@ export const aiApi = {
     data: { provider: string; model?: string | null; base_url?: string | null; api_key?: string }
   ) => api.put<AICredential>(`/credentials/${slot}`, data, AI_BASE),
   test: (slot: AISlot) => api.post<AITestResult>(`/credentials/${slot}/test`, undefined, AI_BASE),
-  testDraft: (data: { provider: string; base_url?: string | null; api_key?: string }) =>
+  // `slot` lets the backend reuse the key already saved there when api_key is left out.
+  testDraft: (data: { provider: string; base_url?: string | null; api_key?: string; slot?: AISlot }) =>
     api.post<AITestResult>("/test-draft", data, AI_BASE),
   models: (slot: AISlot) => api.get<AIModel[]>(`/credentials/${slot}/models`, AI_BASE),
   remove: (slot: AISlot) => api.delete(`/credentials/${slot}`, AI_BASE),

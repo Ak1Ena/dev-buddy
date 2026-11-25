@@ -30,6 +30,9 @@ export function describeRequestError(err: unknown): string {
   if (typeof detail === "string") return detail;
   if (detail && typeof detail === "object" && "error_code" in detail) {
     const d = detail as { error_code?: string; message?: string };
+    // bad_request messages are the server's fixed form-level text (e.g. "vLLM needs a base URL."),
+    // which says more than the generic line; provider-side codes keep our own wording.
+    if (d.error_code === "bad_request" && d.message) return d.message;
     return describeErrorCode(d.error_code);
   }
   if (Array.isArray(detail)) return "Some fields are missing or not valid.";

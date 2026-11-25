@@ -73,7 +73,11 @@ export default function MentorSlotCard({ slot, title, blurb, providers, credenti
   const provider = choices.find((p) => p.id === providerId) ?? null;
   const sameAsSaved = !!credential && credential.provider === providerId;
   const hasSavedKey = sameAsSaved && !!credential?.key_hint;
-  const showKeyInput = !!provider?.needs_key && (!hasSavedKey || replacingKey);
+  // Self-hosted servers (vLLM, LM Studio, custom) may or may not want a key; the backend stores
+  // one if given, so offer it as optional there. Hosted providers require it; Ollama has none.
+  const keyOptional = !!provider && !provider.needs_key && provider.needs_base_url;
+  const showKeyField = !!provider?.needs_key || keyOptional;
+  const showKeyInput = showKeyField && (!hasSavedKey || replacingKey);
   const keyReady = !provider?.needs_key || apiKey.trim() !== "" || (hasSavedKey && !replacingKey);
   const urlReady = !provider?.needs_base_url || baseUrl.trim() !== "";
   const savedUrl = credential?.base_url ?? "";
@@ -111,11 +115,18 @@ export default function MentorSlotCard({ slot, title, blurb, providers, credenti
     }
   }
 
-  function reportTest(r: AITestResult, draft: boolean) {
+  function reportTest(r: AITestResult) {
     if (r.ok) {
       const ms = r.latency_ms != null ? ` in ${Math.round(r.latency_ms)} ms` : "";
-      const count = r.model_count != null ? ` ${r.model_count} models available.` : "";
-      say("ok", `Connected${ms}.${count}${draft ? " Save to keep this setup and load the models." : ""}`);
+      // A draft test returns the model list, so the picker fills before the first save.
+      if (r.models && r.models.length > 0) {
+        setModels(r.models);
+        const n = r.models.length;
+        say("ok", `Connected${ms}. ${n} model${n === 1 ? "" : "s"} found. Pick one, then save.`);
+      } else {
+        const count = r.model_count != null ? ` ${r.model_count} models available.` : "";
+        say("ok", `Connected${ms}.${count}`);
+      }
     } else {
       say("bad", describeErrorCode(r.error_code), r.message ? redact(r.message, apiKey.trim()) : undefined);
     }
@@ -132,8 +143,9 @@ export default function MentorSlotCard({ slot, title, blurb, providers, credenti
           provider: provider.id,
           base_url: provider.needs_base_url ? baseUrl.trim() : undefined,
           api_key: apiKey.trim() || undefined,
+          slot,
         });
-        reportTest(res.data, true);
+        reportTest(res.data);
       } else {
         const res = await aiApi.test(slot);
         // Refresh the record so the status badge shows the new result.
@@ -144,7 +156,7 @@ export default function MentorSlotCard({ slot, title, blurb, providers, credenti
           setBusy(null);
           await loadModels(`Connected${ms}.`);
         } else {
-          reportTest(res.data, false);
+          reportTest(res.data);
         }
       }
     } catch (err) {
@@ -270,12 +282,12 @@ export default function MentorSlotCard({ slot, title, blurb, providers, credenti
           </div>
         )}
 
-        {provider?.needs_key && (
+        {showKeyField && (
           <div>
             {showKeyInput ? (
               <>
                 <label htmlFor={`${uid}-k`} className={fieldLabel}>
-                  API key
+                  API key{keyOptional ? " (optional)" : ""}
                 </label>
                 <input
                   id={`${uid}-k`}
@@ -285,7 +297,7 @@ export default function MentorSlotCard({ slot, title, blurb, providers, credenti
                   spellCheck={false}
                   data-1p-ignore
                   data-lpignore="true"
-                  placeholder="Paste a key"
+                  placeholder={keyOptional ? "Only if your server asks for one" : "Paste a key"}
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                 />
@@ -322,7 +334,7 @@ export default function MentorSlotCard({ slot, title, blurb, providers, credenti
               onChange={(e) => setModel(e.target.value)}
             >
               {modelOptions.length === 0 ? (
-                <option value="">{isLive ? "Save to load the models" : "Test and save to load the models"}</option>
+                <option value="">{isLive ? "Save to load the models" : "Test the connection to load the models"}</option>
               ) : (
                 <>
                   <option value="">Choose a model</option>
@@ -353,7 +365,7 @@ export default function MentorSlotCard({ slot, title, blurb, providers, credenti
             (confirmRemove ? (
               <>
                 <button type="button" className="path-btn danger" disabled={busy !== null} onClick={remove}>
-                  {busy === "remove" ? "Removing…" : "Yes, delete key"}
+                  {busy === "remove" ? "Removing…" : credential.key_hint ? "Yes, delete key" : "Yes, remove"}
                 </button>
                 <button type="button" className="path-btn" onClick={() => setConfirmRemove(false)}>
                   Cancel
@@ -361,7 +373,7 @@ export default function MentorSlotCard({ slot, title, blurb, providers, credenti
               </>
             ) : (
               <button type="button" className="path-btn danger" disabled={busy !== null} onClick={() => setConfirmRemove(true)}>
-                Delete key
+                {credential.key_hint ? "Delete key" : "Remove setup"}
               </button>
             ))}
         </div>

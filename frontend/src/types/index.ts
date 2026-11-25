@@ -334,6 +334,8 @@ export interface AITestResult {
   model_count?: number | null;
   error_code?: AIErrorCode | string | null;
   message?: string | null;
+  /** Only on /test-draft: fills the model picker before the first save. */
+  models?: AIModel[];
 }
 
 export interface AIModel {

@@ -27,3 +27,62 @@ dist/assets/index-SEsmIHBB.js   713.28 kB │ gzip: 219.76 kB
 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
 ✓ built in 6.30s
 build exit=0
+=== Rerun 2026-11-25T16:51:14+07:00 after contract update (test-draft models, slot) ===
+$ npx tsc --noEmit -p .
+tsc exit=0
+$ npm run build
+✓ 2297 modules transformed.
+[plugin vite:reporter] 
+(!) /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/store/auth.ts is dynamically imported by /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/lib/api.ts, /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/lib/api.ts but also statically imported by /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/App.tsx, /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/components/layout/Navbar.tsx, /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/pages/Assessment.tsx, /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/pages/Dashboard.tsx, /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/pages/Landing.tsx, /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/pages/Login.tsx, /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/pages/Register.tsx, dynamic import will not move module into another chunk.
+
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.93 kB │ gzip:   0.51 kB
+dist/assets/index-DnGZxjW7.css   64.90 kB │ gzip:  11.11 kB
+dist/assets/index-yz_oMdes.js   713.62 kB │ gzip: 219.85 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 6.44s
+build exit=0
+
+=== Self-check video: docs/m1-evidence/videos/m1-settings-selfcheck.mp4 ===
+$ ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt,width,height -show_entries format=duration,size
+codec_name=h264
+width=1440
+height=900
+pix_fmt=yuv420p
+duration=84.666667
+size=1346608
+Segments: 0-~52s desktop 1440x900 (incl. mentor reply on a seeded lesson), then 390x844 pass padded to 1440x900.
+Scripted checks (playwright, real backend :8011 via :5183 proxy):
+CHECK desk 8.8s settings page shows both cards PASS 
+CHECK desk 11.4s key field is password type PASS 
+CHECK desk 14.2s wrong key -> clear error PASS "The provider turned down this key. Check that you copied all of it, or make a new one.\n\nThe provider rejected the API key. (HTTP 400)"
+CHECK desk 20.5s ok test fills the model list PASS "Connected in 18 ms. 1 model found. Pick one, then save."
+CHECK desk 23.8s saved in one step PASS "Saved."
+CHECK desk 26.9s after reload: key_hint shown, no key input, key not in page PASS {"hint":"Saved, ends …7f3a","inputs":[{"type":"text","v":"http://localhost:11434/v1"}]}
+CHECK desk 27s after reload: model kept PASS 
+CHECK desk 40.5s mentor reply streamed back PASS "Why does the loop print each fruit on its own line? The loop iterates over the list, printing each fruit one by one. Each iteration prints a new line to the console, starting with the first fruit."
+CHECK desk 48.2s delete -> back to default PASS "Removed. Nexora uses its default AI until you set one."
+CHECK desk 50.7s delete holds after reload PASS 
+CHECK desk 50.7s no key in localStorage/sessionStorage/cookies PASS 
+CHECK desk 50.7s no key in any /api/ai response or console line PASS []
+CHECK desk 50.7s no console errors PASS []
+CHECK mob 9.1s settings page shows both cards PASS 
+CHECK mob 11.6s key field is password type PASS 
+CHECK mob 14.4s wrong key -> clear error PASS "The provider turned down this key. Check that you copied all of it, or make a new one.\n\nThe provider rejected the API key. (HTTP 400)"
+CHECK mob 20.6s ok test fills the model list PASS "Connected in 18 ms. 1 model found. Pick one, then save."
+CHECK mob 24s saved in one step PASS "Saved."
+CHECK mob 26.9s after reload: key_hint shown, no key input, key not in page PASS {"hint":"Saved, ends …7f3a","inputs":[{"type":"text","v":"http://localhost:11434/v1"}]}
+CHECK mob 26.9s after reload: model kept PASS 
+CHECK mob 31.8s delete -> back to default PASS "Removed. Nexora uses its default AI until you set one."
+CHECK mob 34.2s delete holds after reload PASS 
+CHECK mob 34.2s no key in localStorage/sessionStorage/cookies PASS 
+CHECK mob 34.2s no key in any /api/ai response or console line PASS []
+CHECK mob 34.2s no console errors PASS []
+Gateway usage row for the mentor reply (backend/devbuddy.db ai_usage):
+started_at|slot|provider|model|agent|source|ok|latency_ms
+2026-11-25 05:31:31.289200|text|openai_compatible|qwen2.5:0.5b|socratic_mentor|user|1|2614
