@@ -1,6 +1,13 @@
 import axios from "axios";
 import Cookies from "js-cookie";
-import type { LessonSurrenderResponse } from "@/types";
+import type {
+  AICredential,
+  AIModel,
+  AIProvider,
+  AISlot,
+  AITestResult,
+  LessonSurrenderResponse,
+} from "@/types";
 
 const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -148,6 +155,26 @@ export const chatApi = {
     session_id: string;
     topic: string;
   }) => api.post("/chat/proposal/reject", data),
+};
+
+// AI provider settings (M1). The gateway lives under /api/ai, not /api/v1, so these calls
+// override baseURL per request but still go through `api` for the JWT and refresh interceptors.
+// The browser only talks to the Nexora backend; the key goes there once (save / draft test) and
+// is never returned (responses carry `key_hint` only).
+const AI_BASE = { baseURL: `${BASE}/api/ai` };
+
+export const aiApi = {
+  providers: () => api.get<AIProvider[]>("/providers", AI_BASE),
+  credentials: () => api.get<AICredential[]>("/credentials", AI_BASE),
+  save: (
+    slot: AISlot,
+    data: { provider: string; model?: string | null; base_url?: string | null; api_key?: string }
+  ) => api.put<AICredential>(`/credentials/${slot}`, data, AI_BASE),
+  test: (slot: AISlot) => api.post<AITestResult>(`/credentials/${slot}/test`, undefined, AI_BASE),
+  testDraft: (data: { provider: string; base_url?: string | null; api_key?: string }) =>
+    api.post<AITestResult>("/test-draft", data, AI_BASE),
+  models: (slot: AISlot) => api.get<AIModel[]>(`/credentials/${slot}/models`, AI_BASE),
+  remove: (slot: AISlot) => api.delete(`/credentials/${slot}`, AI_BASE),
 };
 
 export const sceneApi = {

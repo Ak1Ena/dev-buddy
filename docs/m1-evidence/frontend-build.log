@@ -1,0 +1,29 @@
+# frontend build log, branch feat/m1-ai-gateway, 2026-11-25T12:01:32+07:00
+## npx tsc --noEmit
+tsc exit=0
+## npm run build
+
+> devbuddy-frontend@0.1.0 build
+> tsc && vite build
+
+vite v6.4.2 building for production...
+transforming...
+Browserslist: browsers data (caniuse-lite) is 6 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+✓ 2297 modules transformed.
+[plugin vite:reporter] 
+(!) /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/store/auth.ts is dynamically imported by /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/lib/api.ts, /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/lib/api.ts but also statically imported by /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/App.tsx, /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/components/layout/Navbar.tsx, /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/pages/Assessment.tsx, /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/pages/Dashboard.tsx, /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/pages/Landing.tsx, /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/pages/Login.tsx, /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/frontend/src/pages/Register.tsx, dynamic import will not move module into another chunk.
+
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.93 kB │ gzip:   0.51 kB
+dist/assets/index-DnGZxjW7.css   64.90 kB │ gzip:  11.11 kB
+dist/assets/index-SEsmIHBB.js   713.28 kB │ gzip: 219.76 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 6.30s
+build exit=0

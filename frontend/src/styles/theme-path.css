@@ -1,0 +1,104 @@
+/*
+ * Design A. Path (D18), dark variant, taken from the nexora-mock tokens
+ * (~/code/nexora-mock/src/css/theme-notebook.css, html[data-theme=dark]).
+ * Scoped to `.theme-path` so pages that are not redesigned yet keep their current look.
+ * Fraunces/Inter are not bundled yet; headings fall back to Georgia.
+ */
+.theme-path {
+  --serif: "Fraunces", Georgia, "Noto Serif Thai", serif;
+  --bg: #0f1116;
+  --surface: #171a21;
+  --surface2: #1f232c;
+  --ink: #eef0f5;
+  --muted: #a9b0be;
+  --line: #2a2f3b;
+  --line-strong: #7d8697;
+  --accent: #6b9dff;
+  --accent-ink: #0a1633;
+  --accent-text: #8db3ff;
+  --accent-soft: #1b2a4c;
+  --ok: #6fd49b;
+  --ok-soft: #14301f;
+  --warn: #f0b35e;
+  --warn-soft: #33281a;
+  --bad: #f29a92;
+  --bad-soft: #3a1d1b;
+  --focus: #ffd166;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 16.5px;
+  line-height: 1.6;
+}
+
+.theme-path h1,
+.theme-path h2 {
+  font-family: var(--serif);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.theme-path .path-input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface2);
+  color: var(--ink);
+  padding: 8px 12px;
+  font-size: 16px; /* 16px keeps iOS from zooming on focus */
+}
+
+.theme-path .path-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.theme-path .path-input:focus-visible,
+.theme-path .path-btn:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.theme-path .path-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 18px;
+  border-radius: 99px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.theme-path .path-btn:hover:not(:disabled) {
+  background: var(--surface2);
+}
+
+.theme-path .path-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.theme-path .path-btn.primary:hover:not(:disabled) {
+  background: var(--accent-text);
+}
+
+.theme-path .path-btn.danger {
+  border-color: transparent;
+  color: var(--bad);
+}
+
+.theme-path .path-btn.danger:hover:not(:disabled) {
+  background: var(--bad-soft);
+}
+
+.theme-path .path-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

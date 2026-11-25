@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { GraduationCap, LogOut, LayoutDashboard, BookOpen } from "lucide-react";
+import { GraduationCap, LogOut, LayoutDashboard, BookOpen, Settings } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -55,6 +55,18 @@ export default function Navbar() {
               <BookOpen className="h-4 w-4" />
               Learn
             </Link>
+            <Link
+              to="/settings"
+              className={cn(
+                "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                isActive("/settings")
+                  ? "bg-sky-500/15 text-sky-400"
+                  : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+              )}
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </Link>
           </div>
         )}
 
@@ -62,6 +74,17 @@ export default function Navbar() {
         <div className="flex items-center gap-2">
           {isAuthenticated ? (
             <>
+              {/* The center links are hidden below sm, so phones get Settings as an icon here. */}
+              <Link
+                to="/settings"
+                aria-label="Settings"
+                className={cn(
+                  "flex h-11 w-11 items-center justify-center rounded-lg transition-colors sm:hidden",
+                  isActive("/settings") ? "bg-sky-500/15 text-sky-400" : "text-slate-400 hover:bg-slate-800"
+                )}
+              >
+                <Settings className="h-5 w-5" />
+              </Link>
               <span className="hidden sm:block text-sm text-slate-400">
                 Hi,{" "}
                 <span className="font-medium text-slate-200">

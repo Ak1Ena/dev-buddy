@@ -289,3 +289,55 @@ export interface LessonProposal {
   rationale: string;
   evidence: string;
 }
+
+// ---- AI provider settings (M1, contract: docs/architecture/m1-ai-gateway.md "HTTP API") ----
+// None of these types carry an API key: the browser sends a key once on save/test and only ever
+// gets `key_hint` back.
+
+export type AISlot = "text" | "live";
+
+export interface AIProvider {
+  id: string;
+  label: string;
+  needs_key: boolean;
+  needs_base_url: boolean;
+  default_base_url: string | null;
+  supports_live: boolean;
+  local: boolean;
+}
+
+export type AICredentialStatus = "untested" | "ok" | "failed";
+
+export interface AICredential {
+  id: string | number;
+  slot: AISlot;
+  provider: string;
+  model: string | null;
+  base_url: string | null;
+  key_hint: string | null;
+  status: AICredentialStatus;
+  last_checked_at: string | null;
+  last_error: string | null;
+}
+
+export type AIErrorCode =
+  | "auth_failed"
+  | "not_found"
+  | "rate_limited"
+  | "unreachable"
+  | "bad_request"
+  | "provider_error";
+
+export interface AITestResult {
+  ok: boolean;
+  latency_ms?: number | null;
+  model_count?: number | null;
+  error_code?: AIErrorCode | string | null;
+  message?: string | null;
+}
+
+export interface AIModel {
+  id: string;
+  label?: string | null;
+  context_window?: number | null;
+}
