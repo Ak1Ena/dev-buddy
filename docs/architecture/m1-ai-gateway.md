@@ -32,10 +32,12 @@ class AIGateway:
     async def complete(self, req: GenerateRequest) -> GenerateResult            # convenience, collects generate()
     async def complete_json(self, req, schema: type[BaseModel], retries: int = 1) -> BaseModel  # step 4
     async def get_models(self) -> list[ModelInfo]
-    async def validate_connection(self) -> ConnectionStatus
-    capabilities: Capabilities  # streaming, json_mode, tools, realtime, local
+    async def validate_connection(self) -> ConnectionStatus   # never raises; failures come back as ok=False + error_code
+    async def get_capabilities(self) -> Capabilities  # streaming, json_mode, tools, realtime, local
 ```
-`get_gateway(user_id: int | None, slot="text")` builds it from the user's credential or the `.env` default. Agents get a gateway passed in or call `get_gateway(...)`; nobody imports `get_llm_provider` after M1.
+`get_gateway(user_id: str | None, slot="text")` builds it from the user's credential or the `.env` default (text slot only; the `live` slot has no `.env` default). Agents take `(user_id, gateway=None)` and call the gateway through `agent_llm(...)`, which keeps the old `complete/stream` call shape so prompts did not change; nobody imports `get_llm_provider` after M1.
+
+As built (Rio, 2026-11-25): `get_capabilities()` is async because the provider is only known after resolving the user's credential. Code lives in `backend/app/ai_gateway/` (adapters/, gateway.py, credentials.py, crypto.py, errors.py, usage.py, json_output.py).
 
 ## HTTP API (contract for Kit; Rio may adjust names, then update this file)
 
@@ -46,16 +48,22 @@ All under `/api/ai`, JWT required, user-scoped. Secrets never appear in any resp
 | GET | `/api/ai/providers` | `[{id, label, needs_key, needs_base_url, default_base_url, supports_live, local}]` |
 | GET | `/api/ai/credentials` | `[{id, slot, provider, model, base_url, key_hint: "…ab12", status: "untested"/"ok"/"failed", last_checked_at, last_error}]` |
 | PUT | `/api/ai/credentials/{slot}` | `{provider, model?, base_url?, api_key?}` → saved record (no key). Omitting `api_key` keeps the stored one. |
-| POST | `/api/ai/credentials/{slot}/test` | → `{ok, latency_ms, model_count, error_code?, message?}`; updates status |
+| POST | `/api/ai/credentials/{slot}/test` | → `{ok, latency_ms, model_count, error_code?, message?}`; updates status. Always HTTP 200: a failed test is `ok: false`. For the `live` slot this is a connection check only (no realtime session yet). |
 | GET | `/api/ai/credentials/{slot}/models` | → `[{id, label?, context_window?}]` from the provider |
-| DELETE | `/api/ai/credentials/{slot}` | revoke: row deleted, ciphertext gone; calls fall back to `.env` default |
-| POST | `/api/ai/test-draft` | `{provider, base_url?, api_key?}` test before save (nothing stored) |
+| DELETE | `/api/ai/credentials/{slot}` | revoke: row deleted, ciphertext gone; calls fall back to `.env` default. → **204** no body; 404 if nothing saved |
+| POST | `/api/ai/test-draft` | `{provider, base_url?, api_key?, slot?}` test before save (nothing stored) → `{ok, latency_ms, model_count, error_code?, message?, models: [...]}`. `slot` (optional): reuse the key already saved in that slot when `api_key` is omitted, so the form can change model/URL without retyping the key. `models` fills the model picker. |
 
-Error codes: `auth_failed`, `not_found`, `rate_limited`, `unreachable`, `bad_request`, `provider_error`.
+Rules as built:
+- PUT without `api_key` keeps the stored key only if provider and base URL are unchanged; otherwise 400 (a saved key is never sent to a new host without being re-entered).
+- `base_url` must be http(s), no spaces, no `user:pass@`, no query or fragment (422 otherwise). Any host is allowed on purpose, so local LLMs work; that also means the server will call any URL a logged-in user saves (SSRF risk to review before multi-tenant hosting).
+- `openwebui` is dev `.env` only: not in `/providers`, PUT rejects it.
+
+Error codes: `auth_failed`, `not_found`, `rate_limited`, `unreachable`, `bad_request`, `provider_error` (plus `cancelled` in the usage log when a call is dropped mid-way).
+Error shape for `/models`, PUT and other non-test routes: HTTP **400** for `bad_request`, **502** for every provider-side error (not 401, because the frontend treats 401 as logout), body `{"detail": {"error_code": "...", "message": "..."}}`. Messages are fixed text per code plus the HTTP status; provider error bodies are never passed through (some echo the key).
 
 ## Usage log (step 5)
 
-Table `ai_usage`: user_id, slot, provider, model, agent (caller name), started_at, latency_ms, input_tokens?, output_tokens?, ok, error_code. No prompt or response bodies. No keys, headers or full URLs with query strings.
+Table `ai_usage`: user_id, slot, provider, model, agent (caller name), source (user/env/draft), started_at, latency_ms, input_tokens?, output_tokens?, ok, error_code. No prompt or response bodies. No keys, headers or full URLs with query strings. Written in the background so a slow write never delays a lesson. Streamed calls on OpenAI-compatible providers log no token counts yet.
 
 ## Logging rules
 

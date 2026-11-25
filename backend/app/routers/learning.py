@@ -48,10 +48,10 @@ async def _orchestrate_discovery_background(
     skill_level: str,
 ):
     """Background task to perform LLM analysis, generate 3 questions, a learning path, and the hero map."""
-    analyzer = CodeAnalyzerAgent()
-    planner = PlannerAgent()
-    designer = DesignerAgent()
-    assessment_gen = AssessmentGeneratorAgent()
+    analyzer = CodeAnalyzerAgent(user_id)
+    planner = PlannerAgent(user_id)
+    designer = DesignerAgent(user_id)
+    assessment_gen = AssessmentGeneratorAgent(user_id)
 
     # Step 1: Perform deeper LLM analysis in background
     analysis = await analyzer.analyze(code_snippet)
@@ -146,6 +146,7 @@ async def _orchestrate_discovery_background(
                 skill_level=skill_level,
                 source_code=code_snippet,
                 weak_areas=[],
+                user_id=user_id,
             ))
 
     except Exception as exc:
@@ -166,10 +167,11 @@ async def _build_lesson_content(
     skill_level: str,
     source_code: str,
     weak_areas: list[str],
+    user_id: str | None = None,
 ) -> dict:
     """Call Planner (narrative) + Designer (animation) in parallel and merge."""
-    planner = PlannerAgent()
-    designer = DesignerAgent()
+    planner = PlannerAgent(user_id)
+    designer = DesignerAgent(user_id)
 
     content, anim_result = await asyncio.gather(
         planner.generate_lesson_content(
@@ -306,6 +308,7 @@ async def _prefill_lesson_content(
     skill_level: str,
     source_code: str,
     weak_areas: list[str],
+    user_id: str | None = None,
 ):
     """Background task: generate content for every lesson in a path, 3 at a time."""
     async with AsyncSessionLocal() as db:
@@ -331,6 +334,7 @@ async def _prefill_lesson_content(
                     skill_level=skill_level,
                     source_code=source_code,
                     weak_areas=weak_areas,
+                    user_id=user_id,
                 )
                 async with AsyncSessionLocal() as session:
                     await session.execute(
@@ -384,7 +388,7 @@ async def instant_discovery(
     4. Returns early to allow frontend to show the Logic Map.
     """
     # Step 1: Fast Static Analysis (Immediate Response)
-    analyzer = CodeAnalyzerAgent()
+    analyzer = CodeAnalyzerAgent(current_user.id)
     analysis = analyzer.static_analyze(body.code_snippet)
     
     language = body.language or analysis["language"]
@@ -560,7 +564,7 @@ async def generate_learning_path(
     # Always create a NEW learning space
     await _deactivate_all_spaces(current_user.id, db)
 
-    planner = PlannerAgent()
+    planner = PlannerAgent(current_user.id)
 
     space_name = await planner.generate_space_name(
         language=assessment.detected_language or "General",
@@ -688,6 +692,7 @@ async def generate_learning_path(
         skill_level=current_user.skill_level or "beginner",
         source_code=assessment.code_snippet,
         weak_areas=weak_areas,
+        user_id=current_user.id,
     )
 
     return formatted
@@ -762,6 +767,7 @@ async def get_lesson(
                         skill_level=lesson.learning_path.skill_level,
                         source_code=lesson.learning_path.source_code or "",
                         weak_areas=current_user.weak_areas or [],
+                        user_id=current_user.id,
                     )
 
                     if "animation_frames" in existing_content and (not new_content.get("animation_frames")):
@@ -839,6 +845,7 @@ async def surrender_lesson(
         skill_level=path.skill_level,
         source_code=path.source_code or "",
         weak_areas=list(dict.fromkeys([lesson.topic, *(current_user.weak_areas or [])])),
+        user_id=current_user.id,
     )
 
     if not progress:

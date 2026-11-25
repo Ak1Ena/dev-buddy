@@ -3,7 +3,7 @@ Choreographer Agent — generates a SceneJSON from code + AST.
 """
 import asyncio
 import logging
-from app.services.llm import get_llm_provider
+from app.ai_gateway import AIGateway, agent_llm
 from app.agents.utils import extract_json
 from app.core.ast_analyzer import ASTAnalyzer
 
@@ -54,8 +54,8 @@ Layout Strategy:
 """
 
 class ChoreographerAgent:
-    def __init__(self):
-        self.llm = get_llm_provider()
+    def __init__(self, user_id: str | None = None, gateway: AIGateway | None = None):
+        self.llm = agent_llm("choreographer", user_id, gateway)
         self.ast_analyzer = ASTAnalyzer()
 
     async def choreograph(self, code: str) -> dict:

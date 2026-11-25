@@ -5,7 +5,7 @@ import logging
 import re
 import asyncio
 import json
-from app.services.llm import get_llm_provider
+from app.ai_gateway import AIGateway, agent_llm
 from app.agents.utils import extract_json
 
 logger = logging.getLogger(__name__)
@@ -268,8 +268,8 @@ def _salvage_questions_from_text(text: str, question_count: int) -> list[dict]:
 
 
 class AssessmentGeneratorAgent:
-    def __init__(self):
-        self.llm = get_llm_provider()
+    def __init__(self, user_id: str | None = None, gateway: AIGateway | None = None):
+        self.llm = agent_llm("assessment_generator", user_id, gateway)
 
     async def generate_questions(self, code_snippet: str, concepts: list[str], language: str, question_count: int = 10) -> list[dict]:
         # For assessment, focus on the first 8000 chars of the code

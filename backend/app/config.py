@@ -1,10 +1,10 @@
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 from pathlib import Path
 
 # Resolve .env from repo root regardless of where uvicorn is launched from
 _ENV_FILE = Path(__file__).resolve().parent.parent.parent / ".env"
-print(f"DEBUG: Loading .env from: {_ENV_FILE}")
 
 
 class Settings(BaseSettings):
@@ -28,11 +28,23 @@ class Settings(BaseSettings):
     llm_model: str = "claude-sonnet-4-6"
 
     # ── Provider API keys (only the one you use is required) ─────────────────
-    anthropic_api_key: str = ""
-    openrouter_api_key: str = ""
-    openai_api_key: str = ""
-    gemini_api_key: str = ""
-    openwebui_api_key: str = ""
+    # SecretStr so printing or logging Settings never shows a key.
+    # These are the server-wide dev default; per-user keys live encrypted in
+    # the ai_credentials table (see app/ai_gateway).
+    anthropic_api_key: SecretStr = SecretStr("")
+    openrouter_api_key: SecretStr = SecretStr("")
+    openai_api_key: SecretStr = SecretStr("")
+    gemini_api_key: SecretStr = SecretStr("")
+    openwebui_api_key: SecretStr = SecretStr("")
+
+    # ── Per-user credential encryption (Fernet key, urlsafe base64) ──────────
+    # Required outside development. In development, if empty, a key is
+    # generated once into backend/.credential_key (gitignored, mode 600).
+    credential_encryption_key: SecretStr = SecretStr("")
+
+    # ── Local OpenAI-compatible servers (defaults for user credentials) ──────
+    lmstudio_base_url: str = "http://localhost:1234/v1"
+    vllm_base_url: str = "http://localhost:8000/v1"
 
     # ── OpenRouter optional metadata ─────────────────────────────────────────
     openrouter_site_url: str = "http://localhost:3000"

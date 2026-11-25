@@ -5,7 +5,7 @@ its own model, prompt, and token budget.
 """
 import logging
 import asyncio
-from app.services.llm import get_llm_provider
+from app.ai_gateway import AIGateway, agent_llm
 from app.agents.utils import extract_json
 
 logger = logging.getLogger(__name__)
@@ -245,8 +245,8 @@ Rules for viz:
 
 
 class DesignerAgent:
-    def __init__(self):
-        self.llm = get_llm_provider()
+    def __init__(self, user_id: str | None = None, gateway: AIGateway | None = None):
+        self.llm = agent_llm("designer", user_id, gateway)
 
     async def generate_animation(
         self,

@@ -3,7 +3,7 @@ Socratic Mentor Agent — guides learners through questions rather than giving d
 Hint levels: 0=Socratic question, 1=concept hint, 2=directional hint, 3=worked example.
 """
 from typing import AsyncGenerator
-from app.services.llm import get_llm_provider
+from app.ai_gateway import AIGateway, agent_llm
 
 SYSTEM = """You are devBuddy, a Senior Peer Mentor for self-taught developers. Your role is to guide independent learners to build deep mental models and architectural thinking — never give direct code solutions.
 
@@ -99,8 +99,9 @@ Rules for proposals:
 
 
 class SocraticMentorAgent:
-    def __init__(self):
-        self.llm = get_llm_provider()
+    def __init__(self, user_id: str | None = None, gateway: AIGateway | None = None):
+        # Only the transport changed in M1; SYSTEM prompt and hint levels are untouched.
+        self.llm = agent_llm("socratic_mentor", user_id, gateway)
 
     def _build_system(
         self,

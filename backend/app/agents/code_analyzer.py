@@ -5,7 +5,7 @@ and detects programming misconceptions from a user-submitted code snippet.
 import asyncio
 import re
 import logging
-from app.services.llm import get_llm_provider
+from app.ai_gateway import AIGateway, agent_llm
 from app.agents.utils import extract_json
 
 logger = logging.getLogger(__name__)
@@ -288,8 +288,8 @@ def _static_analyze(code: str) -> dict:
 # ── agent ─────────────────────────────────────────────────────────────────────
 
 class CodeAnalyzerAgent:
-    def __init__(self):
-        self.llm = get_llm_provider()
+    def __init__(self, user_id: str | None = None, gateway: AIGateway | None = None):
+        self.llm = agent_llm("code_analyzer", user_id, gateway)
 
     def static_analyze(self, code: str) -> dict:
         """Fast, non-LLM analysis using regex."""

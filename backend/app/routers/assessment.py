@@ -25,19 +25,19 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/assessment", tags=["assessment"])
 
-def get_code_analyzer() -> CodeAnalyzerAgent:
-    return CodeAnalyzerAgent()
+def get_code_analyzer(user_id: str | None = None) -> CodeAnalyzerAgent:
+    return CodeAnalyzerAgent(user_id)
 
-def get_assessment_generator() -> AssessmentGeneratorAgent:
-    return AssessmentGeneratorAgent()
+def get_assessment_generator(user_id: str | None = None) -> AssessmentGeneratorAgent:
+    return AssessmentGeneratorAgent(user_id)
 
 
-async def run_assessment_generation_task(session_id: str, code_snippet: str):
+async def run_assessment_generation_task(session_id: str, code_snippet: str, user_id: str | None = None):
     """Background task to analyze code and generate questions (SLA compliance)."""
     async with AsyncSessionLocal() as db:
         try:
-            code_analyzer = get_code_analyzer()
-            assessment_generator = get_assessment_generator()
+            code_analyzer = get_code_analyzer(user_id)
+            assessment_generator = get_assessment_generator(user_id)
 
             # Step 1: Analyze the code
             analysis = await code_analyzer.analyze(code_snippet)
@@ -99,7 +99,7 @@ async def start_assessment(
     await db.refresh(session)
 
     # Trigger background task
-    background_tasks.add_task(run_assessment_generation_task, session.id, data.code_snippet)
+    background_tasks.add_task(run_assessment_generation_task, session.id, data.code_snippet, current_user.id)
 
     # Return immediately with 'generating' status (Frontend will poll)
     return AssessmentStartResponse(

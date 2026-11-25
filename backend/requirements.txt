@@ -5,6 +5,10 @@ alembic==1.14.0
 pydantic[email]==2.10.3
 pydantic-settings==2.6.1
 python-jose[cryptography]==3.3.0
+# Used directly by app/ai_gateway/crypto.py (Fernet); was only transitive before M1.
+cryptography>=42
+# Used by app/core/ast_analyzer.py but was missing from this file (fresh venvs failed to import).
+libcst==1.8.6
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 python-multipart==0.0.12

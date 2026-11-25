@@ -4,7 +4,7 @@ Analyses the conversation to identify the concept gap, then produces a
 mini-lesson specification for the Planner to flesh out.
 """
 import logging
-from app.services.llm import get_llm_provider
+from app.ai_gateway import AIGateway, agent_llm
 from app.agents.utils import extract_json
 
 logger = logging.getLogger(__name__)
@@ -37,8 +37,8 @@ Rules:
 
 
 class LessonSuggesterAgent:
-    def __init__(self):
-        self.llm = get_llm_provider()
+    def __init__(self, user_id: str | None = None, gateway: AIGateway | None = None):
+        self.llm = agent_llm("lesson_suggester", user_id, gateway)
 
     async def suggest(
         self,

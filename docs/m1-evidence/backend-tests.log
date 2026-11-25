@@ -1,0 +1,866 @@
+# Nexora M1 backend evidence (Rio). Worktree: dev-buddy-worktrees/m1-ai-gateway. Date: 2026-11-25T12:08:30+07:00
+# Every block is: $ command, raw output, exit code. Keys are read inside scripts and never printed.
+
+$ git branch --show-current
+feat/m1-ai-gateway
+exit=0
+
+$ ./.venv/bin/python -m pytest -v
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-8.3.4, pluggy-1.7.0 -- /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.16.0, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=function
+collecting ... collected 45 items
+
+tests/test_ai_api.py::test_requires_login PASSED                         [  2%]
+tests/test_ai_api.py::test_providers_list_has_m1_ids_and_no_dev_only PASSED [  4%]
+tests/test_ai_api.py::test_key_never_in_any_response PASSED              [  6%]
+tests/test_ai_api.py::test_connection_test_updates_status_with_typed_error PASSED [  8%]
+tests/test_ai_api.py::test_models_error_maps_to_502_not_401 PASSED       [ 11%]
+tests/test_ai_api.py::test_revoke_deletes_row_and_ciphertext PASSED      [ 13%]
+tests/test_ai_api.py::test_user_b_cannot_see_test_use_or_delete_user_a_credential PASSED [ 15%]
+tests/test_ai_api.py::test_omitting_key_keeps_it_only_for_same_provider_and_url PASSED [ 17%]
+tests/test_ai_api.py::test_validation_rejects_bad_slot_provider_and_url PASSED [ 20%]
+tests/test_ai_api.py::test_local_provider_saves_without_key PASSED       [ 22%]
+tests/test_crypto.py::test_round_trip_and_ciphertext_hides_key PASSED    [ 24%]
+tests/test_crypto.py::test_same_key_encrypts_differently_each_time PASSED [ 26%]
+tests/test_crypto.py::test_wrong_server_key_cannot_decrypt PASSED        [ 28%]
+tests/test_crypto.py::test_key_hint_shows_only_last_four PASSED          [ 31%]
+tests/test_crypto.py::test_dev_generates_key_file_with_mode_600 PASSED   [ 33%]
+tests/test_crypto.py::test_missing_key_outside_development_is_an_error PASSED [ 35%]
+tests/test_gateway.py::test_no_user_credential_uses_env_default PASSED   [ 37%]
+tests/test_gateway.py::test_user_credential_wins_over_env PASSED         [ 40%]
+tests/test_gateway.py::test_other_users_credential_is_not_used PASSED    [ 42%]
+tests/test_gateway.py::test_live_slot_has_no_env_default PASSED          [ 44%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc0-auth_failed] PASSED [ 46%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc1-auth_failed] PASSED [ 48%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc2-auth_failed] PASSED [ 51%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc3-not_found] PASSED [ 53%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc4-rate_limited] PASSED [ 55%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc5-rate_limited] PASSED [ 57%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc6-bad_request] PASSED [ 60%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc7-provider_error] PASSED [ 62%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc8-unreachable] PASSED [ 64%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc9-unreachable] PASSED [ 66%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc10-unreachable] PASSED [ 68%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc11-auth_failed] PASSED [ 71%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc12-provider_error] PASSED [ 73%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc13-provider_error] PASSED [ 75%]
+tests/test_gateway.py::test_gateway_errors_have_no_silent_fallback PASSED [ 77%]
+tests/test_gateway.py::test_stream_error_becomes_error_event PASSED      [ 80%]
+tests/test_gateway.py::test_validate_connection_reports_models_and_failures PASSED [ 82%]
+tests/test_gateway.py::test_complete_json_first_try PASSED               [ 84%]
+tests/test_gateway.py::test_complete_json_retries_with_reason_then_succeeds PASSED [ 86%]
+tests/test_gateway.py::test_complete_json_schema_mismatch_retries_then_fails PASSED [ 88%]
+tests/test_gateway.py::test_usage_row_per_call_without_prompt_or_reply FAILED [ 91%]
+tests/test_gateway.py::test_mentor_uses_gateway_with_unchanged_system_prompt PASSED [ 93%]
+tests/test_gateway.py::test_mentor_stream_through_gateway PASSED         [ 95%]
+tests/test_gateway.py::test_agent_stream_raises_gateway_error PASSED     [ 97%]
+tests/test_gateway.py::test_no_agent_or_router_imports_a_provider_sdk_or_old_factory PASSED [100%]
+
+=================================== FAILURES ===================================
+_______________ test_usage_row_per_call_without_prompt_or_reply ________________
+
+user_a = <app.models.user.User object at 0x7f14785a1510>
+
+    async def test_usage_row_per_call_without_prompt_or_reply(user_a):
+        gw = fake_gateway(FakeProvider(["the reply text"]), user_id=user_a.id)
+        await gw.for_agent("planner").complete([{"role": "user", "content": "the prompt text"}])
+        with pytest.raises(GatewayError):
+            await fake_gateway(FakeProvider(error=httpx.ConnectError("x")), user_id=user_a.id) \
+                .for_agent("designer").complete([{"role": "user", "content": "p"}])
+        await flush_usage()
+        async with database.AsyncSessionLocal() as db:
+            rows = (await db.execute(select(AIUsage).order_by(AIUsage.id))).scalars().all()
+>       assert [(r.agent, r.ok, r.error_code) for r in rows] == [
+            ("planner", True, None), ("designer", False, "unreachable")]
+E       AssertionError: assert [('designer',..., True, None)] == [('planner', ...unreachable')]
+E         
+E         At index 0 diff: ('designer', False, 'unreachable') != ('planner', True, None)
+E         
+E         Full diff:
+E           [
+E         +     (
+E         +         'designer',...
+E         
+E         ...Full output truncated (14 lines hidden), use '-vv' to show
+
+tests/test_gateway.py:143: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  app.ai_gateway.errors:errors.py:77 AI gateway error: code=unreachable status=None type=ConnectError
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:295
+  /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend/.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:295: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_gateway.py::test_usage_row_per_call_without_prompt_or_reply
+=================== 1 failed, 44 passed, 1 warning in 16.54s ===================
+exit=1
+
+# The failure above is a test bug: usage rows are written by concurrent background tasks, so
+# autoincrement id order is not call order. Fixed the test to order by started_at (tests/test_gateway.py).
+$ for i in 1 2 3 4 5; do ./.venv/bin/python -m pytest -q tests/test_gateway.py -k usage_row | tail -1; done
+1 passed, 28 deselected, 1 warning in 0.65s
+1 passed, 28 deselected, 1 warning in 0.64s
+1 passed, 28 deselected, 1 warning in 0.63s
+1 passed, 28 deselected, 1 warning in 0.63s
+1 passed, 28 deselected, 1 warning in 0.65s
+exit=0
+
+$ ./.venv/bin/python -m pytest -v
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-8.3.4, pluggy-1.7.0 -- /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.16.0, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=function
+collecting ... collected 45 items
+
+tests/test_ai_api.py::test_requires_login PASSED                         [  2%]
+tests/test_ai_api.py::test_providers_list_has_m1_ids_and_no_dev_only PASSED [  4%]
+tests/test_ai_api.py::test_key_never_in_any_response PASSED              [  6%]
+tests/test_ai_api.py::test_connection_test_updates_status_with_typed_error PASSED [  8%]
+tests/test_ai_api.py::test_models_error_maps_to_502_not_401 PASSED       [ 11%]
+tests/test_ai_api.py::test_revoke_deletes_row_and_ciphertext PASSED      [ 13%]
+tests/test_ai_api.py::test_user_b_cannot_see_test_use_or_delete_user_a_credential PASSED [ 15%]
+tests/test_ai_api.py::test_omitting_key_keeps_it_only_for_same_provider_and_url PASSED [ 17%]
+tests/test_ai_api.py::test_validation_rejects_bad_slot_provider_and_url PASSED [ 20%]
+tests/test_ai_api.py::test_local_provider_saves_without_key PASSED       [ 22%]
+tests/test_crypto.py::test_round_trip_and_ciphertext_hides_key PASSED    [ 24%]
+tests/test_crypto.py::test_same_key_encrypts_differently_each_time PASSED [ 26%]
+tests/test_crypto.py::test_wrong_server_key_cannot_decrypt PASSED        [ 28%]
+tests/test_crypto.py::test_key_hint_shows_only_last_four PASSED          [ 31%]
+tests/test_crypto.py::test_dev_generates_key_file_with_mode_600 PASSED   [ 33%]
+tests/test_crypto.py::test_missing_key_outside_development_is_an_error PASSED [ 35%]
+tests/test_gateway.py::test_no_user_credential_uses_env_default PASSED   [ 37%]
+tests/test_gateway.py::test_user_credential_wins_over_env PASSED         [ 40%]
+tests/test_gateway.py::test_other_users_credential_is_not_used PASSED    [ 42%]
+tests/test_gateway.py::test_live_slot_has_no_env_default PASSED          [ 44%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc0-auth_failed] PASSED [ 46%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc1-auth_failed] PASSED [ 48%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc2-auth_failed] PASSED [ 51%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc3-not_found] PASSED [ 53%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc4-rate_limited] PASSED [ 55%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc5-rate_limited] PASSED [ 57%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc6-bad_request] PASSED [ 60%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc7-provider_error] PASSED [ 62%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc8-unreachable] PASSED [ 64%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc9-unreachable] PASSED [ 66%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc10-unreachable] PASSED [ 68%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc11-auth_failed] PASSED [ 71%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc12-provider_error] PASSED [ 73%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc13-provider_error] PASSED [ 75%]
+tests/test_gateway.py::test_gateway_errors_have_no_silent_fallback PASSED [ 77%]
+tests/test_gateway.py::test_stream_error_becomes_error_event PASSED      [ 80%]
+tests/test_gateway.py::test_validate_connection_reports_models_and_failures PASSED [ 82%]
+tests/test_gateway.py::test_complete_json_first_try PASSED               [ 84%]
+tests/test_gateway.py::test_complete_json_retries_with_reason_then_succeeds PASSED [ 86%]
+tests/test_gateway.py::test_complete_json_schema_mismatch_retries_then_fails PASSED [ 88%]
+tests/test_gateway.py::test_usage_row_per_call_without_prompt_or_reply PASSED [ 91%]
+tests/test_gateway.py::test_mentor_uses_gateway_with_unchanged_system_prompt PASSED [ 93%]
+tests/test_gateway.py::test_mentor_stream_through_gateway PASSED         [ 95%]
+tests/test_gateway.py::test_agent_stream_raises_gateway_error PASSED     [ 97%]
+tests/test_gateway.py::test_no_agent_or_router_imports_a_provider_sdk_or_old_factory PASSED [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:295
+  /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend/.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:295: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 45 passed, 1 warning in 15.99s ========================
+exit=0
+
+# ── Live server ─────────────────────────────────────────────────────────────
+# First connection run found a bug: Gemini answers a bad key with HTTP 400, so it showed as
+# bad_request. Fixed in app/ai_gateway/errors.py (_says_bad_key) + a test case. Run below is after the fix.
+$ ./.venv/bin/python -m pytest -q
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+46 passed, 1 warning in 15.71s
+exit=0
+
+$ ./.venv/bin/python scripts/stub_ai_server.py 8790 &   # local Anthropic/OpenAI stub, accepts only key 'stub-key'
+$ DATABASE_URL=sqlite+aiosqlite:////tmp/nexora-m1-evidence.db ./.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8011 &
+$ curl -s localhost:8011/health
+{"status":"ok","service":"devBuddy AI"}
+exit=0
+$ ss -ltnp | grep -E ':(8011|8790) '
+LISTEN 0      5                                   127.0.0.1:8790       0.0.0.0:*    users:(("python",pid=4129110,fd=4))
+LISTEN 0      2048                                127.0.0.1:8011       0.0.0.0:*    users:(("python",pid=4130500,fd=13))
+
+# ── Connection test per provider over /api/ai (keys from .env, masked by the script) ──
+$ PYTHONPATH=. ./.venv/bin/python scripts/m1_evidence_connections.py
+# GEMINI_API_KEY in .env: set (value not shown)
+# OPENROUTER_API_KEY in .env: set (value not shown)
+# OPENWEBUI_API_KEY in .env: set (value not shown)
+# ANTHROPIC_API_KEY in .env: empty (value not shown)
+# OPENAI_API_KEY in .env: empty (value not shown)
+$ POST /api/v1/auth/register {"email": "ev_admin@example.com", "username": "ev_admin", "password": "evidence-pass-1"}
+-> HTTP 201 in 623 ms: (token response, 702 bytes, not shown)
+$ GET /api/ai/providers
+-> HTTP 200 in 7 ms: {"count": 8, "first_ids": ["anthropic", "openai", "gemini", "openrouter", "ollama"]}
+
+## gemini (LIVE)
+$ POST /api/v1/auth/register {"email": "ev_gemini@example.com", "username": "ev_gemini", "password": "evidence-pass-1"}
+-> HTTP 201 in 522 ms: (token response, 704 bytes, not shown)
+# model chosen from the live list (65 models): models/gemini-2.5-flash
+$ PUT /api/ai/credentials/text {"provider": "gemini", "model": "models/gemini-2.5-flash", "api_key": "<GEMINI_API_KEY from .env>"}
+-> HTTP 200 in 22 ms: {"id": "140ea4be-08f1-49f6-a84e-c3142f64a8be", "slot": "text", "provider": "gemini", "model": "models/gemini-2.5-flash", "base_url": null, "key_hint": "…Y614", "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 351 ms: {"ok": true, "latency_ms": 325, "model_count": 65, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 210 ms: {"count": 65, "first_ids": ["models/antigravity-preview-05-2026", "models/antigravity-preview-09-2026", "models/antigravity-preview-latest", "models/aqa", "models/deep-research-max-preview-04-2026"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 10 ms: {"count": 1, "first_ids": ["140ea4be-08f1-49f6-a84e-c3142f64a8be"]}
+$ POST /api/ai/test-draft {"provider": "gemini", "api_key": "bad-key-for-evidence-0000"}
+-> HTTP 200 in 295 ms: {"ok": false, "latency_ms": 276, "model_count": 0, "error_code": "auth_failed", "message": "The provider rejected the API key. (HTTP 400)", "models": []}
+
+## openrouter (LIVE)
+$ POST /api/v1/auth/register {"email": "ev_openrouter@example.com", "username": "ev_openrouter", "password": "evidence-pass-1"}
+-> HTTP 201 in 543 ms: (token response, 712 bytes, not shown)
+# model chosen from the live list (437 models): baidu/ernie-5.5-flash-preview:free
+$ PUT /api/ai/credentials/text {"provider": "openrouter", "model": "baidu/ernie-5.5-flash-preview:free", "api_key": "<OPENROUTER_API_KEY from .env>"}
+-> HTTP 200 in 13 ms: {"id": "5fde2000-c359-4fae-99a6-a470684b23d9", "slot": "text", "provider": "openrouter", "model": "baidu/ernie-5.5-flash-preview:free", "base_url": null, "key_hint": "…2edf", "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 510 ms: {"ok": true, "latency_ms": 470, "model_count": 437, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 497 ms: {"count": 437, "first_ids": ["aion-labs/aion-2.0", "aion-labs/aion-3.0", "aion-labs/aion-3.0-mini", "aion-labs/aion-3.5", "aion-labs/aion-3.5-mini"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 34 ms: {"count": 1, "first_ids": ["5fde2000-c359-4fae-99a6-a470684b23d9"]}
+$ POST /api/ai/test-draft {"provider": "openrouter", "api_key": "bad-key-for-evidence-0000"}
+-> HTTP 200 in 621 ms: {"ok": false, "latency_ms": 573, "model_count": 0, "error_code": "auth_failed", "message": "The provider rejected the API key. (HTTP 401)", "models": []}
+
+## ollama (LIVE, local, qwen2.5:0.5b)
+$ POST /api/v1/auth/register {"email": "ev_ollama@example.com", "username": "ev_ollama", "password": "evidence-pass-1"}
+-> HTTP 201 in 707 ms: (token response, 704 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "ollama", "model": "qwen2.5:0.5b"}
+-> HTTP 200 in 24 ms: {"id": "f4b770b2-2d02-4920-8716-f5a20bf6a7f9", "slot": "text", "provider": "ollama", "model": "qwen2.5:0.5b", "base_url": null, "key_hint": null, "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 47 ms: {"ok": true, "latency_ms": 20, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 30 ms: {"count": 1, "first_ids": ["qwen2.5:0.5b"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 14 ms: {"count": 1, "first_ids": ["f4b770b2-2d02-4920-8716-f5a20bf6a7f9"]}
+
+## ollama in the live slot (LIVE, local)
+$ POST /api/v1/auth/register {"email": "ev_ollama@example.com", "username": "ev_ollama", "password": "evidence-pass-1"}
+-> HTTP 400 in 8 ms: {"detail": "Email or username already taken"}
+$ POST /api/v1/auth/login {"email": "ev_ollama@example.com", "password": "evidence-pass-1"}
+-> HTTP 200 in 578 ms: (token response, 704 bytes, not shown)
+$ PUT /api/ai/credentials/live {"provider": "ollama", "model": "qwen2.5:0.5b"}
+-> HTTP 200 in 12 ms: {"id": "d614a7e6-17ed-4311-af05-3d4284889a32", "slot": "live", "provider": "ollama", "model": "qwen2.5:0.5b", "base_url": null, "key_hint": null, "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/live/test
+-> HTTP 200 in 33 ms: {"ok": true, "latency_ms": 11, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/live/models
+-> HTTP 200 in 28 ms: {"count": 1, "first_ids": ["qwen2.5:0.5b"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 9 ms: {"count": 2, "first_ids": ["d614a7e6-17ed-4311-af05-3d4284889a32", "f4b770b2-2d02-4920-8716-f5a20bf6a7f9"]}
+
+## lmstudio (LIVE via the OpenAI-compatible path, against Ollama /v1)
+$ POST /api/v1/auth/register {"email": "ev_lmstudio@example.com", "username": "ev_lmstudio", "password": "evidence-pass-1"}
+-> HTTP 201 in 568 ms: (token response, 708 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "lmstudio", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1"}
+-> HTTP 200 in 10 ms: {"id": "88513c45-67da-4b95-b601-635edd895c9a", "slot": "text", "provider": "lmstudio", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1", "key_hint": null, "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 25 ms: {"ok": true, "latency_ms": 8, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 24 ms: {"count": 1, "first_ids": ["qwen2.5:0.5b"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 6 ms: {"count": 1, "first_ids": ["88513c45-67da-4b95-b601-635edd895c9a"]}
+
+## vllm (LIVE via the OpenAI-compatible path, against Ollama /v1)
+$ POST /api/v1/auth/register {"email": "ev_vllm@example.com", "username": "ev_vllm", "password": "evidence-pass-1"}
+-> HTTP 201 in 549 ms: (token response, 700 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "vllm", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1"}
+-> HTTP 200 in 9 ms: {"id": "607f1cfe-e615-4766-8833-2a50cf223386", "slot": "text", "provider": "vllm", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1", "key_hint": null, "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 35 ms: {"ok": true, "latency_ms": 16, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 21 ms: {"count": 1, "first_ids": ["qwen2.5:0.5b"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 5 ms: {"count": 1, "first_ids": ["607f1cfe-e615-4766-8833-2a50cf223386"]}
+
+## openai_compatible (LIVE via the OpenAI-compatible path, against Ollama /v1)
+$ POST /api/v1/auth/register {"email": "ev_openai_compatible@example.com", "username": "ev_openai_compatible", "password": "evidence-pass-1"}
+-> HTTP 201 in 540 ms: (token response, 726 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "openai_compatible", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1"}
+-> HTTP 200 in 9 ms: {"id": "eff19118-c4a1-4f6d-b282-713d0178b72f", "slot": "text", "provider": "openai_compatible", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1", "key_hint": null, "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 26 ms: {"ok": true, "latency_ms": 8, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 24 ms: {"count": 1, "first_ids": ["qwen2.5:0.5b"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 6 ms: {"count": 1, "first_ids": ["eff19118-c4a1-4f6d-b282-713d0178b72f"]}
+
+## anthropic (stub, not live)
+$ POST /api/v1/auth/register {"email": "ev_anthropic@example.com", "username": "ev_anthropic", "password": "evidence-pass-1"}
+-> HTTP 201 in 530 ms: (token response, 710 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "anthropic", "model": "claude-stub-1", "api_key": "stub-key", "base_url": "http://127.0.0.1:8790"}
+-> HTTP 200 in 10 ms: {"id": "b8423e56-8b1c-4211-bdcb-3d941bd0d6cf", "slot": "text", "provider": "anthropic", "model": "claude-stub-1", "base_url": "http://127.0.0.1:8790", "key_hint": "…-key", "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 34 ms: {"ok": true, "latency_ms": 16, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 28 ms: {"count": 1, "first_ids": ["claude-stub-1"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 6 ms: {"count": 1, "first_ids": ["b8423e56-8b1c-4211-bdcb-3d941bd0d6cf"]}
+$ POST /api/ai/test-draft {"provider": "anthropic", "api_key": "bad-key-for-evidence-0000", "base_url": "http://127.0.0.1:8790"}
+-> HTTP 200 in 34 ms: {"ok": false, "latency_ms": 18, "model_count": 0, "error_code": "auth_failed", "message": "The provider rejected the API key. (HTTP 401)", "models": []}
+
+## openai (stub, not live)
+$ POST /api/v1/auth/register {"email": "ev_openai@example.com", "username": "ev_openai", "password": "evidence-pass-1"}
+-> HTTP 201 in 549 ms: (token response, 704 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "openai", "model": "gpt-stub-1", "api_key": "stub-key", "base_url": "http://127.0.0.1:8790/v1"}
+-> HTTP 200 in 9 ms: {"id": "349f7896-cb98-4e83-b8cc-dfbbfa98e5fc", "slot": "text", "provider": "openai", "model": "gpt-stub-1", "base_url": "http://127.0.0.1:8790/v1", "key_hint": "…-key", "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 27 ms: {"ok": true, "latency_ms": 8, "model_count": 2, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 21 ms: {"count": 2, "first_ids": ["gpt-stub-1", "gpt-stub-2"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 6 ms: {"count": 1, "first_ids": ["349f7896-cb98-4e83-b8cc-dfbbfa98e5fc"]}
+$ POST /api/ai/test-draft {"provider": "openai", "api_key": "bad-key-for-evidence-0000", "base_url": "http://127.0.0.1:8790/v1"}
+-> HTTP 200 in 25 ms: {"ok": false, "latency_ms": 7, "model_count": 0, "error_code": "auth_failed", "message": "The provider rejected the API key. (HTTP 401)", "models": []}
+
+## unreachable host gives a typed error, not a crash
+$ POST /api/ai/test-draft {"provider": "openai_compatible", "base_url": "http://127.0.0.1:9/v1"}
+-> HTTP 200 in 2757 ms: {"ok": false, "latency_ms": 2739, "model_count": 0, "error_code": "unreachable", "message": "Could not reach the provider. Check the base URL and that it is running.", "models": []}
+
+## user isolation over HTTP: ev_admin has no credentials and cannot use ev_gemini's
+$ GET /api/ai/credentials
+-> HTTP 200 in 8 ms: []
+$ GET /api/ai/credentials/text/models
+-> HTTP 404 in 5 ms: {"detail": "No credential saved for this slot."}
+
+# leak check of every raw API response (full key and inner fragment) against .env keys: none found
+exit=0
+
+# ── Probes of the cloud providers (explain the results below) ──────────────────
+# Gemini 2.5/2.0-flash are listed but retired for new keys; 3.8-flash is the pick. OpenWebUI key and Ollama cloud are rejected.
+$ PYTHONPATH=. ./.venv/bin/python - <<'EOF'   # key read from .env, replaced by <KEY> in any output
+import httpx; from app.config import get_settings
+s = get_settings(); g = s.gemini_api_key.get_secret_value(); w = s.openwebui_api_key.get_secret_value()
+gem = "https://generativelanguage.googleapis.com/v1beta/openai"
+for m in ["gemini-2.5-flash", "gemini-3.8-flash"]:
+    r = httpx.post(gem + "/chat/completions", headers={"Authorization": f"Bearer {g}"}, timeout=60,
+                   json={"model": m, "messages": [{"role": "user", "content": "say pong"}], "max_tokens": 50})
+    print("gemini", m, r.status_code, " ".join(r.text.replace(g, "<KEY>").split())[:160])
+for path in ["/api/models", "/api/v1/messages"]:
+    r = httpx.request("GET" if "models" in path else "POST", s.openwebui_base_url.rstrip("/") + path,
+                      headers={"x-api-key": w, "Authorization": f"Bearer {w}"}, timeout=30,
+                      json=None if "models" in path else {"model": "gpt-5", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5})
+    print("openwebui", path, r.status_code, " ".join(r.text.replace(w, "<KEY>").split())[:120])
+EOF
+gemini gemini-2.5-flash 404 [{ "error": { "code": 404, "message": "This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-
+gemini gemini-3.8-flash 503 [{ "error": { "code": 503, "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.", "stat
+openwebui /api/models 401 {"detail":"Your session has expired or the token is invalid. Please sign in again."}
+openwebui /api/v1/messages 401 {"detail":"Your session has expired or the token is invalid. Please sign in again."}
+exit=0
+$ curl -s localhost:11434/v1/chat/completions -d '{"model":"gemma4:31b-cloud",...}'   # the .env default LLM_MODEL
+{"error":{"message":"Unauthorized","type":"api_error","param":null,"code":null}}
+
+exit=0
+
+# ── Connection test per provider over /api/ai (fresh DB, server restarted after the fixes) ──
+$ PYTHONPATH=. ./.venv/bin/python scripts/m1_evidence_connections.py
+# GEMINI_API_KEY in .env: set (value not shown)
+# OPENROUTER_API_KEY in .env: set (value not shown)
+# OPENWEBUI_API_KEY in .env: set (value not shown)
+# ANTHROPIC_API_KEY in .env: empty (value not shown)
+# OPENAI_API_KEY in .env: empty (value not shown)
+$ POST /api/v1/auth/register {"email": "ev_admin@example.com", "username": "ev_admin", "password": "evidence-pass-1"}
+-> HTTP 201 in 659 ms: (token response, 702 bytes, not shown)
+$ GET /api/ai/providers
+-> HTTP 200 in 8 ms: {"count": 8, "first_ids": ["anthropic", "openai", "gemini", "openrouter", "ollama"]}
+
+## gemini (LIVE)
+$ POST /api/v1/auth/register {"email": "ev_gemini@example.com", "username": "ev_gemini", "password": "evidence-pass-1"}
+-> HTTP 201 in 541 ms: (token response, 704 bytes, not shown)
+# model chosen from the live list (65 models): models/gemini-3.8-flash
+$ PUT /api/ai/credentials/text {"provider": "gemini", "model": "models/gemini-3.8-flash", "api_key": "<GEMINI_API_KEY from .env>"}
+-> HTTP 200 in 24 ms: {"id": "d11a772b-955e-4ff5-919c-1089674835ac", "slot": "text", "provider": "gemini", "model": "models/gemini-3.8-flash", "base_url": null, "key_hint": "…Y614", "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 264 ms: {"ok": true, "latency_ms": 240, "model_count": 65, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 156 ms: {"count": 65, "first_ids": ["models/antigravity-preview-05-2026", "models/antigravity-preview-09-2026", "models/antigravity-preview-latest", "models/aqa", "models/deep-research-max-preview-04-2026"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 7 ms: {"count": 1, "first_ids": ["d11a772b-955e-4ff5-919c-1089674835ac"]}
+$ POST /api/ai/test-draft {"provider": "gemini", "api_key": "bad-key-for-evidence-0000"}
+-> HTTP 200 in 287 ms: {"ok": false, "latency_ms": 269, "model_count": 0, "error_code": "auth_failed", "message": "The provider rejected the API key. (HTTP 400)", "models": []}
+
+## openrouter (LIVE)
+$ POST /api/v1/auth/register {"email": "ev_openrouter@example.com", "username": "ev_openrouter", "password": "evidence-pass-1"}
+-> HTTP 201 in 566 ms: (token response, 712 bytes, not shown)
+# model chosen from the live list (437 models): google/gemma-4-31b-it:free
+$ PUT /api/ai/credentials/text {"provider": "openrouter", "model": "google/gemma-4-31b-it:free", "api_key": "<OPENROUTER_API_KEY from .env>"}
+-> HTTP 200 in 12 ms: {"id": "471ad496-8ffe-427c-8937-7efb860f26f6", "slot": "text", "provider": "openrouter", "model": "google/gemma-4-31b-it:free", "base_url": null, "key_hint": "…2edf", "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 425 ms: {"ok": true, "latency_ms": 406, "model_count": 437, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 267 ms: {"count": 437, "first_ids": ["aion-labs/aion-2.0", "aion-labs/aion-3.0", "aion-labs/aion-3.0-mini", "aion-labs/aion-3.5", "aion-labs/aion-3.5-mini"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 6 ms: {"count": 1, "first_ids": ["471ad496-8ffe-427c-8937-7efb860f26f6"]}
+$ POST /api/ai/test-draft {"provider": "openrouter", "api_key": "bad-key-for-evidence-0000"}
+-> HTTP 200 in 706 ms: {"ok": false, "latency_ms": 691, "model_count": 0, "error_code": "auth_failed", "message": "The provider rejected the API key. (HTTP 401)", "models": []}
+
+## ollama (LIVE, local, qwen2.5:0.5b)
+$ POST /api/v1/auth/register {"email": "ev_ollama@example.com", "username": "ev_ollama", "password": "evidence-pass-1"}
+-> HTTP 201 in 542 ms: (token response, 704 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "ollama", "model": "qwen2.5:0.5b"}
+-> HTTP 200 in 9 ms: {"id": "69fc6cfd-660d-4733-bf5a-d26a98c965be", "slot": "text", "provider": "ollama", "model": "qwen2.5:0.5b", "base_url": null, "key_hint": null, "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 37 ms: {"ok": true, "latency_ms": 19, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 23 ms: {"count": 1, "first_ids": ["qwen2.5:0.5b"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 8 ms: {"count": 1, "first_ids": ["69fc6cfd-660d-4733-bf5a-d26a98c965be"]}
+
+## ollama in the live slot (LIVE, local)
+$ POST /api/v1/auth/register {"email": "ev_ollama@example.com", "username": "ev_ollama", "password": "evidence-pass-1"}
+-> HTTP 400 in 5 ms: {"detail": "Email or username already taken"}
+$ POST /api/v1/auth/login {"email": "ev_ollama@example.com", "password": "evidence-pass-1"}
+-> HTTP 200 in 559 ms: (token response, 704 bytes, not shown)
+$ PUT /api/ai/credentials/live {"provider": "ollama", "model": "qwen2.5:0.5b"}
+-> HTTP 200 in 12 ms: {"id": "10640c4b-cf2b-4eb1-8bb8-f0144e6ef305", "slot": "live", "provider": "ollama", "model": "qwen2.5:0.5b", "base_url": null, "key_hint": null, "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/live/test
+-> HTTP 200 in 35 ms: {"ok": true, "latency_ms": 11, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/live/models
+-> HTTP 200 in 27 ms: {"count": 1, "first_ids": ["qwen2.5:0.5b"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 8 ms: {"count": 2, "first_ids": ["10640c4b-cf2b-4eb1-8bb8-f0144e6ef305", "69fc6cfd-660d-4733-bf5a-d26a98c965be"]}
+
+## lmstudio (LIVE via the OpenAI-compatible path, against Ollama /v1)
+$ POST /api/v1/auth/register {"email": "ev_lmstudio@example.com", "username": "ev_lmstudio", "password": "evidence-pass-1"}
+-> HTTP 201 in 564 ms: (token response, 708 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "lmstudio", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1"}
+-> HTTP 200 in 10 ms: {"id": "3a49a5ac-1055-4303-934a-82a15a3e196a", "slot": "text", "provider": "lmstudio", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1", "key_hint": null, "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 29 ms: {"ok": true, "latency_ms": 10, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 25 ms: {"count": 1, "first_ids": ["qwen2.5:0.5b"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 6 ms: {"count": 1, "first_ids": ["3a49a5ac-1055-4303-934a-82a15a3e196a"]}
+
+## vllm (LIVE via the OpenAI-compatible path, against Ollama /v1)
+$ POST /api/v1/auth/register {"email": "ev_vllm@example.com", "username": "ev_vllm", "password": "evidence-pass-1"}
+-> HTTP 201 in 524 ms: (token response, 700 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "vllm", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1"}
+-> HTTP 200 in 8 ms: {"id": "5a1dba15-70ba-41bd-96f2-b24f16354bc4", "slot": "text", "provider": "vllm", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1", "key_hint": null, "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 30 ms: {"ok": true, "latency_ms": 14, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 21 ms: {"count": 1, "first_ids": ["qwen2.5:0.5b"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 5 ms: {"count": 1, "first_ids": ["5a1dba15-70ba-41bd-96f2-b24f16354bc4"]}
+
+## openai_compatible (LIVE via the OpenAI-compatible path, against Ollama /v1)
+$ POST /api/v1/auth/register {"email": "ev_openai_compatible@example.com", "username": "ev_openai_compatible", "password": "evidence-pass-1"}
+-> HTTP 201 in 538 ms: (token response, 726 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "openai_compatible", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1"}
+-> HTTP 200 in 9 ms: {"id": "7a3949a9-cf81-41b2-a187-1bdab27ff453", "slot": "text", "provider": "openai_compatible", "model": "qwen2.5:0.5b", "base_url": "http://localhost:11434/v1", "key_hint": null, "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 32 ms: {"ok": true, "latency_ms": 15, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 23 ms: {"count": 1, "first_ids": ["qwen2.5:0.5b"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 6 ms: {"count": 1, "first_ids": ["7a3949a9-cf81-41b2-a187-1bdab27ff453"]}
+
+## anthropic (stub, not live)
+$ POST /api/v1/auth/register {"email": "ev_anthropic@example.com", "username": "ev_anthropic", "password": "evidence-pass-1"}
+-> HTTP 201 in 515 ms: (token response, 710 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "anthropic", "model": "claude-stub-1", "api_key": "stub-key", "base_url": "http://127.0.0.1:8790"}
+-> HTTP 200 in 8 ms: {"id": "a111438c-d93d-46a9-9473-caf74feac3da", "slot": "text", "provider": "anthropic", "model": "claude-stub-1", "base_url": "http://127.0.0.1:8790", "key_hint": "…-key", "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 34 ms: {"ok": true, "latency_ms": 12, "model_count": 1, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 28 ms: {"count": 1, "first_ids": ["claude-stub-1"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 6 ms: {"count": 1, "first_ids": ["a111438c-d93d-46a9-9473-caf74feac3da"]}
+$ POST /api/ai/test-draft {"provider": "anthropic", "api_key": "bad-key-for-evidence-0000", "base_url": "http://127.0.0.1:8790"}
+-> HTTP 200 in 31 ms: {"ok": false, "latency_ms": 16, "model_count": 0, "error_code": "auth_failed", "message": "The provider rejected the API key. (HTTP 401)", "models": []}
+
+## openai (stub, not live)
+$ POST /api/v1/auth/register {"email": "ev_openai@example.com", "username": "ev_openai", "password": "evidence-pass-1"}
+-> HTTP 201 in 531 ms: (token response, 704 bytes, not shown)
+$ PUT /api/ai/credentials/text {"provider": "openai", "model": "gpt-stub-1", "api_key": "stub-key", "base_url": "http://127.0.0.1:8790/v1"}
+-> HTTP 200 in 9 ms: {"id": "e4718f70-e2de-4e26-b41f-141e54faf4af", "slot": "text", "provider": "openai", "model": "gpt-stub-1", "base_url": "http://127.0.0.1:8790/v1", "key_hint": "…-key", "status": "untested", "last_checked_at": null, "last_error": null}
+$ POST /api/ai/credentials/text/test
+-> HTTP 200 in 24 ms: {"ok": true, "latency_ms": 7, "model_count": 2, "error_code": null, "message": null}
+$ GET /api/ai/credentials/text/models
+-> HTTP 200 in 19 ms: {"count": 2, "first_ids": ["gpt-stub-1", "gpt-stub-2"]}
+$ GET /api/ai/credentials
+-> HTTP 200 in 6 ms: {"count": 1, "first_ids": ["e4718f70-e2de-4e26-b41f-141e54faf4af"]}
+$ POST /api/ai/test-draft {"provider": "openai", "api_key": "bad-key-for-evidence-0000", "base_url": "http://127.0.0.1:8790/v1"}
+-> HTTP 200 in 22 ms: {"ok": false, "latency_ms": 7, "model_count": 0, "error_code": "auth_failed", "message": "The provider rejected the API key. (HTTP 401)", "models": []}
+
+## unreachable host gives a typed error, not a crash
+$ POST /api/ai/test-draft {"provider": "openai_compatible", "base_url": "http://127.0.0.1:9/v1"}
+-> HTTP 200 in 2710 ms: {"ok": false, "latency_ms": 2694, "model_count": 0, "error_code": "unreachable", "message": "Could not reach the provider. Check the base URL and that it is running.", "models": []}
+
+## user isolation over HTTP: ev_admin has no credentials and cannot use ev_gemini's
+$ GET /api/ai/credentials
+-> HTTP 200 in 7 ms: []
+$ GET /api/ai/credentials/text/models
+-> HTTP 404 in 6 ms: {"detail": "No credential saved for this slot."}
+
+# leak check of every raw API response (full key and inner fragment) against .env keys: none found
+exit=0
+
+# ── Generation per provider + every agent flow through the gateway ──
+# Attempt 1: flows as ev_openrouter (google/gemma-4-31b-it:free). OpenRouter free tier answered 429 to every
+# call, so agents fell back to their deterministic output and the mentor raised a typed GatewayError.
+$ DATABASE_URL=sqlite+aiosqlite:////tmp/nexora-m1-evidence.db PYTHONPATH=. ./.venv/bin/python scripts/m1_evidence_flows.py
+## one real generation per saved provider credential (user's text slot)
+$ gateway.complete(user=ev_gemini, gemini LIVE, prompt='Reply with the single word: pong')
+AI gateway error: code=provider_error status=503 type=InternalServerError
+-> GatewayError code=provider_error message='The provider returned an error. (HTTP 503)'
+$ gateway.complete(user=ev_openrouter, openrouter LIVE, prompt='Reply with the single word: pong')
+AI gateway error: code=rate_limited status=429 type=RateLimitError
+-> GatewayError code=rate_limited message='The provider is rate limiting requests. Try again shortly. (HTTP 429)'
+$ gateway.complete(user=ev_ollama, ollama LIVE, prompt='Reply with the single word: pong')
+-> ok in 197 ms | ollama / qwen2.5:0.5b (source=user) | text='PONG!' | tokens in/out=36/4
+$ gateway.complete(user=ev_lmstudio, lmstudio LIVE via Ollama /v1, prompt='Reply with the single word: pong')
+-> ok in 171 ms | lmstudio / qwen2.5:0.5b (source=user) | text='PONG!' | tokens in/out=36/4
+$ gateway.complete(user=ev_vllm, vllm LIVE via Ollama /v1, prompt='Reply with the single word: pong')
+-> ok in 99 ms | vllm / qwen2.5:0.5b (source=user) | text='pong' | tokens in/out=36/2
+$ gateway.complete(user=ev_openai_compatible, openai_compatible LIVE via Ollama /v1, prompt='Reply with the single word: pong')
+-> ok in 99 ms | openai_compatible / qwen2.5:0.5b (source=user) | text='pong' | tokens in/out=36/2
+$ gateway.complete(user=ev_anthropic, anthropic stub, not live, prompt='Reply with the single word: pong')
+-> ok in 45 ms | anthropic / claude-stub-1 (source=user) | text='stub anthropic reply' | tokens in/out=5/3
+$ gateway.complete(user=ev_openai, openai stub, not live, prompt='Reply with the single word: pong')
+-> ok in 38 ms | openai / gpt-stub-1 (source=user) | text='stub openai reply' | tokens in/out=5/3
+$ live slot: gateway(user=ev_ollama, slot='live')
+$ gateway.complete(user=ev_ollama live slot, ollama LIVE, prompt='Reply with the single word: pong')
+-> ok in 94 ms | ollama / qwen2.5:0.5b (source=user) | text='pong' | tokens in/out=36/2
+
+## openwebui (LIVE, dev .env only, not user-selectable): connection test + generation
+AI gateway error: code=auth_failed status=401 type=HTTPStatusError
+$ AIGateway(openwebui from .env).validate_connection()
+-> ok=False latency_ms=187 model_count=0 error_code=auth_failed first_ids=[]
+
+## smoke run of every agent flow through the gateway, as user ev_openrouter: openrouter / google/gemma-4-31b-it:free (source=user). Outputs trimmed.
+$ CodeAnalyzerAgent(user).analyze(CODE)
+AI gateway error: code=rate_limited status=429 type=RateLimitError
+LLM code analysis failed, using static fallback: [rate_limited] The provider is rate limiting requests. Try again shortly. (HTTP 429)
+-> ok in 1669 ms: {"is_code": true, "language": "python", "difficulty": "advanced", "concepts": ["functions", "loops", "recursion", "lists", "variables", "operators", "input_output"], "line_count": 8, "summary": "def average(nums):", "concept_locations": {"functions": "line 1", "loops": "line 3", "recursion": "line 1", "lists": "lines 7-8", "variables": "line 2", "operators": "line 4", "input_output": "lines 7-8"}}
+$ AssessmentGeneratorAgent(user).generate_questions(CODE, concepts, language, question_count=3)
+AI gateway error: code=rate_limited status=429 type=RateLimitError
+LLM question generation failed, using static fallback: [rate_limited] The provider is rate limiting requests. Try again shortly. (HTTP 429)
+-> ok in 1876 ms: [{"id": "q1", "question": "Based on the function in your code, what is the purpose of its parameters?", "options": [{"key": "A", "text": "They act as placeholders for the data the function needs to work with"}, {"key": "B", "text": "They are used to name the entire file"}, {"key": "C", "text": "They determine the speed of the program"}, {"key": "D", "text": "They are only for documentation and don't affect logic"}], "correct": "A", "topic": "functions", "difficulty": "beginner", "code_reference" … [1395 more chars trimmed]
+$ PlannerAgent(user).generate_space_name(...)
+AI gateway error: code=rate_limited status=429 type=RateLimitError
+Space name generation failed: [rate_limited] The provider is rate limiting requests. Try again shortly. (HTTP 429)
+-> ok in 2006 ms: Python
+$ PlannerAgent(user).generate_learning_path(...)
+AI gateway error: code=rate_limited status=429 type=RateLimitError
+LLM misconception detection failed, using static fallback: [rate_limited] The provider is rate limiting requests. Try again shortly. (HTTP 429)
+AI gateway error: code=rate_limited status=429 type=RateLimitError
+Learning path LLM attempt 1 failed: [rate_limited] The provider is rate limiting requests. Try again shortly. (HTTP 429)
+AI gateway error: code=rate_limited status=429 type=RateLimitError
+Learning path LLM attempt 2 failed: [rate_limited] The provider is rate limiting requests. Try again shortly. (HTTP 429)
+All LLM attempts failed — using deterministic fallback path
+-> ok in 5200 ms: {"title": "Understanding Your Python Code", "description": "A personalized path targeting only the gaps in your understanding. Each lesson focuses on one concept found in your submitted code.", "lessons": [{"order_index": 1, "title": "Edge Cases", "topic": "edge cases", "description": "Learn about edge cases as used in your python code.", "estimated_minutes": 20, "difficulty": "beginner"}, {"order_index": 2, "title": "Functions & Parameters", "topic": "functions", "description": "Learn about fun … [1232 more chars trimmed]
+$ PlannerAgent(user).generate_lesson_content(...)
+AI gateway error: code=rate_limited status=429 type=RateLimitError
+Lesson content generation failed for topic=Empty list edge case: [rate_limited] The provider is rate limiting requests. Try again shortly. (HTTP 429)
+-> ok in 1728 ms: {"concept_hook": "Think of Empty list edge case as a foundational block in your python code.", "code_walkthrough": [{"code": "def average(nums):", "plain_english": "This line participates in the Empty list edge case logic.", "why": "The programmer wrote it so later steps have a value or action to work with."}, {"code": " total = 0", "plain_english": "This line participates in the Empty list edge case logic.", "why": "The programmer wrote it so later steps have a value or action to work with."},  … [1046 more chars trimmed]
+$ DesignerAgent(user).generate_animation(...)
+AI gateway error: code=rate_limited status=429 type=RateLimitError
+Designer agent failed for topic=loops: [rate_limited] The provider is rate limiting requests. Try again shortly. (HTTP 429)
+-> ok in 1711 ms: {"deep_dive": {"title": "Mental Model", "cards": [{"title": "Track loops", "content": "Watch where loops appears, how values change, and which later lines depend on those values.", "icon": "database", "related_nodes": ["concept"]}]}, "viz": {"kind": "flow", "steps": [{"id": "concept", "label": "Loops", "summary": "This lesson focuses on how loops works in the python code."}, {"id": "execution", "label": "Execution", "summary": "Read the code in order and track each value as it is created or upda … [346 more chars trimmed]
+$ ChoreographerAgent(user).choreograph(CODE)
+AI gateway error: code=rate_limited status=429 type=RateLimitError
+Choreographer failed: [rate_limited] The provider is rate limiting requests. Try again shortly. (HTTP 429)
+-> ok in 1633 ms: {"version": "1.0", "metadata": {"title": "Error", "totalDuration": 0}, "timeline": []}
+$ LessonSuggesterAgent(user).suggest(convo)
+AI gateway error: code=rate_limited status=429 type=RateLimitError
+LessonSuggester failed: [rate_limited] The provider is rate limiting requests. Try again shortly. (HTTP 429)
+-> ok in 1622 ms: null
+$ SocraticMentorAgent(user).chat('my code crashes on [], fix it for me', hint_level=0)
+AI gateway error: code=rate_limited status=429 type=RateLimitError
+-> FAILED GatewayError: [rate_limited] The provider is rate limiting requests. Try again shortly. (HTTP 429)
+$ SocraticMentorAgent(user).stream_chat('why does average([]) crash?', hint_level=1)
+AI gateway error: code=rate_limited status=429 type=RateLimitError
+-> FAILED GatewayError: [rate_limited] The provider is rate limiting requests. Try again shortly. (HTTP 429)
+
+## ai_usage rows written by the calls above (no prompt, reply or key is stored)
+agent | provider | model | source | ok | error_code | in/out tokens | latency_ms
+evidence | gemini | models/gemini-3.8-flash | user | False | provider_error | None/None | 15622
+evidence | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 2183
+evidence | ollama | qwen2.5:0.5b | user | True | None | 36/4 | 182
+evidence | lmstudio | qwen2.5:0.5b | user | True | None | 36/4 | 154
+evidence | vllm | qwen2.5:0.5b | user | True | None | 36/2 | 82
+evidence | openai_compatible | qwen2.5:0.5b | user | True | None | 36/2 | 83
+evidence | anthropic | claude-stub-1 | user | True | None | 5/3 | 16
+evidence | openai | gpt-stub-1 | user | True | None | 5/3 | 12
+evidence | ollama | qwen2.5:0.5b | user | True | None | 36/2 | 89
+code_analyzer | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1665
+assessment_generator | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1875
+planner | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 2005
+code_analyzer | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1698
+planner | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1763
+planner | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1732
+planner | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1727
+designer | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1710
+choreographer | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1609
+lesson_suggester | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1622
+socratic_mentor | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1817
+
+# leak check of this output against the .env key values: none found
+exit=0
+
+# Attempt 2: flows as ev_ollama (local qwen2.5:0.5b, CPU only). Every agent call ok=True through the gateway.
+# Output quality is a 0.5B model's (e.g. the mentor echoed the learner's code); the mentor prompt itself is unchanged (pytest).
+$ DATABASE_URL=sqlite+aiosqlite:////tmp/nexora-m1-evidence.db PYTHONPATH=. ./.venv/bin/python scripts/m1_evidence_flows.py ev_ollama
+## one real generation per saved provider credential (user's text slot)
+$ gateway.complete(user=ev_gemini, gemini LIVE, prompt='Reply with the single word: pong')
+AI gateway error: code=provider_error status=503 type=InternalServerError
+-> GatewayError code=provider_error message='The provider returned an error. (HTTP 503)'
+$ gateway.complete(user=ev_openrouter, openrouter LIVE, prompt='Reply with the single word: pong')
+AI gateway error: code=rate_limited status=429 type=RateLimitError
+-> GatewayError code=rate_limited message='The provider is rate limiting requests. Try again shortly. (HTTP 429)'
+$ gateway.complete(user=ev_ollama, ollama LIVE, prompt='Reply with the single word: pong')
+-> ok in 81 ms | ollama / qwen2.5:0.5b (source=user) | text='pong' | tokens in/out=36/2
+$ gateway.complete(user=ev_lmstudio, lmstudio LIVE via Ollama /v1, prompt='Reply with the single word: pong')
+-> ok in 162 ms | lmstudio / qwen2.5:0.5b (source=user) | text='PONG!' | tokens in/out=36/4
+$ gateway.complete(user=ev_vllm, vllm LIVE via Ollama /v1, prompt='Reply with the single word: pong')
+-> ok in 155 ms | vllm / qwen2.5:0.5b (source=user) | text='PONG!' | tokens in/out=36/4
+$ gateway.complete(user=ev_openai_compatible, openai_compatible LIVE via Ollama /v1, prompt='Reply with the single word: pong')
+-> ok in 111 ms | openai_compatible / qwen2.5:0.5b (source=user) | text='pong' | tokens in/out=36/2
+$ gateway.complete(user=ev_anthropic, anthropic stub, not live, prompt='Reply with the single word: pong')
+-> ok in 35 ms | anthropic / claude-stub-1 (source=user) | text='stub anthropic reply' | tokens in/out=5/3
+$ gateway.complete(user=ev_openai, openai stub, not live, prompt='Reply with the single word: pong')
+-> ok in 46 ms | openai / gpt-stub-1 (source=user) | text='stub openai reply' | tokens in/out=5/3
+$ live slot: gateway(user=ev_ollama, slot='live')
+$ gateway.complete(user=ev_ollama live slot, ollama LIVE, prompt='Reply with the single word: pong')
+-> ok in 87 ms | ollama / qwen2.5:0.5b (source=user) | text='pong' | tokens in/out=36/2
+
+## openwebui (LIVE, dev .env only, not user-selectable): connection test + generation
+AI gateway error: code=auth_failed status=401 type=HTTPStatusError
+$ AIGateway(openwebui from .env).validate_connection()
+-> ok=False latency_ms=157 model_count=0 error_code=auth_failed first_ids=[]
+
+## smoke run of every agent flow through the gateway, as user ev_ollama: ollama / qwen2.5:0.5b (source=user). Outputs trimmed.
+$ CodeAnalyzerAgent(user).analyze(CODE)
+-> ok in 4743 ms: {"is_code": true, "language": "python", "difficulty": "advanced", "concepts": ["list comprehensions"], "line_count": 12, "summary": "Calculate the average of a list of numbers", "concept_locations": {"concept": "lines 3-4"}}
+$ AssessmentGeneratorAgent(user).generate_questions(CODE, concepts, language, question_count=3)
+-> ok in 25104 ms: [{"id": "q1", "question": "What does the function average(nums) return?", "options": [{"key": "A", "text": "Returns the average of the numbers"}, {"key": "B", "text": "Returns the sum of the numbers"}, {"key": "C", "text": "Returns a new list with the sum of the numbers"}, {"key": "D", "text": "Returns a new list with the average of the numbers"}], "correct": "A", "topic": "functions", "difficulty": "beginner", "code_reference": "line 3", "explanation": "The function `average(nums)` takes a list … [1295 more chars trimmed]
+$ PlannerAgent(user).generate_space_name(...)
+-> ok in 863 ms: Python List Comprehensions: Average Finder
+$ PlannerAgent(user).generate_learning_path(...)
+-> ok in 23139 ms: {"title": "Understanding Your Code: [short description]", "description": "2-sentence description mentioning the student's code", "lessons": [{"order_index": 1, "title": "Lesson title referencing their code", "topic": "list comprehensions", "description": "The student's code contains a mistake in list comprehension", "estimated_minutes": 10, "difficulty": "beginner"}, {"order_index": 2, "title": "Lesson title referencing their code", "topic": "edge cases", "description": "The student's code conta … [294 more chars trimmed]
+$ PlannerAgent(user).generate_lesson_content(...)
+-> ok in 18768 ms: {"concept_hook": "An empty list edge case, and why it matters in the context of division.", "code_walkthrough": [{"code": "The `average` function in the original code snippet is intended to divide the sum of all the numbers in a list by the length of the list. However, it raises a `ZeroDivisionError` if the list is empty. "}, {"code": "To predict the output of the `average` function when the list is empty, the programmer can observe the following steps: "}, {"code": "1. The `average` function ta … [1263 more chars trimmed]
+$ DesignerAgent(user).generate_animation(...)
+-> ok in 107719 ms: {"deep_dive": {"title": "Summing a List", "cards": [{"title": "Short Title", "content": "Bite-sized technical insight (1-2 sentences).", "icon": "brain|zap|shield|database|cpu", "related_nodes": ["data-view-id-or-node-id"]}]}, "viz": {"kind": "tree", "root_id": "average", "nodes": [{"id": "average", "label": "Summing a List", "summary": "Computes the sum of a list of numbers and returns the average.", "code_ref": {"walkthrough_index": 0, "line_start": 1, "line_end": 1}, "children": [{"id": "tota … [2946 more chars trimmed]
+$ ChoreographerAgent(user).choreograph(CODE)
+-> ok in 17002 ms: {"version": "1.0", "metadata": {"title": "Scene Title", "description": "Animation of an average function with a decision point.", "totalDuration": 12}, "timeline": [{"id": "averageDecision", "type": "code_highlight", "start": 2, "duration": 1, "props": {"line_start": 1, "line_end": 1, "walkthrough_index": 1}}, {"id": "averageCalculation", "type": "code_highlight", "start": 3, "duration": 2, "props": {"line_start": 2, "line_end": 2, "walkthrough_index": 2}}, {"id": "averageResult", "type": "code_ … [252 more chars trimmed]
+$ LessonSuggesterAgent(user).suggest(convo)
+-> ok in 4731 ms: null
+$ SocraticMentorAgent(user).chat('my code crashes on [], fix it for me', hint_level=0)
+-> ok in 9984 ms: ```python def average(nums): total = 0 for n in nums: total += n return total / len(nums) print(average([3, 4, 5])) print(average([])) ```
+$ SocraticMentorAgent(user).stream_chat('why does average([]) crash?', hint_level=1)
+-> ok in 3461 ms: 68 chunks: You're right! It's crashing because the function is trying to use an empty list, which is not allowed. Let's fix it and see if this helps. What if instead we initialize the list as empty before the loop? That way, the first call to the function will give us an empty list, and the rest of the calls will work fine.
+
+## ai_usage rows written by the calls above (no prompt, reply or key is stored)
+agent | provider | model | source | ok | error_code | in/out tokens | latency_ms
+evidence | gemini | models/gemini-3.8-flash | user | False | provider_error | None/None | 15622
+evidence | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 2183
+evidence | ollama | qwen2.5:0.5b | user | True | None | 36/4 | 182
+evidence | lmstudio | qwen2.5:0.5b | user | True | None | 36/4 | 154
+evidence | vllm | qwen2.5:0.5b | user | True | None | 36/2 | 82
+evidence | openai_compatible | qwen2.5:0.5b | user | True | None | 36/2 | 83
+evidence | anthropic | claude-stub-1 | user | True | None | 5/3 | 16
+evidence | openai | gpt-stub-1 | user | True | None | 5/3 | 12
+evidence | ollama | qwen2.5:0.5b | user | True | None | 36/2 | 89
+code_analyzer | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1665
+assessment_generator | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1875
+planner | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 2005
+code_analyzer | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1698
+planner | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1763
+planner | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1732
+planner | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1727
+designer | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1710
+choreographer | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1609
+lesson_suggester | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1622
+socratic_mentor | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1817
+socratic_mentor | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1730
+evidence | gemini | models/gemini-3.8-flash | user | False | provider_error | None/None | 22791
+evidence | openrouter | google/gemma-4-31b-it:free | user | False | rate_limited | None/None | 1820
+evidence | ollama | qwen2.5:0.5b | user | True | None | 36/2 | 67
+evidence | lmstudio | qwen2.5:0.5b | user | True | None | 36/4 | 140
+evidence | vllm | qwen2.5:0.5b | user | True | None | 36/4 | 134
+evidence | openai_compatible | qwen2.5:0.5b | user | True | None | 36/2 | 89
+evidence | anthropic | claude-stub-1 | user | True | None | 5/3 | 14
+evidence | openai | gpt-stub-1 | user | True | None | 5/3 | 17
+evidence | ollama | qwen2.5:0.5b | user | True | None | 36/2 | 80
+code_analyzer | ollama | qwen2.5:0.5b | user | True | None | 359/80 | 4742
+assessment_generator | ollama | qwen2.5:0.5b | user | True | None | 586/547 | 25102
+planner | ollama | qwen2.5:0.5b | user | True | None | 109/9 | 862
+code_analyzer | ollama | qwen2.5:0.5b | user | True | None | 377/191 | 8837
+planner | ollama | qwen2.5:0.5b | user | True | None | 647/231 | 14299
+planner | ollama | qwen2.5:0.5b | user | True | None | 474/476 | 18767
+designer | ollama | qwen2.5:0.5b | user | True | None | 3541/1343 | 107717
+choreographer | ollama | qwen2.5:0.5b | user | True | None | 829/327 | 16978
+lesson_suggester | ollama | qwen2.5:0.5b | user | True | None | 352/91 | 4731
+socratic_mentor | ollama | qwen2.5:0.5b | user | True | None | 1129/50 | 9984
+socratic_mentor | ollama | qwen2.5:0.5b | user | True | None | None/None | 3461
+
+# leak check of this output against the .env key values: none found
+exit=0
+
+# ── HTTP smoke: mentor chat stream + assessment start, as ev_ollama ──
+# Note: assessment question generation hit the router's own timeout on the CPU model, so the 10 questions
+# are its static fallback; the code analysis step did come from the LLM.
+$ bash /tmp/nexora-http-smoke.sh
+$ TOKEN=$(curl -s -X POST $API/api/v1/auth/login -d {"email":"ev_ollama@example.com",...} | jq -r .access_token)   # token not printed
+token length: 187
+
+$ curl -sN -X POST $API/api/v1/chat/stream -H "Authorization: Bearer $TOKEN" -d {"message":"why does average([]) crash?","code_context":"def average(nums): return sum(nums)/len(nums)","hint_level":0}
+exit=0
+SSE events: 11 | first 3 and last 2 events:
+data: {"chunk": "It", "session_id": "c2304226-a526-43a0-966d-a9b872be7fa3"}
+data: {"chunk": " c", "session_id": "c2304226-a526-43a0-966d-a9b872be7fa3"}
+data: {"chunk": "rash", "session_id": "c2304226-a526-43a0-966d-a9b872be7fa3"}
+...
+data: {"chunk": "s an empty list.", "session_id": "c2304226-a526-43a0-966d-a9b872be7fa3"}
+data: {"done": true}
+joined reply text:
+It crashes because `nums` is an empty list.
+
+$ curl -s -X POST $API/api/v1/assessment/start -H "Authorization: Bearer $TOKEN" -d {"code_snippet": <average() code>}
+{"session_id":"6abd2e5f-769a-4d6d-ba5e-bc080a28e666","code_analysis":{"language":"detecting...","difficulty":"beginner","concepts":[],"summary":"Analyzing your code...","concept_locations":{}},"questions":[]}
+
+$ poll GET $API/api/v1/assessment/session/6abd2e5f-769a-4d6d-ba5e-bc080a28e666 every 5 s until status != generating (max 5 min)
+after ~70 s: status=ready
+keys: ['code_analysis', 'questions', 'session_id', 'status']
+code_analysis: {"language": "Python", "difficulty": "beginner", "concepts": ["universal_concept_1", "universal_concept_2"], "summary": "Find the average of a list of numbers.", "concept_locations": {"concept": "line 5"}}
+question count: 10
+ - How does the computer know which lines of code belong inside a function or loop in this snippet?
+ - What is the primary goal of the logic provided in this code snippet?
+ - How does the computer know which lines of code belong inside a function or loop in this snippet?
+exit=0
+
+# ── HTTP: a provider failure reaches the learner as a typed, key-free error event ──
+$ bash /tmp/nexora-http-err.sh
+$ curl -sN -X POST $API/api/v1/chat/stream -H "Authorization: Bearer <ev_openrouter token>" -d {"message":"hi"}   # openrouter gemma-4-31b free, currently 429
+data: {"error": "[rate_limited] The provider is rate limiting requests. Try again shortly. (HTTP 429)"}
+
+data: {"done": true}
+
+exit=0
+
+# ── ai_usage rows from the HTTP calls (last 6) ──
+$ sqlite3 /tmp/nexora-m1-evidence.db 'select agent,provider,model,source,ok,error_code,input_tokens,output_tokens,latency_ms from ai_usage order by started_at desc limit 6'
+socratic_mentor | openrouter | google/gemma-4-31b-it:free | user | 0 | rate_limited | None | None | 2239
+socratic_mentor | gemini | models/gemini-3.8-flash | user | 0 | cancelled | None | None | 119998
+assessment_generator | ollama | qwen2.5:0.5b | user | 0 | cancelled | None | None | 60001
+code_analyzer | ollama | qwen2.5:0.5b | user | 1 | None | 347 | 82 | 2819
+socratic_mentor | ollama | qwen2.5:0.5b | user | 1 | None | None | None | 1298
+socratic_mentor | ollama | qwen2.5:0.5b | user | 1 | None | None | None | 3461
+columns: ['id', 'user_id', 'slot', 'provider', 'model', 'agent', 'source', 'started_at', 'latency_ms', 'input_tokens', 'output_tokens', 'ok', 'error_code']
+exit=0
+# Row 2 above: an earlier try of this error check as ev_gemini; Gemini sent nothing for 120 s, curl gave up (exit 28),
+# and the gateway logged the dropped call as error_code=cancelled. Row 3: the assessment question step hit its 60 s
+# timeout and was cancelled (static fallback used). The OpenAI SDK default timeout (600 s, 2 retries) is unchanged from before M1.
+
+# ── Stop the servers started above (8000 belongs to another process and is left alone) ──
+$ kill 4134261 4129110   # uvicorn :8011, stub :8790 (owners checked with ss -ltnp / ps first)
+exit=0
+$ ss -ltnp | grep -E ':(8000|8011|8790) '
+LISTEN 0      2048                                  0.0.0.0:8000       0.0.0.0:*    users:(("python",pid=3644552,fd=8))
+
+# ── Final checks before commit ──
+$ ./.venv/bin/python -m pytest -v
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-8.3.4, pluggy-1.7.0 -- /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.16.0, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=function
+collecting ... collected 46 items
+
+tests/test_ai_api.py::test_requires_login PASSED                         [  2%]
+tests/test_ai_api.py::test_providers_list_has_m1_ids_and_no_dev_only PASSED [  4%]
+tests/test_ai_api.py::test_key_never_in_any_response PASSED              [  6%]
+tests/test_ai_api.py::test_connection_test_updates_status_with_typed_error PASSED [  8%]
+tests/test_ai_api.py::test_models_error_maps_to_502_not_401 PASSED       [ 10%]
+tests/test_ai_api.py::test_revoke_deletes_row_and_ciphertext PASSED      [ 13%]
+tests/test_ai_api.py::test_user_b_cannot_see_test_use_or_delete_user_a_credential PASSED [ 15%]
+tests/test_ai_api.py::test_omitting_key_keeps_it_only_for_same_provider_and_url PASSED [ 17%]
+tests/test_ai_api.py::test_validation_rejects_bad_slot_provider_and_url PASSED [ 19%]
+tests/test_ai_api.py::test_local_provider_saves_without_key PASSED       [ 21%]
+tests/test_crypto.py::test_round_trip_and_ciphertext_hides_key PASSED    [ 23%]
+tests/test_crypto.py::test_same_key_encrypts_differently_each_time PASSED [ 26%]
+tests/test_crypto.py::test_wrong_server_key_cannot_decrypt PASSED        [ 28%]
+tests/test_crypto.py::test_key_hint_shows_only_last_four PASSED          [ 30%]
+tests/test_crypto.py::test_dev_generates_key_file_with_mode_600 PASSED   [ 32%]
+tests/test_crypto.py::test_missing_key_outside_development_is_an_error PASSED [ 34%]
+tests/test_gateway.py::test_no_user_credential_uses_env_default PASSED   [ 36%]
+tests/test_gateway.py::test_user_credential_wins_over_env PASSED         [ 39%]
+tests/test_gateway.py::test_other_users_credential_is_not_used PASSED    [ 41%]
+tests/test_gateway.py::test_live_slot_has_no_env_default PASSED          [ 43%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc0-auth_failed] PASSED [ 45%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc1-auth_failed] PASSED [ 47%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc2-auth_failed] PASSED [ 50%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc3-not_found] PASSED [ 52%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc4-rate_limited] PASSED [ 54%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc5-rate_limited] PASSED [ 56%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc6-bad_request] PASSED [ 58%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc7-auth_failed] PASSED [ 60%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc8-provider_error] PASSED [ 63%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc9-unreachable] PASSED [ 65%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc10-unreachable] PASSED [ 67%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc11-unreachable] PASSED [ 69%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc12-auth_failed] PASSED [ 71%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc13-provider_error] PASSED [ 73%]
+tests/test_gateway.py::test_error_mapping_is_typed_and_never_echoes_provider_text[exc14-provider_error] PASSED [ 76%]
+tests/test_gateway.py::test_gateway_errors_have_no_silent_fallback PASSED [ 78%]
+tests/test_gateway.py::test_stream_error_becomes_error_event PASSED      [ 80%]
+tests/test_gateway.py::test_validate_connection_reports_models_and_failures PASSED [ 82%]
+tests/test_gateway.py::test_complete_json_first_try PASSED               [ 84%]
+tests/test_gateway.py::test_complete_json_retries_with_reason_then_succeeds PASSED [ 86%]
+tests/test_gateway.py::test_complete_json_schema_mismatch_retries_then_fails PASSED [ 89%]
+tests/test_gateway.py::test_usage_row_per_call_without_prompt_or_reply PASSED [ 91%]
+tests/test_gateway.py::test_mentor_uses_gateway_with_unchanged_system_prompt PASSED [ 93%]
+tests/test_gateway.py::test_mentor_stream_through_gateway PASSED         [ 95%]
+tests/test_gateway.py::test_agent_stream_raises_gateway_error PASSED     [ 97%]
+tests/test_gateway.py::test_no_agent_or_router_imports_a_provider_sdk_or_old_factory PASSED [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:295
+  /home/akiena/code/dev-buddy-worktrees/m1-ai-gateway/backend/.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:295: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 46 passed, 1 warning in 16.24s ========================
+exit=0
+
+$ grep -rn 'get_llm_provider\|services.llm' app/ --include=*.py
+app/ai_gateway/providers.py:3:This replaces app/services/llm/factory.py. It is the only place that maps a
+app/ai_gateway/__init__.py:6:  providers.py    provider registry and adapter construction (was services/llm/factory.py)
+app/ai_gateway/__init__.py:7:  adapters/       one class per wire format (was services/llm/*_provider.py)
+app/ai_gateway/adapters/base.py:3:Moved here from app/services/llm/base.py in M1. Only the gateway talks to
+exit=0 (1 = no match)
+$ grep -rn 'print("DEBUG\|print(f"DEBUG' app/
+exit=1 (1 = no match)
+# The 4 matches above are 'moved from services/llm/...' docstrings only; no import of get_llm_provider or app.services.llm remains.
+
+# ── Secret leak check of this log and the staged diff (run just before commit) ──
+# Checks every 10-char slice of every KEY/SECRET/TOKEN/PASSWORD value in the worktree .env; prints names only.
+# First run flagged SECRET_KEY and JWT_SECRET_KEY: the match was the word "production" in tests/test_crypto.py,
+# and both .env values are identical to the public .env.example placeholders, so they are skipped below.
+$ git diff --cached > /tmp/nexora-staged.diff
+$ python /tmp/nexora-leakcheck.py .env /tmp/nexora-staged.diff docs/m1-evidence/backend-tests.log
+skipped (value equals the public .env.example placeholder): ['JWT_SECRET_KEY', 'SECRET_KEY']
+secrets checked: ['CREDENTIAL_ENCRYPTION_KEY', 'GEMINI_API_KEY', 'OPENROUTER_API_KEY', 'OPENWEBUI_API_KEY']
+result: no fragment of any secret found in 2 files
+exit=0

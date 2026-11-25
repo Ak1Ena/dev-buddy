@@ -70,7 +70,7 @@ async def create_remedial_lesson_task(
                 .values(order_index=Lesson.order_index + 1)
             )
             
-            planner = PlannerAgent()
+            planner = PlannerAgent(user_id)
             content = await planner.generate_lesson_content(
                 topic=topic,
                 title=f"Mastering {topic.replace('_', ' ').title()}",
@@ -116,7 +116,7 @@ async def create_hint3_suggestion_task(
                 {"role": "user", "content": message},
                 {"role": "assistant", "content": response_text},
             ]
-            suggester = LessonSuggesterAgent()
+            suggester = LessonSuggesterAgent(user_id)
             spec = await suggester.suggest(conv_so_far, lesson_context)
             if spec:
                 lesson_result2 = await db.execute(select(Lesson).where(Lesson.id == lesson_id))
@@ -135,7 +135,7 @@ async def create_hint3_suggestion_task(
                 )
                 max_idx = max_idx_result.scalar() or 0
 
-                planner = PlannerAgent()
+                planner = PlannerAgent(user_id)
                 source_code = (path.source_code or "") if path else ""
                 content = await planner.generate_lesson_content(
                     topic=spec["topic"],
@@ -218,7 +218,7 @@ async def send_message(
             lesson_context = "\n".join(parts)
 
     # Get AI response
-    mentor = SocraticMentorAgent()
+    mentor = SocraticMentorAgent(current_user.id)
     response_text = await mentor.chat(
         user_message=data.message,
         conversation_history=history,
@@ -365,9 +365,11 @@ async def stream_message(
         if lesson:
             lesson_context = f"{lesson.title} ({lesson.topic})"
 
+    user_id = current_user.id
+
     async def event_stream():
         full_response = ""
-        mentor = SocraticMentorAgent()
+        mentor = SocraticMentorAgent(user_id)
         
         try:
             async for chunk in mentor.stream_chat(
@@ -448,9 +450,10 @@ async def _fill_lesson_content_bg(
     skill_level: str,
     code_snippet: str,
     weak_areas: list[str],
+    user_id: str | None = None,
 ):
     try:
-        planner = PlannerAgent()
+        planner = PlannerAgent(user_id)
         content = await planner.generate_lesson_content(
             topic=topic,
             title=title,
@@ -555,6 +558,7 @@ async def accept_proposal(
         skill_level=current_user.skill_level,
         code_snippet=(path.source_code or "")[:1000],
         weak_areas=[data.topic],
+        user_id=current_user.id,
     )
 
     return SuggestedLesson(

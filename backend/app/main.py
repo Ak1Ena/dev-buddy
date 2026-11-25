@@ -4,17 +4,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
+from app.ai_gateway.crypto import ensure_credential_key
+from app.ai_gateway.usage import flush_usage
 from app.config import get_settings
 from app.database import init_db
-from app.routers import auth, assessment, learning, chat, analytics, scenes
+from app.routers import auth, assessment, learning, chat, analytics, scenes, ai
 
 settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Fail at startup, not at first save, if the credential key is missing
+    # outside development.
+    ensure_credential_key()
     await init_db()
     yield
+    await flush_usage()
 
 
 app = FastAPI(
@@ -29,7 +35,8 @@ app = FastAPI(
 # CORS must be added FIRST so headers are present even on error responses
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    # Defaults plus ALLOWED_ORIGINS from .env (e.g. a worktree frontend on another port).
+    allow_origins=sorted({"http://localhost:5173", "http://localhost:3000", *settings.cors_origins}),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,6 +50,8 @@ app.include_router(learning.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")
 app.include_router(scenes.router, prefix="/api/v1")
+# M1 contract (docs/architecture/m1-ai-gateway.md) puts these at /api/ai, not /api/v1.
+app.include_router(ai.router, prefix="/api")
 
 
 import logging

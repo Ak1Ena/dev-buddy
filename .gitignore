@@ -78,3 +78,6 @@ htmlcov/
 
 # Data
 data/chroma/
+
+# Dev-only Fernet key for per-user AI credentials (M1)
+backend/.credential_key
