@@ -1,0 +1,464 @@
+{
+  "schema_version": "1.0",
+  "kind": "lesson",
+  "id": "lesson.python.loops",
+  "version": 1,
+  "status": "draft",
+  "authored_by": "ai-draft: Sage (Nexora Learning Designer bot), 2026-11-25",
+  "approved_by": null,
+  "approved_at": null,
+  "content_language": "en",
+  "notes_for_reviewer": [
+    "Story and step outline follow mock A (docs/design/proposal.md: 9, 18, 36, 7 checks). The counts here come from the stored runs in this file, checked by content/tools/check_content.py.",
+    "Uses `for name in list` before the lists lesson: iteration only, no indexing, so the prerequisite graph (loops needs variables, conditionals) still holds.",
+    "Step 9's replay stops the endless loop after 10,000 rounds; the UI should say so."
+  ],
+  "concept_id": "python.loops",
+  "title": "Mai's party lists: how much work does a loop do?",
+  "shape": "story-trace",
+  "estimated_minutes": 15,
+  "story": {
+    "person": "Mai",
+    "place": "planning her sister's engagement party in Bangkok",
+    "text": "Mai is matching the party RSVP list against the list of people who already have tickets. Her script compares every name with every name. With a few names it is instant; with the full guest list it feels slow, and she wants to know how much work it is doing."
+  },
+  "video": null,
+  "program": {
+    "language": "python",
+    "code": "rsvp = [\"Ann\", \"Bo\", \"Chai\"]\ntickets = [\"Bo\", \"Dee\", \"Ann\"]\nchecks = 0\nmatched = 0\nfor guest in rsvp:\n    for holder in tickets:\n        checks = checks + 1\n        if guest == holder:\n            matched = matched + 1\nprint(checks)\nprint(matched)\n",
+    "expected_stdout": "9\n2\n"
+  },
+  "metric_labels": [
+    "Checks",
+    "Matches"
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "name": "Two lists",
+      "kind": "story",
+      "text": "Three people said yes (Ann, Bo, Chai). Three people hold tickets (Bo, Dee, Ann). The script counts every comparison in checks.",
+      "metrics": {
+        "Checks": 0,
+        "Matches": 0
+      }
+    },
+    {
+      "id": "s2",
+      "name": "The outer loop",
+      "kind": "trace",
+      "text": "Line 5 walks through the RSVP list, one guest at a time.",
+      "focus_lines": [
+        5
+      ],
+      "predict": {
+        "id": "python.loops.s2.p",
+        "question": "How many times does the outer loop start its body?",
+        "answer_format": "number",
+        "answer": "3",
+        "reveal": "3: once for Ann, once for Bo, once for Chai.",
+        "verify": {
+          "code": "rsvp = [\"Ann\", \"Bo\", \"Chai\"]\nrounds = 0\nfor guest in rsvp:\n    rounds = rounds + 1\nprint(rounds)\n",
+          "expected_stdout": "3\n"
+        }
+      }
+    },
+    {
+      "id": "s3",
+      "name": "First guest",
+      "kind": "trace",
+      "text": "For Ann, the inner loop (line 6) walks through every ticket holder.",
+      "focus_lines": [
+        6,
+        7,
+        8,
+        9
+      ],
+      "predict": {
+        "id": "python.loops.s3.p",
+        "question": "When the inner loop has finished for Ann, what is checks?",
+        "answer_format": "number",
+        "answer": "3",
+        "reveal": "3. Ann was compared with Bo, Dee and Ann. One of those matched.",
+        "verify": {
+          "code": "rsvp = [\"Ann\", \"Bo\", \"Chai\"]\ntickets = [\"Bo\", \"Dee\", \"Ann\"]\nchecks = 0\nfor guest in rsvp:\n    for holder in tickets:\n        checks = checks + 1\n    break\nprint(checks)\n",
+          "expected_stdout": "3\n"
+        }
+      },
+      "metrics": {
+        "Checks": 3,
+        "Matches": 1
+      }
+    },
+    {
+      "id": "s4",
+      "name": "The whole run",
+      "kind": "trace",
+      "text": "The outer loop moves on to Bo, then Chai. Each gets a full inner loop.",
+      "focus_lines": [
+        10
+      ],
+      "predict": {
+        "id": "python.loops.s4.p",
+        "question": "When both loops finish, what does `print(checks)` show?",
+        "answer_format": "number",
+        "answer": "9",
+        "reveal": "9: 3 guests times 3 tickets. Two of them matched (Ann and Bo).",
+        "verify": {
+          "code": "rsvp = [\"Ann\", \"Bo\", \"Chai\"]\ntickets = [\"Bo\", \"Dee\", \"Ann\"]\nchecks = 0\nfor guest in rsvp:\n    for holder in tickets:\n        checks = checks + 1\nprint(checks)\n",
+          "expected_stdout": "9\n"
+        }
+      },
+      "metrics": {
+        "Checks": 9,
+        "Matches": 2
+      }
+    },
+    {
+      "id": "s5",
+      "name": "More guests",
+      "kind": "case",
+      "text": "Three more people say yes. The ticket list is still 3 names.",
+      "code": "rsvp = [\"Ann\", \"Bo\", \"Chai\", \"Dao\", \"Ek\", \"Fah\"]\ntickets = [\"Bo\", \"Dee\", \"Ann\"]\nchecks = 0\nfor guest in rsvp:\n    for holder in tickets:\n        checks = checks + 1\nprint(checks)\n",
+      "predict": {
+        "id": "python.loops.s5.p",
+        "question": "With 6 guests and 3 tickets, how many checks?",
+        "answer_format": "number",
+        "answer": "18",
+        "reveal": "18. Every extra guest costs one full pass over the tickets.",
+        "verify": {
+          "code": "rsvp = [\"Ann\", \"Bo\", \"Chai\", \"Dao\", \"Ek\", \"Fah\"]\ntickets = [\"Bo\", \"Dee\", \"Ann\"]\nchecks = 0\nfor guest in rsvp:\n    for holder in tickets:\n        checks = checks + 1\nprint(checks)\n",
+          "expected_stdout": "18\n"
+        }
+      },
+      "what_changed": "RSVP 3 -> 6 names: checks 9 -> 18.",
+      "metrics": {
+        "Checks": 18
+      }
+    },
+    {
+      "id": "s6",
+      "name": "Both lists longer",
+      "kind": "case",
+      "text": "Three more people buy tickets too: now 6 and 6.",
+      "code": "rsvp = [\"Ann\", \"Bo\", \"Chai\", \"Dao\", \"Ek\", \"Fah\"]\ntickets = [\"Bo\", \"Dee\", \"Ann\", \"Gun\", \"Fah\", \"Hong\"]\nchecks = 0\nfor guest in rsvp:\n    for holder in tickets:\n        checks = checks + 1\nprint(checks)\n",
+      "predict": {
+        "id": "python.loops.s6.p",
+        "question": "With 6 guests and 6 tickets, how many checks?",
+        "answer_format": "number",
+        "answer": "36",
+        "reveal": "36. Double both lists and the work is four times bigger.",
+        "verify": {
+          "code": "rsvp = [\"Ann\", \"Bo\", \"Chai\", \"Dao\", \"Ek\", \"Fah\"]\ntickets = [\"Bo\", \"Dee\", \"Ann\", \"Gun\", \"Fah\", \"Hong\"]\nchecks = 0\nfor guest in rsvp:\n    for holder in tickets:\n        checks = checks + 1\nprint(checks)\n",
+          "expected_stdout": "36\n"
+        }
+      },
+      "what_changed": "tickets 3 -> 6 as well: checks 18 -> 36.",
+      "metrics": {
+        "Checks": 36
+      }
+    },
+    {
+      "id": "s7",
+      "name": "Stop at the first match",
+      "kind": "case",
+      "text": "Back to 3 and 3. Mai adds break: once a guest is found, the inner loop stops.",
+      "code": "rsvp = [\"Ann\", \"Bo\", \"Chai\"]\ntickets = [\"Bo\", \"Dee\", \"Ann\"]\nchecks = 0\nfor guest in rsvp:\n    for holder in tickets:\n        checks = checks + 1\n        if guest == holder:\n            break\nprint(checks)\n",
+      "predict": {
+        "id": "python.loops.s7.p",
+        "question": "With break, how many checks now?",
+        "answer_format": "number",
+        "answer": "7",
+        "reveal": "7: Ann takes 3 (found last), Bo takes 1 (found first), Chai takes 3 (no ticket, so no break).",
+        "verify": {
+          "code": "rsvp = [\"Ann\", \"Bo\", \"Chai\"]\ntickets = [\"Bo\", \"Dee\", \"Ann\"]\nchecks = 0\nfor guest in rsvp:\n    for holder in tickets:\n        checks = checks + 1\n        if guest == holder:\n            break\nprint(checks)\n",
+          "expected_stdout": "7\n"
+        }
+      },
+      "what_changed": "adding break: checks 9 -> 7. It saves work only after a match; Chai still checks all 3.",
+      "metrics": {
+        "Checks": 7
+      }
+    },
+    {
+      "id": "s8",
+      "name": "A countdown with while",
+      "kind": "trace",
+      "text": "Mai sends reminder invites. A while loop repeats as long as its condition is True.",
+      "code": "invites_left = 3\nwhile invites_left > 0:\n    print(\"Sending invite\")\n    invites_left = invites_left - 1\nprint(\"All sent\")\n",
+      "predict": {
+        "id": "python.loops.s8.p",
+        "question": "How many times is \"Sending invite\" printed?",
+        "answer_format": "number",
+        "answer": "3",
+        "reveal": "3. After the third round invites_left is 0, so `invites_left > 0` is False and the loop ends.",
+        "verify": {
+          "code": "invites_left = 3\nsent = 0\nwhile invites_left > 0:\n    sent = sent + 1\n    invites_left = invites_left - 1\nprint(sent)\n",
+          "expected_stdout": "3\n"
+        }
+      }
+    },
+    {
+      "id": "s9",
+      "name": "Forget to count down",
+      "kind": "case",
+      "text": "Mai deletes line 4 by accident.",
+      "code": "invites_left = 3\nwhile invites_left > 0:\n    print(\"Sending invite\")\nprint(\"All sent\")\n",
+      "predict": {
+        "id": "python.loops.s9.p",
+        "question": "Without line 4, what happens?",
+        "answer_format": "choice",
+        "choices": [
+          {
+            "key": "A",
+            "text": "It prints 3 times",
+            "misconception_id": "python.loops:never-ends"
+          },
+          {
+            "key": "B",
+            "text": "It prints 0 times"
+          },
+          {
+            "key": "C",
+            "text": "It never stops"
+          }
+        ],
+        "answer": "C",
+        "reveal": "It never stops. invites_left stays 3, so the condition is True forever. (Our replay stops it after 10,000 rounds.)",
+        "misconception_ids": [
+          "python.loops:never-ends"
+        ],
+        "verify": {
+          "code": "invites_left = 3\nrounds = 0\nwhile invites_left > 0:\n    rounds = rounds + 1\n    if rounds > 10000:\n        break\nif rounds > 10000:\n    print(\"It never stops\")\nelse:\n    print(rounds, \"times\")\n",
+          "expected_stdout": "It never stops\n"
+        }
+      },
+      "what_changed": "without `invites_left = invites_left - 1`: 3 invites -> the loop never ends."
+    },
+    {
+      "id": "s10",
+      "name": "Recap",
+      "kind": "recap",
+      "text": "How much work loops do, in three sentences."
+    }
+  ],
+  "recap": [
+    "A loop inside a loop runs the inner body once for every pair, so the work is the length of one list times the other.",
+    "break stops the inner loop early, which only helps after a match is found.",
+    "A while loop runs as long as its condition is True, so something inside it must change the condition or it never ends."
+  ],
+  "checks": {
+    "apply": [
+      {
+        "id": "python.loops.apply-1",
+        "type": "write_code",
+        "concept_id": "python.loops",
+        "leg": "apply",
+        "prompt": "Write a program that reads a whole number n and prints the sum 1 + 2 + ... + n. For 4 it prints 10. For 0 it prints 0.",
+        "language": "python",
+        "difficulty": "core",
+        "starter_code": "n = int(input())\n# add up 1 to n and print the total\n",
+        "grader": {
+          "type": "stdout",
+          "cases": [
+            {
+              "stdin": "1\n",
+              "expected_stdout": "1\n"
+            },
+            {
+              "stdin": "4\n",
+              "expected_stdout": "10\n"
+            },
+            {
+              "stdin": "10\n",
+              "expected_stdout": "55\n"
+            },
+            {
+              "stdin": "0\n",
+              "expected_stdout": "0\n"
+            }
+          ]
+        },
+        "reference_solution": "n = int(input())\ntotal = 0\nfor k in range(1, n + 1):\n    total = total + k\nprint(total)\n",
+        "must_fail": [
+          {
+            "code": "n = int(input())\ntotal = 0\nfor k in range(1, n):\n    total = total + k\nprint(total)\n",
+            "why": "range(1, n) stops before n",
+            "misconception_id": "python.loops:range-off-by-one"
+          },
+          {
+            "code": "n = int(input())\ntotal = 0\nfor k in range(n):\n    total = total + k\nprint(total)\n",
+            "why": "range(n) is 0 to n-1",
+            "misconception_id": "python.loops:range-off-by-one"
+          }
+        ],
+        "hints": [
+          {
+            "level": 1,
+            "text": "Which numbers should the loop visit for n = 4? Write them down, then check which range gives exactly those."
+          },
+          {
+            "level": 2,
+            "text": "range stops before its end number. If your loop visits 1, 2, 3 for n = 4, which end value is one short?"
+          },
+          {
+            "level": 3,
+            "text": "Similar: to visit the days 1 to 7 of a week, use `for day in range(1, 8)`, one past the last day, and keep a running total that starts at 0 before the loop. Build your sum the same way."
+          }
+        ],
+        "misconception_ids": [
+          "python.loops:range-off-by-one"
+        ]
+      }
+    ],
+    "explain": [
+      {
+        "id": "python.loops.explain-1",
+        "type": "explain",
+        "concept_id": "python.loops",
+        "leg": "explain",
+        "prompt": "Mai's friend says: \"Just add break and the matching will always be fast.\" Using what you saw (9, 18, 36 and 7 checks), explain how the number of checks grows with the two lists, and when break helps and when it doesn't.",
+        "grader": {
+          "type": "rubric",
+          "criteria": [
+            {
+              "id": "c1",
+              "text": "Says the inner loop runs fully for every outer item, so checks = length of one list times the other (doubling both makes about four times the work)."
+            },
+            {
+              "id": "c2",
+              "text": "Says break only stops the inner loop after a match is found."
+            },
+            {
+              "id": "c3",
+              "text": "Says guests with no match (like Chai) still check every ticket, so break does not always make it fast."
+            }
+          ],
+          "pass_rule": "all",
+          "reference_answer": "Each guest is compared with every ticket, so the checks are guests times tickets: 3x3=9, 6x3=18, 6x6=36. break stops a guest's inner loop once their name is found, which saved 2 checks (9 to 7), but a guest without a ticket still goes through the whole list, so with many unmatched guests break barely helps."
+        },
+        "hints": [
+          {
+            "level": 1,
+            "text": "Where did 9, 18 and 36 come from? What do you multiply?"
+          },
+          {
+            "level": 2,
+            "text": "In the break run, which guest still needed all 3 checks, and why?"
+          },
+          {
+            "level": 3,
+            "text": "Guided example in another setting: checking 4 keys against 5 locks one by one is up to 20 tries; stopping when a key fits saves tries only for keys that fit somewhere. Explain Mai's lists the same way."
+          }
+        ]
+      }
+    ],
+    "transfer": [
+      {
+        "id": "python.loops.transfer-1",
+        "type": "fix_bug",
+        "concept_id": "python.loops",
+        "leg": "transfer",
+        "prompt": "Tum saves 200 baht every week. This program should read a savings goal and print how many weeks it takes to reach it. With 1000 it should print 5, but it never finishes. Fix it.",
+        "language": "python",
+        "difficulty": "core",
+        "code": "goal = int(input())\nsaved = 0\nweeks = 0\nwhile saved < goal:\n    weeks = weeks + 1\nprint(weeks)\n",
+        "grader": {
+          "type": "stdout",
+          "cases": [
+            {
+              "stdin": "1000\n",
+              "expected_stdout": "5\n"
+            },
+            {
+              "stdin": "1100\n",
+              "expected_stdout": "6\n"
+            },
+            {
+              "stdin": "200\n",
+              "expected_stdout": "1\n"
+            },
+            {
+              "stdin": "0\n",
+              "expected_stdout": "0\n"
+            }
+          ]
+        },
+        "reference_solution": "goal = int(input())\nsaved = 0\nweeks = 0\nwhile saved < goal:\n    weeks = weeks + 1\n    saved = saved + 200\nprint(weeks)\n",
+        "must_fail": [
+          {
+            "code": "goal = int(input())\nsaved = 0\nweeks = 0\nwhile saved <= goal:\n    weeks = weeks + 1\n    saved = saved + 200\nprint(weeks)\n",
+            "why": "<= counts one week too many",
+            "misconception_id": "python.loops:range-off-by-one"
+          }
+        ],
+        "hints": [
+          {
+            "level": 1,
+            "text": "Pick goal 1000 and follow saved through the loop. Does it ever change?"
+          },
+          {
+            "level": 2,
+            "text": "The loop stops only when `saved < goal` becomes False. Which line should move saved closer to the goal each week?"
+          },
+          {
+            "level": 3,
+            "text": "Similar: a countdown `n = 3`, `while n > 0:` needs `n = n - 1` in its body; without it, n stays 3 and the loop never ends. Find the value in Tum's loop that never moves."
+          }
+        ],
+        "misconception_ids": [
+          "python.loops:never-ends"
+        ]
+      }
+    ]
+  },
+  "misconception_probe": {
+    "id": "python.loops.probe-1",
+    "type": "predict_output",
+    "concept_id": "python.loops",
+    "leg": "probe",
+    "prompt": "What does this print?",
+    "language": "python",
+    "code": "for i in range(1, 5):\n    print(i)\n",
+    "choices": [
+      {
+        "key": "A",
+        "text": "1\n2\n3\n4"
+      },
+      {
+        "key": "B",
+        "text": "1\n2\n3\n4\n5",
+        "misconception_id": "python.loops:range-off-by-one"
+      },
+      {
+        "key": "C",
+        "text": "0\n1\n2\n3\n4"
+      },
+      {
+        "key": "D",
+        "text": "1\n5"
+      }
+    ],
+    "grader": {
+      "type": "choice",
+      "answer": "A"
+    },
+    "hints": [
+      {
+        "level": 1,
+        "text": "range has a start and a stop. Is the stop number itself included?"
+      },
+      {
+        "level": 2,
+        "text": "Count the values range(1, 5) gives: start at the first number, and stop just before the second."
+      },
+      {
+        "level": 3,
+        "text": "Similar: `range(3, 6)` gives 3, 4, 5. Apply the same rule to range(1, 5)."
+      }
+    ],
+    "misconception_ids": [
+      "python.loops:range-off-by-one"
+    ]
+  }
+}

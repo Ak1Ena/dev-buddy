@@ -1,0 +1,415 @@
+{
+  "schema_version": "1.0",
+  "kind": "lesson",
+  "id": "lesson.python.conditionals",
+  "version": 1,
+  "status": "draft",
+  "authored_by": "ai-draft: Sage (Nexora Learning Designer bot), 2026-11-25",
+  "approved_by": null,
+  "approved_at": null,
+  "content_language": "en",
+  "concept_id": "python.conditionals",
+  "title": "Ploy's ticket booth: which price wins?",
+  "shape": "story-trace",
+  "estimated_minutes": 12,
+  "story": {
+    "person": "Ploy",
+    "place": "the ticket booth of a small cinema in Chiang Mai",
+    "text": "Ploy sells tickets at a small cinema. Children under 12 pay 80 baht, students pay 120, everyone else pays 180. Yesterday a 9-year-old with a student card was charged the wrong price, and her dad wants to know why."
+  },
+  "video": null,
+  "program": {
+    "language": "python",
+    "code": "age = 15\nis_student = True\nif age < 12:\n    price = 80\nelif is_student:\n    price = 120\nelse:\n    price = 180\nprint(price)\n",
+    "expected_stdout": "120\n"
+  },
+  "steps": [
+    {
+      "id": "s1",
+      "name": "A puzzled parent",
+      "kind": "story",
+      "text": "The booth script decides the price with if, elif and else. First we run it for a 15-year-old student."
+    },
+    {
+      "id": "s2",
+      "name": "The first question",
+      "kind": "trace",
+      "text": "Python reaches line 3 and asks its question.",
+      "focus_lines": [
+        3
+      ],
+      "predict": {
+        "id": "python.conditionals.s2.p",
+        "question": "With age 15, is `age < 12` True or False?",
+        "answer_format": "choice",
+        "choices": [
+          {
+            "key": "A",
+            "text": "True"
+          },
+          {
+            "key": "B",
+            "text": "False"
+          }
+        ],
+        "answer": "B",
+        "reveal": "False. 15 is not less than 12, so line 4 is skipped.",
+        "verify": {
+          "code": "age = 15\nprint(age < 12)\n",
+          "expected_stdout": "False\n"
+        }
+      }
+    },
+    {
+      "id": "s3",
+      "name": "The second question",
+      "kind": "trace",
+      "text": "Because the first answer was False, Python moves to the elif.",
+      "focus_lines": [
+        5,
+        6,
+        9
+      ],
+      "predict": {
+        "id": "python.conditionals.s3.p",
+        "question": "Which price is printed for this customer?",
+        "answer_format": "number",
+        "answer": "120",
+        "reveal": "120. is_student is True, so the elif branch runs.",
+        "verify": {
+          "code": "age = 15\nis_student = True\nif age < 12:\n    price = 80\nelif is_student:\n    price = 120\nelse:\n    price = 180\nprint(price)\n",
+          "expected_stdout": "120\n"
+        }
+      }
+    },
+    {
+      "id": "s4",
+      "name": "Does else still run?",
+      "kind": "trace",
+      "text": "Look at lines 7 and 8.",
+      "focus_lines": [
+        7,
+        8
+      ],
+      "predict": {
+        "id": "python.conditionals.s4.p",
+        "question": "Does the line `price = 180` run for this customer?",
+        "answer_format": "choice",
+        "choices": [
+          {
+            "key": "A",
+            "text": "Yes",
+            "misconception_id": "python.conditionals:else-after-if"
+          },
+          {
+            "key": "B",
+            "text": "No"
+          }
+        ],
+        "answer": "B",
+        "reveal": "No. Once one branch has run, Python skips the rest of the chain, else included.",
+        "misconception_ids": [
+          "python.conditionals:else-after-if"
+        ],
+        "verify": {
+          "code": "age = 15\nis_student = True\nran = \"No\"\nif age < 12:\n    price = 80\nelif is_student:\n    price = 120\nelse:\n    price = 180\n    ran = \"Yes\"\nprint(ran)\n",
+          "expected_stdout": "No\n"
+        }
+      }
+    },
+    {
+      "id": "s5",
+      "name": "A 9-year-old student",
+      "kind": "case",
+      "text": "Same script, but now the customer is 9 and has a student card.",
+      "code": "age = 9\nis_student = True\nif age < 12:\n    price = 80\nelif is_student:\n    price = 120\nelse:\n    price = 180\nprint(price)\n",
+      "predict": {
+        "id": "python.conditionals.s5.p",
+        "question": "What price is printed now?",
+        "answer_format": "number",
+        "answer": "80",
+        "reveal": "80. The first condition is True now, so Python never even checks the elif.",
+        "misconception_ids": [
+          "python.conditionals:every-elif-runs"
+        ],
+        "verify": {
+          "code": "age = 9\nis_student = True\nif age < 12:\n    price = 80\nelif is_student:\n    price = 120\nelse:\n    price = 180\nprint(price)\n",
+          "expected_stdout": "80\n"
+        }
+      },
+      "what_changed": "age 15 -> 9: the first condition becomes True, price 120 -> 80; the elif is not checked."
+    },
+    {
+      "id": "s6",
+      "name": "Swap the two checks",
+      "kind": "case",
+      "text": "A colleague moved the student check to the top. Same 9-year-old student.",
+      "code": "age = 9\nis_student = True\nif is_student:\n    price = 120\nelif age < 12:\n    price = 80\nelse:\n    price = 180\nprint(price)\n",
+      "predict": {
+        "id": "python.conditionals.s6.p",
+        "question": "What price is printed with the checks swapped?",
+        "answer_format": "number",
+        "answer": "120",
+        "reveal": "120. The student check is first and it is True, so Python stops there. That is yesterday's bug.",
+        "verify": {
+          "code": "age = 9\nis_student = True\nif is_student:\n    price = 120\nelif age < 12:\n    price = 80\nelse:\n    price = 180\nprint(price)\n",
+          "expected_stdout": "120\n"
+        }
+      },
+      "what_changed": "order swapped: the same child pays 120 instead of 80, because the first True condition wins."
+    },
+    {
+      "id": "s7",
+      "name": "An adult without a card",
+      "kind": "trace",
+      "text": "Back to the original order. Now the customer is 30 and not a student.",
+      "code": "age = 30\nis_student = False\nif age < 12:\n    price = 80\nelif is_student:\n    price = 120\nelse:\n    price = 180\nprint(price)\n",
+      "predict": {
+        "id": "python.conditionals.s7.p",
+        "question": "What price is printed?",
+        "answer_format": "number",
+        "answer": "180",
+        "reveal": "180. Both questions were False, so the else branch runs.",
+        "verify": {
+          "code": "age = 30\nis_student = False\nif age < 12:\n    price = 80\nelif is_student:\n    price = 120\nelse:\n    price = 180\nprint(price)\n",
+          "expected_stdout": "180\n"
+        }
+      }
+    },
+    {
+      "id": "s8",
+      "name": "Recap",
+      "kind": "recap",
+      "text": "How Python picks one branch, in three sentences."
+    }
+  ],
+  "recap": [
+    "Python checks the if, then each elif, top to bottom, and runs only the first branch whose condition is True.",
+    "else runs only when none of the conditions above it were True.",
+    "So the order of the checks is part of the rule: put the most specific case first."
+  ],
+  "checks": {
+    "apply": [
+      {
+        "id": "python.conditionals.apply-1",
+        "type": "write_code",
+        "concept_id": "python.conditionals",
+        "leg": "apply",
+        "prompt": "Fern's weather app shows one word for the day. Write a program that reads a temperature (a whole number) and prints `cold` below 15, `nice` from 15 to 28, and `hot` above 28.",
+        "language": "python",
+        "difficulty": "core",
+        "starter_code": "temperature = int(input())\n# print cold, nice or hot\n",
+        "grader": {
+          "type": "stdout",
+          "cases": [
+            {
+              "stdin": "10\n",
+              "expected_stdout": "cold\n"
+            },
+            {
+              "stdin": "15\n",
+              "expected_stdout": "nice\n"
+            },
+            {
+              "stdin": "28\n",
+              "expected_stdout": "nice\n"
+            },
+            {
+              "stdin": "29\n",
+              "expected_stdout": "hot\n"
+            },
+            {
+              "stdin": "-3\n",
+              "expected_stdout": "cold\n"
+            }
+          ]
+        },
+        "reference_solution": "temperature = int(input())\nif temperature < 15:\n    print(\"cold\")\nelif temperature <= 28:\n    print(\"nice\")\nelse:\n    print(\"hot\")\n",
+        "must_fail": [
+          {
+            "code": "temperature = int(input())\nif temperature < 15:\n    print(\"cold\")\nif temperature <= 28:\n    print(\"nice\")\nelse:\n    print(\"hot\")\n",
+            "why": "two separate ifs: 10 prints cold and nice",
+            "misconception_id": "python.conditionals:every-elif-runs"
+          },
+          {
+            "code": "temperature = int(input())\nif temperature < 15:\n    print(\"cold\")\nelif temperature < 28:\n    print(\"nice\")\nelse:\n    print(\"hot\")\n",
+            "why": "wrong edge: 28 prints hot"
+          }
+        ],
+        "hints": [
+          {
+            "level": 1,
+            "text": "How many words should the program print for one temperature? Which keyword makes Python pick only one branch?"
+          },
+          {
+            "level": 2,
+            "text": "Test your edges: what should 15 print, and what should 28 print? Check that each comparison includes or excludes the right end."
+          },
+          {
+            "level": 3,
+            "text": "Similar shape for a grade: `if score < 50: print('retry')`, then `elif score <= 79: print('pass')`, then `else: print('merit')`. One chain, first True wins. Build your temperature chain the same way."
+          }
+        ]
+      }
+    ],
+    "explain": [
+      {
+        "id": "python.conditionals.explain-1",
+        "type": "explain",
+        "concept_id": "python.conditionals",
+        "leg": "explain",
+        "prompt": "Ploy's colleague swapped the two checks, and a 9-year-old student was charged 120 instead of 80. Explain why changing the order changed the price.",
+        "grader": {
+          "type": "rubric",
+          "criteria": [
+            {
+              "id": "c1",
+              "text": "Says the conditions are checked from top to bottom."
+            },
+            {
+              "id": "c2",
+              "text": "Says only the first branch whose condition is True runs; the rest are skipped."
+            },
+            {
+              "id": "c3",
+              "text": "Applies it: with the student check first, it is True for the child, so the age check is never reached."
+            }
+          ],
+          "pass_rule": "all",
+          "reference_answer": "Python asks the questions in order and stops at the first True one. With the student check on top, the 9-year-old's student card makes it True, so 120 is chosen and the under-12 check never runs."
+        },
+        "hints": [
+          {
+            "level": 1,
+            "text": "In what order does Python ask the questions in an if/elif chain?"
+          },
+          {
+            "level": 2,
+            "text": "For the 9-year-old student, which condition is True first in the swapped version? What happens to the ones after it?"
+          },
+          {
+            "level": 3,
+            "text": "Guided example in another setting: a lift that asks 'is it the top floor?' before 'is the door blocked?' never notices the blocked door on the top floor. Use the same idea for Ploy's two checks."
+          }
+        ],
+        "misconception_ids": [
+          "python.conditionals:every-elif-runs"
+        ]
+      }
+    ],
+    "transfer": [
+      {
+        "id": "python.conditionals.transfer-1",
+        "type": "fix_bug",
+        "concept_id": "python.conditionals",
+        "leg": "transfer",
+        "prompt": "An online shop charges delivery: free for orders of 1000 baht or more, 30 baht from 500 to 999, and 60 baht below 500. A customer with a 1200 baht order was charged 30. Fix the program.",
+        "language": "python",
+        "difficulty": "core",
+        "code": "total = int(input())\nif total >= 500:\n    fee = 30\nelif total >= 1000:\n    fee = 0\nelse:\n    fee = 60\nprint(fee)\n",
+        "grader": {
+          "type": "stdout",
+          "cases": [
+            {
+              "stdin": "1200\n",
+              "expected_stdout": "0\n"
+            },
+            {
+              "stdin": "1000\n",
+              "expected_stdout": "0\n"
+            },
+            {
+              "stdin": "999\n",
+              "expected_stdout": "30\n"
+            },
+            {
+              "stdin": "500\n",
+              "expected_stdout": "30\n"
+            },
+            {
+              "stdin": "499\n",
+              "expected_stdout": "60\n"
+            },
+            {
+              "stdin": "0\n",
+              "expected_stdout": "60\n"
+            }
+          ]
+        },
+        "reference_solution": "total = int(input())\nif total >= 1000:\n    fee = 0\nelif total >= 500:\n    fee = 30\nelse:\n    fee = 60\nprint(fee)\n",
+        "must_fail": [
+          {
+            "code": "total = int(input())\nfee = 60\nif total >= 1000:\n    fee = 0\nif total >= 500:\n    fee = 30\nprint(fee)\n",
+            "why": "separate ifs: the second one overwrites free delivery",
+            "misconception_id": "python.conditionals:every-elif-runs"
+          }
+        ],
+        "hints": [
+          {
+            "level": 1,
+            "text": "Run it in your head with 1200. Which condition is checked first, and is it True?"
+          },
+          {
+            "level": 2,
+            "text": "Once the first condition is True, Python never looks at the elif. Which question should come first so 1200 can reach free delivery?"
+          },
+          {
+            "level": 3,
+            "text": "Similar: a gym gives 'gold' at 100 visits and 'silver' at 50. Checking `>= 50` first means 120 visits only gets silver; asking about 100 first fixes it. Look at the order of your two checks."
+          }
+        ]
+      }
+    ]
+  },
+  "misconception_probe": {
+    "id": "python.conditionals.probe-1",
+    "type": "predict_output",
+    "concept_id": "python.conditionals",
+    "leg": "probe",
+    "prompt": "What does this print?",
+    "language": "python",
+    "code": "x = 7\nif x > 5:\n    print(\"big\")\nelif x > 3:\n    print(\"medium\")\nelse:\n    print(\"small\")\nprint(\"done\")\n",
+    "choices": [
+      {
+        "key": "A",
+        "text": "big\ndone"
+      },
+      {
+        "key": "B",
+        "text": "big\nmedium\ndone",
+        "misconception_id": "python.conditionals:every-elif-runs"
+      },
+      {
+        "key": "C",
+        "text": "big\nsmall\ndone",
+        "misconception_id": "python.conditionals:else-after-if"
+      },
+      {
+        "key": "D",
+        "text": "medium\ndone"
+      }
+    ],
+    "grader": {
+      "type": "choice",
+      "answer": "A"
+    },
+    "hints": [
+      {
+        "level": 1,
+        "text": "x is 7. Which condition is the first one that is True?"
+      },
+      {
+        "level": 2,
+        "text": "After a branch runs, does Python look at the remaining elif and else?"
+      },
+      {
+        "level": 3,
+        "text": "Similar: with `n = 10`, `if n > 0: print('pos')` then `elif n > 5: print('ten-ish')` prints only pos, even though both are True. Then the line after the chain runs."
+      }
+    ],
+    "misconception_ids": [
+      "python.conditionals:every-elif-runs",
+      "python.conditionals:else-after-if"
+    ]
+  }
+}

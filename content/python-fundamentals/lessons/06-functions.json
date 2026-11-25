@@ -1,0 +1,428 @@
+{
+  "schema_version": "1.0",
+  "kind": "lesson",
+  "id": "lesson.python.functions",
+  "version": 1,
+  "status": "draft",
+  "authored_by": "ai-draft: Sage (Nexora Learning Designer bot), 2026-11-25",
+  "approved_by": null,
+  "approved_at": null,
+  "content_language": "en",
+  "notes_for_reviewer": [
+    "`python.functions:local-visible-outside` is added beyond first-domain.md. Reviewer: keep or drop.",
+    "Step 2's replay uses `global` to show the body did not run; that code is checker-only, not shown to learners."
+  ],
+  "concept_id": "python.functions",
+  "title": "Somchai's laundry: a rule you can call",
+  "shape": "story-trace",
+  "estimated_minutes": 12,
+  "story": {
+    "person": "Somchai",
+    "place": "his coin laundry near a university in Khon Kaen",
+    "text": "Somchai charges 40 baht per kilo plus a 20 baht service fee. He wrote the rule once as a function so every customer's price comes from the same place. His nephew changed one word in it, and now the day's total crashes."
+  },
+  "video": null,
+  "program": {
+    "language": "python",
+    "code": "def wash_price(kg):\n    return kg * 40 + 20\n\nfirst = wash_price(3)\nsecond = wash_price(1)\nprint(first)\nprint(second)\nprint(first + second)\n",
+    "expected_stdout": "140\n60\n200\n"
+  },
+  "steps": [
+    {
+      "id": "s1",
+      "name": "One rule, many customers",
+      "kind": "story",
+      "text": "Lines 1-2 define the price rule. Lines 4-8 use it for two customers."
+    },
+    {
+      "id": "s2",
+      "name": "Define the rule",
+      "kind": "trace",
+      "text": "Python reads lines 1 and 2.",
+      "focus_lines": [
+        1,
+        2
+      ],
+      "predict": {
+        "id": "python.functions.s2.p",
+        "question": "When Python runs lines 1-2, does it work out a price?",
+        "answer_format": "choice",
+        "choices": [
+          {
+            "key": "A",
+            "text": "Yes, it works out a price straight away"
+          },
+          {
+            "key": "B",
+            "text": "No, it only remembers the rule until it is called"
+          }
+        ],
+        "answer": "B",
+        "reveal": "No. def only stores the rule under the name wash_price. The body runs when someone calls it.",
+        "verify": {
+          "code": "ran = \"No, it only remembers the rule until it is called\"\ndef wash_price(kg):\n    global ran\n    ran = \"Yes, it works out a price straight away\"\n    return kg * 40 + 20\nprint(ran)\n",
+          "expected_stdout": "No, it only remembers the rule until it is called\n"
+        }
+      }
+    },
+    {
+      "id": "s3",
+      "name": "First customer",
+      "kind": "trace",
+      "text": "Line 4 calls wash_price with 3. Inside the function, kg is 3 for this call.",
+      "focus_lines": [
+        4,
+        6
+      ],
+      "predict": {
+        "id": "python.functions.s3.p",
+        "question": "What does line 6 print?",
+        "answer_format": "number",
+        "answer": "140",
+        "reveal": "140: 3 * 40 + 20. return hands 140 back, and line 4 stores it in first.",
+        "verify": {
+          "code": "def wash_price(kg):\n    return kg * 40 + 20\nprint(wash_price(3))\n",
+          "expected_stdout": "140\n"
+        }
+      }
+    },
+    {
+      "id": "s4",
+      "name": "Second customer",
+      "kind": "trace",
+      "text": "Line 5 calls the same rule with 1. kg is 1 this time.",
+      "focus_lines": [
+        5,
+        7
+      ],
+      "predict": {
+        "id": "python.functions.s4.p",
+        "question": "What does line 7 print?",
+        "answer_format": "number",
+        "answer": "60",
+        "reveal": "60: 1 * 40 + 20. Same rule, different argument.",
+        "misconception_ids": [
+          "python.functions:param-vs-arg"
+        ],
+        "verify": {
+          "code": "def wash_price(kg):\n    return kg * 40 + 20\nprint(wash_price(1))\n",
+          "expected_stdout": "60\n"
+        }
+      }
+    },
+    {
+      "id": "s5",
+      "name": "The day's total",
+      "kind": "trace",
+      "text": "Line 8 adds the two returned prices.",
+      "focus_lines": [
+        8
+      ],
+      "predict": {
+        "id": "python.functions.s5.p",
+        "question": "What does line 8 print?",
+        "answer_format": "number",
+        "answer": "200",
+        "reveal": "200. Both calls returned numbers, so they can be added.",
+        "verify": {
+          "code": "def wash_price(kg):\n    return kg * 40 + 20\n\nfirst = wash_price(3)\nsecond = wash_price(1)\nprint(first + second)\n",
+          "expected_stdout": "200\n"
+        }
+      }
+    },
+    {
+      "id": "s6",
+      "name": "print instead of return",
+      "kind": "case",
+      "text": "The nephew changed return to print in the function.",
+      "code": "def wash_price(kg):\n    print(kg * 40 + 20)\n\nfirst = wash_price(3)\nprint(first)\n",
+      "predict": {
+        "id": "python.functions.s6.p",
+        "question": "The call shows 140 on screen. What does the last line, print(first), show?",
+        "answer_format": "short_text",
+        "answer": "None",
+        "reveal": "None. print only shows a value on screen; it doesn't hand anything back. A function with no return gives back None, so first is None (and first + second would crash).",
+        "misconception_ids": [
+          "python.functions:print-vs-return"
+        ],
+        "verify": {
+          "code": "import contextlib, io\ndef wash_price(kg):\n    print(kg * 40 + 20)\nwith contextlib.redirect_stdout(io.StringIO()):\n    first = wash_price(3)\nprint(first)\n",
+          "expected_stdout": "None\n"
+        }
+      },
+      "what_changed": "return -> print: the screen still shows 140, but first now holds None."
+    },
+    {
+      "id": "s7",
+      "name": "Reach inside from outside",
+      "kind": "case",
+      "text": "Another version keeps the price in a variable inside the function, and tries to print it outside.",
+      "code": "def wash_price(kg):\n    price = kg * 40 + 20\n    return price\n\nwash_price(3)\nprint(price)\n",
+      "predict": {
+        "id": "python.functions.s7.p",
+        "question": "What happens on the last line?",
+        "answer_format": "choice",
+        "choices": [
+          {
+            "key": "A",
+            "text": "140",
+            "misconception_id": "python.functions:local-visible-outside"
+          },
+          {
+            "key": "B",
+            "text": "NameError"
+          }
+        ],
+        "answer": "B",
+        "reveal": "NameError. price only exists inside the function while it runs. Outside, use the returned value: `first = wash_price(3)`.",
+        "misconception_ids": [
+          "python.functions:local-visible-outside"
+        ],
+        "verify": {
+          "code": "def wash_price(kg):\n    price = kg * 40 + 20\n    return price\nwash_price(3)\ntry:\n    print(price)\nexcept NameError:\n    print(\"NameError\")\n",
+          "expected_stdout": "NameError\n"
+        }
+      },
+      "what_changed": "price now lives inside the function: reading it outside gives NameError instead of 140."
+    },
+    {
+      "id": "s8",
+      "name": "Recap",
+      "kind": "recap",
+      "text": "What a function gives back, in three sentences."
+    }
+  ],
+  "recap": [
+    "def stores a rule; the body runs only when the function is called, with the parameter set to the argument of that call.",
+    "return hands a value back to the caller; print only shows it on screen, and a function without return gives back None.",
+    "Variables made inside a function exist only inside it; pass values in as arguments and get them out with return."
+  ],
+  "checks": {
+    "apply": [
+      {
+        "id": "python.functions.apply-1",
+        "type": "write_code",
+        "concept_id": "python.functions",
+        "leg": "apply",
+        "prompt": "A town bus costs 15 baht to board plus 5 baht per stop. Write the function bus_fare(stops) so it returns the fare. bus_fare(4) should give back 35.",
+        "language": "python",
+        "difficulty": "core",
+        "starter_code": "def bus_fare(stops):\n    # give back the fare: 15 baht to board plus 5 baht per stop\n    pass\n",
+        "grader": {
+          "type": "function_tests",
+          "function": "bus_fare",
+          "cases": [
+            {
+              "args": [
+                0
+              ],
+              "expected": 15
+            },
+            {
+              "args": [
+                1
+              ],
+              "expected": 20
+            },
+            {
+              "args": [
+                4
+              ],
+              "expected": 35
+            },
+            {
+              "args": [
+                10
+              ],
+              "expected": 65
+            }
+          ]
+        },
+        "reference_solution": "def bus_fare(stops):\n    return 15 + 5 * stops\n",
+        "must_fail": [
+          {
+            "code": "def bus_fare(stops):\n    print(15 + 5 * stops)\n",
+            "why": "prints instead of returning",
+            "misconception_id": "python.functions:print-vs-return"
+          },
+          {
+            "code": "def bus_fare(stops):\n    return 35\n",
+            "why": "hardcodes the example"
+          }
+        ],
+        "hints": [
+          {
+            "level": 1,
+            "text": "The caller wants a number back from bus_fare. Which keyword hands a value back?"
+          },
+          {
+            "level": 2,
+            "text": "Work out bus_fare(0) and bus_fare(1) by hand. What stays the same, and what grows with each stop?"
+          },
+          {
+            "level": 3,
+            "text": "Guided example with a different rule: a phone plan costing 100 baht plus 2 baht per minute is `def plan_cost(minutes):` followed by a line that returns `100 + 2 * minutes`. Write the bus rule the same way."
+          }
+        ],
+        "misconception_ids": [
+          "python.functions:print-vs-return"
+        ]
+      }
+    ],
+    "explain": [
+      {
+        "id": "python.functions.explain-1",
+        "type": "explain",
+        "concept_id": "python.functions",
+        "leg": "explain",
+        "prompt": "Somchai's nephew says: \"print and return are the same, both give you the price.\" After his change the screen showed 140, but the day's total crashed. Explain the difference to him.",
+        "grader": {
+          "type": "rubric",
+          "criteria": [
+            {
+              "id": "c1",
+              "text": "Says print only shows a value on the screen."
+            },
+            {
+              "id": "c2",
+              "text": "Says return hands the value back to the code that called the function, so it can be stored or used."
+            },
+            {
+              "id": "c3",
+              "text": "Says a function with no return gives back None, which is why adding the results failed."
+            }
+          ],
+          "pass_rule": "all",
+          "reference_answer": "print shows the price to a person but the calling code gets nothing. return gives the price back to the caller. Without return the function gives back None, and None + None can't be added, so the total crashes."
+        },
+        "hints": [
+          {
+            "level": 1,
+            "text": "In `first = wash_price(3)`, what ends up in first with each version?"
+          },
+          {
+            "level": 2,
+            "text": "Who sees a printed value, the person or the code? Who gets a returned value?"
+          },
+          {
+            "level": 3,
+            "text": "Guided example in another setting: a cashier who reads the total out loud versus one who hands you the receipt. You can only add receipts together. Explain print and return with that idea."
+          }
+        ],
+        "misconception_ids": [
+          "python.functions:print-vs-return"
+        ]
+      }
+    ],
+    "transfer": [
+      {
+        "id": "python.functions.transfer-1",
+        "type": "fix_bug",
+        "concept_id": "python.functions",
+        "leg": "transfer",
+        "prompt": "A school's name-tag printer should make a tag for whoever is passed in. label(\"Bo\") should give back `Name: Bo`, but every tag says `Name: Ann`. Fix the function.",
+        "language": "python",
+        "difficulty": "core",
+        "code": "student = \"Ann\"\n\ndef label(name):\n    return \"Name: \" + student\n",
+        "grader": {
+          "type": "function_tests",
+          "function": "label",
+          "cases": [
+            {
+              "args": [
+                "Bo"
+              ],
+              "expected": "Name: Bo"
+            },
+            {
+              "args": [
+                "Ann"
+              ],
+              "expected": "Name: Ann"
+            },
+            {
+              "args": [
+                "Chai"
+              ],
+              "expected": "Name: Chai"
+            }
+          ]
+        },
+        "reference_solution": "student = \"Ann\"\n\ndef label(name):\n    return \"Name: \" + name\n",
+        "must_fail": [
+          {
+            "code": "student = \"Ann\"\n\ndef label(name):\n    return \"Name: \" + \"name\"\n",
+            "why": "uses the text \"name\" instead of the parameter",
+            "misconception_id": "python.functions:param-vs-arg"
+          }
+        ],
+        "hints": [
+          {
+            "level": 1,
+            "text": "Call label(\"Bo\") in your head. Which value ends up after `Name: `?"
+          },
+          {
+            "level": 2,
+            "text": "The caller's value arrives through the parameter. Is the parameter used anywhere inside the function?"
+          },
+          {
+            "level": 3,
+            "text": "Similar: `def greet(person): return \"Hi \" + guest` ignores person, so every greeting goes to the same guest. Using the parameter fixes it. Look at which name your return line uses."
+          }
+        ],
+        "misconception_ids": [
+          "python.functions:param-vs-arg"
+        ]
+      }
+    ]
+  },
+  "misconception_probe": {
+    "id": "python.functions.probe-1",
+    "type": "predict_output",
+    "concept_id": "python.functions",
+    "leg": "probe",
+    "prompt": "What does this print?",
+    "language": "python",
+    "code": "def double(n):\n    print(n * 2)\n\nresult = double(5)\nprint(result)\n",
+    "choices": [
+      {
+        "key": "A",
+        "text": "10\n10",
+        "misconception_id": "python.functions:print-vs-return"
+      },
+      {
+        "key": "B",
+        "text": "10\nNone"
+      },
+      {
+        "key": "C",
+        "text": "None"
+      },
+      {
+        "key": "D",
+        "text": "10"
+      }
+    ],
+    "grader": {
+      "type": "choice",
+      "answer": "B"
+    },
+    "hints": [
+      {
+        "level": 1,
+        "text": "Which line shows something during the call itself?"
+      },
+      {
+        "level": 2,
+        "text": "Does double have a return line? What does a function give back without one?"
+      },
+      {
+        "level": 3,
+        "text": "Similar: `def shout(w): print(w)` then `x = shout('hi')` then `print(x)` shows hi, then None."
+      }
+    ],
+    "misconception_ids": [
+      "python.functions:print-vs-return"
+    ]
+  }
+}

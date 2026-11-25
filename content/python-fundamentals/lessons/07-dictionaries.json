@@ -1,0 +1,445 @@
+{
+  "schema_version": "1.0",
+  "kind": "lesson",
+  "id": "lesson.python.dictionaries",
+  "version": 1,
+  "status": "draft",
+  "authored_by": "ai-draft: Sage (Nexora Learning Designer bot), 2026-11-25",
+  "approved_by": null,
+  "approved_at": null,
+  "content_language": "en",
+  "notes_for_reviewer": [
+    "Dictionary misconception `lookup-by-value` is used broadly here: looking up by value or by position."
+  ],
+  "concept_id": "python.dictionaries",
+  "title": "Fon's phone-case stall: look things up by name",
+  "shape": "story-trace",
+  "estimated_minutes": 12,
+  "story": {
+    "person": "Fon",
+    "place": "her phone-case stall in a Bangkok mall",
+    "text": "Fon keeps her stock in a dictionary: each phone model's name points at how many cases are left. A customer asked for a model she has never stocked and the script crashed in front of them. She wants lookups that never embarrass her again."
+  },
+  "video": null,
+  "program": {
+    "language": "python",
+    "code": "stock = {\"A15\": 4, \"S23\": 0, \"P8\": 2}\nprint(stock[\"A15\"])\nstock[\"P8\"] = stock[\"P8\"] - 1\nprint(stock[\"P8\"])\nstock[\"X100\"] = 6\nprint(len(stock))\nprint(\"S23\" in stock)\nprint(stock.get(\"Z9\", 0))\n",
+    "expected_stdout": "4\n1\n4\nTrue\n0\n"
+  },
+  "steps": [
+    {
+      "id": "s1",
+      "name": "Fon's stock",
+      "kind": "story",
+      "text": "Each entry is a key (the model name) and a value (cases left). We look things up by key."
+    },
+    {
+      "id": "s2",
+      "name": "Look up a model",
+      "kind": "trace",
+      "text": "Line 2 asks for the value stored under the key \"A15\".",
+      "focus_lines": [
+        1,
+        2
+      ],
+      "predict": {
+        "id": "python.dictionaries.s2.p",
+        "question": "What does line 2 print?",
+        "answer_format": "number",
+        "answer": "4",
+        "reveal": "4. Square brackets with a key give that key's value.",
+        "verify": {
+          "code": "stock = {\"A15\": 4, \"S23\": 0, \"P8\": 2}\nprint(stock[\"A15\"])\n",
+          "expected_stdout": "4\n"
+        }
+      }
+    },
+    {
+      "id": "s3",
+      "name": "Sell one case",
+      "kind": "trace",
+      "text": "A customer buys a P8 case. Line 3 reads the value, subtracts 1, and stores it back.",
+      "focus_lines": [
+        3,
+        4
+      ],
+      "predict": {
+        "id": "python.dictionaries.s3.p",
+        "question": "What does line 4 print?",
+        "answer_format": "number",
+        "answer": "1",
+        "reveal": "1. The value under \"P8\" was 2; it is now 1.",
+        "verify": {
+          "code": "stock = {\"A15\": 4, \"S23\": 0, \"P8\": 2}\nstock[\"P8\"] = stock[\"P8\"] - 1\nprint(stock[\"P8\"])\n",
+          "expected_stdout": "1\n"
+        }
+      }
+    },
+    {
+      "id": "s4",
+      "name": "A new model arrives",
+      "kind": "trace",
+      "text": "Line 5 stores a value under a key that didn't exist yet.",
+      "focus_lines": [
+        5,
+        6
+      ],
+      "predict": {
+        "id": "python.dictionaries.s4.p",
+        "question": "How many entries does stock have now (line 6)?",
+        "answer_format": "number",
+        "answer": "4",
+        "reveal": "4. Assigning to a new key adds an entry.",
+        "verify": {
+          "code": "stock = {\"A15\": 4, \"S23\": 0, \"P8\": 2}\nstock[\"X100\"] = 6\nprint(len(stock))\n",
+          "expected_stdout": "4\n"
+        }
+      }
+    },
+    {
+      "id": "s5",
+      "name": "Look up by position",
+      "kind": "case",
+      "text": "Fon's helper is used to lists and asks for the first entry with [0].",
+      "code": "stock = {\"A15\": 4, \"S23\": 0, \"P8\": 2}\nprint(stock[0])\n",
+      "predict": {
+        "id": "python.dictionaries.s5.p",
+        "question": "What happens?",
+        "answer_format": "choice",
+        "choices": [
+          {
+            "key": "A",
+            "text": "4",
+            "misconception_id": "python.dictionaries:lookup-by-value"
+          },
+          {
+            "key": "B",
+            "text": "KeyError"
+          }
+        ],
+        "answer": "B",
+        "reveal": "KeyError: 0. A dictionary has no positions, only keys, and 0 is not one of the keys.",
+        "misconception_ids": [
+          "python.dictionaries:lookup-by-value"
+        ],
+        "verify": {
+          "code": "stock = {\"A15\": 4, \"S23\": 0, \"P8\": 2}\ntry:\n    print(stock[0])\nexcept KeyError:\n    print(\"KeyError\")\n",
+          "expected_stdout": "KeyError\n"
+        }
+      },
+      "what_changed": "key \"A15\" -> 0: there is no key 0, so 4 becomes a KeyError."
+    },
+    {
+      "id": "s6",
+      "name": "A model Fon never had",
+      "kind": "case",
+      "text": "A customer asks for Z9. With square brackets that would crash too. Line 8 uses .get with a default.",
+      "focus_lines": [
+        8
+      ],
+      "predict": {
+        "id": "python.dictionaries.s6.p",
+        "question": "What does line 8 print?",
+        "answer_format": "number",
+        "answer": "0",
+        "reveal": "0. .get gives the value if the key exists, otherwise the default you passed.",
+        "misconception_ids": [
+          "python.dictionaries:missing-key"
+        ],
+        "verify": {
+          "code": "stock = {\"A15\": 4, \"S23\": 0, \"P8\": 2}\nprint(stock.get(\"Z9\", 0))\n",
+          "expected_stdout": "0\n"
+        }
+      },
+      "what_changed": "stock[\"Z9\"] -> stock.get(\"Z9\", 0): a crash becomes 0."
+    },
+    {
+      "id": "s7",
+      "name": "Is it in stock?",
+      "kind": "trace",
+      "text": "S23 has 0 cases left. Line 7 asks whether \"S23\" is in stock.",
+      "focus_lines": [
+        7
+      ],
+      "predict": {
+        "id": "python.dictionaries.s7.p",
+        "question": "What does line 7 print?",
+        "answer_format": "choice",
+        "choices": [
+          {
+            "key": "A",
+            "text": "True"
+          },
+          {
+            "key": "B",
+            "text": "False",
+            "misconception_id": "python.dictionaries:lookup-by-value"
+          }
+        ],
+        "answer": "A",
+        "reveal": "True. `in` checks the keys, not whether the value is above 0. S23 is a key, even with 0 cases.",
+        "verify": {
+          "code": "stock = {\"A15\": 4, \"S23\": 0, \"P8\": 2}\nprint(\"S23\" in stock)\n",
+          "expected_stdout": "True\n"
+        }
+      }
+    },
+    {
+      "id": "s8",
+      "name": "Walk the stall",
+      "kind": "trace",
+      "text": "A for loop over a dictionary.",
+      "code": "stock = {\"A15\": 4, \"S23\": 0, \"P8\": 2}\nfor model in stock:\n    print(model)\n",
+      "predict": {
+        "id": "python.dictionaries.s8.p",
+        "question": "What is the first line the loop prints?",
+        "answer_format": "choice",
+        "choices": [
+          {
+            "key": "A",
+            "text": "A15"
+          },
+          {
+            "key": "B",
+            "text": "4",
+            "misconception_id": "python.dictionaries:lookup-by-value"
+          }
+        ],
+        "answer": "A",
+        "reveal": "A15. Looping over a dictionary gives its keys, in the order they were added. Use stock[model] to get each value.",
+        "verify": {
+          "code": "stock = {\"A15\": 4, \"S23\": 0, \"P8\": 2}\nfor model in stock:\n    print(model)\n    break\n",
+          "expected_stdout": "A15\n"
+        }
+      }
+    },
+    {
+      "id": "s9",
+      "name": "Recap",
+      "kind": "recap",
+      "text": "How a dictionary looks things up, in three sentences."
+    }
+  ],
+  "recap": [
+    "A dictionary maps keys to values; you look up, change and add entries by key, never by position.",
+    "A missing key in square brackets raises KeyError; .get(key, default) gives the default instead.",
+    "`in` and for loops work on the keys; use d[key] to reach each value."
+  ],
+  "checks": {
+    "apply": [
+      {
+        "id": "python.dictionaries.apply-1",
+        "type": "write_code",
+        "concept_id": "python.dictionaries",
+        "leg": "apply",
+        "prompt": "Finish Fon's lookup: the program reads a model name and prints how many cases are left. For a model the stall doesn't carry it must print 0, not crash.",
+        "language": "python",
+        "difficulty": "core",
+        "starter_code": "stock = {\"A15\": 4, \"S23\": 0, \"P8\": 2}\nmodel = input()\n# print how many cases of that model are left (0 if the stall doesn't carry it)\n",
+        "grader": {
+          "type": "stdout",
+          "cases": [
+            {
+              "stdin": "A15\n",
+              "expected_stdout": "4\n"
+            },
+            {
+              "stdin": "S23\n",
+              "expected_stdout": "0\n"
+            },
+            {
+              "stdin": "Z9\n",
+              "expected_stdout": "0\n"
+            },
+            {
+              "stdin": "P8\n",
+              "expected_stdout": "2\n"
+            }
+          ]
+        },
+        "reference_solution": "stock = {\"A15\": 4, \"S23\": 0, \"P8\": 2}\nmodel = input()\nprint(stock.get(model, 0))\n",
+        "must_fail": [
+          {
+            "code": "stock = {\"A15\": 4, \"S23\": 0, \"P8\": 2}\nmodel = input()\nprint(stock[model])\n",
+            "why": "square brackets crash on Z9",
+            "misconception_id": "python.dictionaries:missing-key"
+          }
+        ],
+        "hints": [
+          {
+            "level": 1,
+            "text": "What should happen for a model the stall doesn't carry? Try Z9 in your head."
+          },
+          {
+            "level": 2,
+            "text": "Square brackets crash on a missing key. Dictionaries have a way to read a key with a fallback value."
+          },
+          {
+            "level": 3,
+            "text": "Similar with a café menu: `prices = {\"tea\": 30}`; `prices.get(\"cake\", \"not sold\")` gives \"not sold\" instead of crashing. Use the same idea with a fallback that suits stock counts."
+          }
+        ],
+        "misconception_ids": [
+          "python.dictionaries:missing-key"
+        ]
+      }
+    ],
+    "explain": [
+      {
+        "id": "python.dictionaries.explain-1",
+        "type": "explain",
+        "concept_id": "python.dictionaries",
+        "leg": "explain",
+        "prompt": "Fon's helper wrote `stock[0]` to get the first model and got KeyError: 0. Explain why, and how to get a model's count instead.",
+        "grader": {
+          "type": "rubric",
+          "criteria": [
+            {
+              "id": "c1",
+              "text": "Says a dictionary is looked up by key, not by position."
+            },
+            {
+              "id": "c2",
+              "text": "Says 0 is not one of the keys (the keys are model names), so Python raises KeyError."
+            },
+            {
+              "id": "c3",
+              "text": "Says to use the model name as the key, e.g. stock[\"A15\"], or .get for a key that may be missing."
+            }
+          ],
+          "pass_rule": "all",
+          "reference_answer": "Dictionaries don't have positions like lists; square brackets take a key. The keys are model names such as \"A15\", and there is no key 0, so Python raises KeyError. Use stock[\"A15\"], or stock.get(name, 0) if the model might not be there."
+        },
+        "hints": [
+          {
+            "level": 1,
+            "text": "What goes inside the square brackets for a list, and what goes inside for a dictionary?"
+          },
+          {
+            "level": 2,
+            "text": "List Fon's keys. Is 0 one of them?"
+          },
+          {
+            "level": 3,
+            "text": "Guided example in another setting: a phone's contacts are found by name, not by 'contact number 0'. Explain stock[0] with that idea."
+          }
+        ],
+        "misconception_ids": [
+          "python.dictionaries:lookup-by-value"
+        ]
+      }
+    ],
+    "transfer": [
+      {
+        "id": "python.dictionaries.transfer-1",
+        "type": "write_code",
+        "concept_id": "python.dictionaries",
+        "leg": "transfer",
+        "prompt": "Ms. Lek's class votes on a trip. The program reads the votes on one line (one word per vote). Count the votes for each place and print each place with its count, in the order each place first appears. For `sea hill sea` it prints `sea 2` then `hill 1`.",
+        "language": "python",
+        "difficulty": "stretch",
+        "starter_code": "votes = input().split()\ncounts = {}\n# count each place, then print each place and its count\n",
+        "grader": {
+          "type": "stdout",
+          "cases": [
+            {
+              "stdin": "sea hill sea\n",
+              "expected_stdout": "sea 2\nhill 1\n"
+            },
+            {
+              "stdin": "park\n",
+              "expected_stdout": "park 1\n"
+            },
+            {
+              "stdin": "zoo zoo zoo mall\n",
+              "expected_stdout": "zoo 3\nmall 1\n"
+            },
+            {
+              "stdin": "a b c b a\n",
+              "expected_stdout": "a 2\nb 2\nc 1\n"
+            }
+          ]
+        },
+        "reference_solution": "votes = input().split()\ncounts = {}\nfor place in votes:\n    counts[place] = counts.get(place, 0) + 1\nfor place in counts:\n    print(place, counts[place])\n",
+        "must_fail": [
+          {
+            "code": "votes = input().split()\ncounts = {}\nfor place in votes:\n    counts[place] = 1\nfor place in counts:\n    print(place, counts[place])\n",
+            "why": "overwrites the count instead of adding"
+          },
+          {
+            "code": "votes = input().split()\ncounts = {}\nfor place in votes:\n    counts[place] = counts[place] + 1\nfor place in counts:\n    print(place, counts[place])\n",
+            "why": "reads a key before it exists: KeyError",
+            "misconception_id": "python.dictionaries:missing-key"
+          }
+        ],
+        "hints": [
+          {
+            "level": 1,
+            "text": "The first time you see a place, what should its count become? And the second time?"
+          },
+          {
+            "level": 2,
+            "text": "Reading counts[place] crashes the first time a place appears. How can you read a count that might not exist yet?"
+          },
+          {
+            "level": 3,
+            "text": "Similar, counting letters with if/else: `if ch in letters:` add 1 to `letters[ch]`, otherwise set `letters[ch] = 1`. Then a second loop prints each key with its value. Do the same for places."
+          }
+        ],
+        "misconception_ids": [
+          "python.dictionaries:missing-key"
+        ]
+      }
+    ]
+  },
+  "misconception_probe": {
+    "id": "python.dictionaries.probe-1",
+    "type": "predict_output",
+    "concept_id": "python.dictionaries",
+    "leg": "probe",
+    "prompt": "What does this print?",
+    "language": "python",
+    "code": "ages = {\"Ann\": 25, \"Bo\": 31}\nprint(ages.get(25))\n",
+    "choices": [
+      {
+        "key": "A",
+        "text": "Ann",
+        "misconception_id": "python.dictionaries:lookup-by-value"
+      },
+      {
+        "key": "B",
+        "text": "None"
+      },
+      {
+        "key": "C",
+        "text": "25"
+      },
+      {
+        "key": "D",
+        "text": "KeyError",
+        "misconception_id": "python.dictionaries:missing-key"
+      }
+    ],
+    "grader": {
+      "type": "choice",
+      "answer": "B"
+    },
+    "hints": [
+      {
+        "level": 1,
+        "text": "What are the keys of ages? Is 25 one of them?"
+      },
+      {
+        "level": 2,
+        "text": "What does .get give back for a missing key when you don't pass a default?"
+      },
+      {
+        "level": 3,
+        "text": "Similar: `prices = {\"tea\": 30}` then `prices.get(30)` looks for a key 30, finds none, and gives back None."
+      }
+    ],
+    "misconception_ids": [
+      "python.dictionaries:lookup-by-value"
+    ]
+  }
+}

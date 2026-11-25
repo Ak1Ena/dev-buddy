@@ -1,0 +1,423 @@
+{
+  "schema_version": "1.0",
+  "kind": "lesson",
+  "id": "lesson.python.types-expressions",
+  "version": 1,
+  "status": "draft",
+  "authored_by": "ai-draft: Sage (Nexora Learning Designer bot), 2026-11-25",
+  "approved_by": null,
+  "approved_at": null,
+  "content_language": "en",
+  "notes_for_reviewer": [
+    "`%` is not taught here; the debugging lesson explains it where it is used.",
+    "Shape: story-trace rather than syntax drill, because the bill gives a flow to follow (D22)."
+  ],
+  "concept_id": "python.types-expressions",
+  "title": "Beam's noodle bill: types decide what + does",
+  "shape": "story-trace",
+  "estimated_minutes": 12,
+  "story": {
+    "person": "Beam",
+    "place": "her aunt's noodle stall at a night market",
+    "text": "Beam is writing a tiny checkout script for her aunt's noodle stall. Prices come in from an order form, and a form always hands over text, even when it looks like a number. The first bill she prints for one bowl and one drink is wildly wrong."
+  },
+  "video": null,
+  "program": {
+    "language": "python",
+    "code": "noodles = \"45\"\ndrink = \"20\"\nprint(noodles + drink)\ntotal = int(noodles) + int(drink)\nprint(total)\nprint(\"Total: \" + str(total) + \" baht\")\nprint(total / 2)\nprint(total // 2)\n",
+    "expected_stdout": "4520\n65\nTotal: 65 baht\n32.5\n32\n"
+  },
+  "steps": [
+    {
+      "id": "s1",
+      "name": "A strange bill",
+      "kind": "story",
+      "text": "One bowl of noodles is 45 baht and a drink is 20. The form gave Beam the prices as text. Let's run her script line by line."
+    },
+    {
+      "id": "s2",
+      "name": "Prices arrive as text",
+      "kind": "trace",
+      "text": "Lines 1 and 2 store the prices exactly as the form gave them. Note the quotes. `input()` and forms behave the same way: they give text.",
+      "focus_lines": [
+        1,
+        2
+      ],
+      "predict": {
+        "id": "python.types-expressions.s2.p",
+        "question": "What type is noodles? (int = whole number, str = text, float = decimal number)",
+        "answer_format": "choice",
+        "choices": [
+          {
+            "key": "A",
+            "text": "int",
+            "misconception_id": "python.types-expressions:int-str-confusion"
+          },
+          {
+            "key": "B",
+            "text": "str"
+          },
+          {
+            "key": "C",
+            "text": "float"
+          }
+        ],
+        "answer": "B",
+        "reveal": "str. The quotes make \"45\" text that happens to contain digits.",
+        "misconception_ids": [
+          "python.types-expressions:int-str-confusion"
+        ],
+        "verify": {
+          "code": "noodles = \"45\"\nprint(type(noodles).__name__)\n",
+          "expected_stdout": "str\n"
+        }
+      }
+    },
+    {
+      "id": "s3",
+      "name": "Adding two texts",
+      "kind": "trace",
+      "text": "Line 3 adds the two prices the way Beam first wrote it.",
+      "focus_lines": [
+        3
+      ],
+      "predict": {
+        "id": "python.types-expressions.s3.p",
+        "question": "What does line 3 print?",
+        "answer_format": "short_text",
+        "answer": "4520",
+        "reveal": "4520. Between two strings, + glues them together: \"45\" then \"20\". That is Beam's bug.",
+        "misconception_ids": [
+          "python.types-expressions:str-plus-adds"
+        ],
+        "verify": {
+          "code": "noodles = \"45\"\ndrink = \"20\"\nprint(noodles + drink)\n",
+          "expected_stdout": "4520\n"
+        }
+      }
+    },
+    {
+      "id": "s4",
+      "name": "Turn text into numbers",
+      "kind": "trace",
+      "text": "Line 4 converts each price with int() before adding.",
+      "focus_lines": [
+        4,
+        5
+      ],
+      "predict": {
+        "id": "python.types-expressions.s4.p",
+        "question": "What does line 5 print?",
+        "answer_format": "number",
+        "answer": "65",
+        "reveal": "65. int(\"45\") is the number 45, so + now adds.",
+        "verify": {
+          "code": "noodles = \"45\"\ndrink = \"20\"\ntotal = int(noodles) + int(drink)\nprint(total)\n",
+          "expected_stdout": "65\n"
+        }
+      }
+    },
+    {
+      "id": "s5",
+      "name": "Glue a number into a sentence",
+      "kind": "case",
+      "text": "Beam wants to print a sentence with the total. Line 6 uses str(total). What if she leaves str() out?",
+      "code": "total = 65\nprint(\"Total: \" + total + \" baht\")\n",
+      "predict": {
+        "id": "python.types-expressions.s5.p",
+        "question": "Without str(), what happens when this line runs?",
+        "answer_format": "choice",
+        "choices": [
+          {
+            "key": "A",
+            "text": "Total: 65 baht",
+            "misconception_id": "python.types-expressions:int-str-confusion"
+          },
+          {
+            "key": "B",
+            "text": "TypeError"
+          }
+        ],
+        "answer": "B",
+        "reveal": "Python stops with TypeError: + can join two strings or add two numbers, but it will not mix a str with an int. str(total) turns 65 into \"65\" first.",
+        "misconception_ids": [
+          "python.types-expressions:int-str-confusion"
+        ],
+        "verify": {
+          "code": "total = 65\ntry:\n    print(\"Total: \" + total + \" baht\")\nexcept TypeError:\n    print(\"TypeError\")\n",
+          "expected_stdout": "TypeError\n"
+        }
+      },
+      "what_changed": "str(total) -> total: `Total: 65 baht` becomes a TypeError, because + won't mix str and int."
+    },
+    {
+      "id": "s6",
+      "name": "Split the bill",
+      "kind": "trace",
+      "text": "Beam and her cousin share the bill. Line 7 divides by 2.",
+      "focus_lines": [
+        7
+      ],
+      "predict": {
+        "id": "python.types-expressions.s6.p",
+        "question": "What does line 7 print?",
+        "answer_format": "number",
+        "answer": "32.5",
+        "reveal": "32.5. The / operator always gives a float (a decimal number).",
+        "verify": {
+          "code": "total = 65\nprint(total / 2)\n",
+          "expected_stdout": "32.5\n"
+        }
+      }
+    },
+    {
+      "id": "s7",
+      "name": "Whole baht only",
+      "kind": "case",
+      "text": "The stall has no satang coins. Line 8 uses // instead of /.",
+      "focus_lines": [
+        8
+      ],
+      "predict": {
+        "id": "python.types-expressions.s7.p",
+        "question": "What does line 8 print?",
+        "answer_format": "number",
+        "answer": "32",
+        "reveal": "32. // keeps only the whole-number part of the division.",
+        "verify": {
+          "code": "total = 65\nprint(total // 2)\n",
+          "expected_stdout": "32\n"
+        }
+      },
+      "what_changed": "/ -> //: 32.5 (a float) becomes 32 (an int)."
+    },
+    {
+      "id": "s8",
+      "name": "Recap",
+      "kind": "recap",
+      "text": "What types do to operators, in three sentences."
+    }
+  ],
+  "recap": [
+    "The type of a value decides what an operator does: + adds two numbers but glues two strings.",
+    "Text from forms and input() is str, so convert it with int() before doing maths, and back with str() to put a number into a sentence.",
+    "/ always gives a decimal (float); // gives the whole-number part."
+  ],
+  "checks": {
+    "apply": [
+      {
+        "id": "python.types-expressions.apply-1",
+        "type": "write_code",
+        "concept_id": "python.types-expressions",
+        "leg": "apply",
+        "prompt": "Beam's stall now sells iced tea by the cup. The program gets the number of cups, then the price of one cup, each as text on its own line. Finish it so it prints the total cost as a number (3 cups at 25 baht prints 75).",
+        "language": "python",
+        "difficulty": "core",
+        "starter_code": "cups = input()\nprice_each = input()\n# print the total cost as a number\n",
+        "grader": {
+          "type": "stdout",
+          "cases": [
+            {
+              "stdin": "3\n25\n",
+              "expected_stdout": "75\n"
+            },
+            {
+              "stdin": "10\n12\n",
+              "expected_stdout": "120\n"
+            },
+            {
+              "stdin": "1\n9\n",
+              "expected_stdout": "9\n"
+            },
+            {
+              "stdin": "0\n30\n",
+              "expected_stdout": "0\n"
+            }
+          ]
+        },
+        "reference_solution": "cups = input()\nprice_each = input()\nprint(int(cups) * int(price_each))\n",
+        "must_fail": [
+          {
+            "code": "cups = input()\nprice_each = input()\nprint(cups + price_each)\n",
+            "why": "glues the two texts",
+            "misconception_id": "python.types-expressions:str-plus-adds"
+          },
+          {
+            "code": "cups = input()\nprice_each = input()\nprint(cups * price_each)\n",
+            "why": "multiplies text by text: TypeError",
+            "misconception_id": "python.types-expressions:int-str-confusion"
+          }
+        ],
+        "hints": [
+          {
+            "level": 1,
+            "text": "What type of value does input() give you, even when someone types digits?"
+          },
+          {
+            "level": 2,
+            "text": "Before you multiply, both values need to be numbers. Which built-in turns the text \"3\" into the number 3?"
+          },
+          {
+            "level": 3,
+            "text": "Similar case with a step counter: `a = input()` gives \"4000\"; `int(a) + 500` gives 4500, while `a + \"500\"` gives \"4000500\". Use the same idea on cups and price_each."
+          }
+        ],
+        "misconception_ids": [
+          "python.types-expressions:int-str-confusion"
+        ]
+      }
+    ],
+    "explain": [
+      {
+        "id": "python.types-expressions.explain-1",
+        "type": "explain",
+        "concept_id": "python.types-expressions",
+        "leg": "explain",
+        "prompt": "Beam's first total was 4520 instead of 65. Explain to her why `\"45\" + \"20\"` gives 4520, and what makes `45 + 20` give 65.",
+        "grader": {
+          "type": "rubric",
+          "criteria": [
+            {
+              "id": "c1",
+              "text": "Names the two types: the prices were text (str), not numbers (int)."
+            },
+            {
+              "id": "c2",
+              "text": "Says + joins strings but adds numbers: what it does depends on the type."
+            },
+            {
+              "id": "c3",
+              "text": "Says how to fix it: convert with int() before adding."
+            }
+          ],
+          "pass_rule": "all",
+          "reference_answer": "The prices were strings because the form gives text. + on two strings sticks them together, so \"45\" + \"20\" is \"4520\". On two ints, + adds, so 45 + 20 is 65. Converting with int() first gives the sum."
+        },
+        "hints": [
+          {
+            "level": 1,
+            "text": "Look at the quotes. What type are \"45\" and \"20\"?"
+          },
+          {
+            "level": 2,
+            "text": "Does + do the same thing for every type? Compare what it does with two numbers and with two pieces of text."
+          },
+          {
+            "level": 3,
+            "text": "Guided example in another setting: `\"ab\" + \"cd\"` gives \"abcd\" while `2 + 3` gives 5: same operator, different types, different job. Explain Beam's bill with that idea."
+          }
+        ],
+        "misconception_ids": [
+          "python.types-expressions:str-plus-adds"
+        ]
+      }
+    ],
+    "transfer": [
+      {
+        "id": "python.types-expressions.transfer-1",
+        "type": "fix_bug",
+        "concept_id": "python.types-expressions",
+        "leg": "transfer",
+        "prompt": "Fern's weather script reads a temperature in °C (a whole number) and should print it in °F. For 30 it should print 86.0, but it crashes. Fix it.",
+        "language": "python",
+        "difficulty": "core",
+        "code": "celsius = input()\nfahrenheit = celsius * 9 / 5 + 32\nprint(fahrenheit)\n",
+        "grader": {
+          "type": "stdout",
+          "cases": [
+            {
+              "stdin": "30\n",
+              "expected_stdout": "86.0\n"
+            },
+            {
+              "stdin": "100\n",
+              "expected_stdout": "212.0\n"
+            },
+            {
+              "stdin": "0\n",
+              "expected_stdout": "32.0\n"
+            },
+            {
+              "stdin": "-40\n",
+              "expected_stdout": "-40.0\n"
+            }
+          ]
+        },
+        "reference_solution": "celsius = int(input())\nfahrenheit = celsius * 9 / 5 + 32\nprint(fahrenheit)\n",
+        "must_fail": [
+          {
+            "code": "celsius = input()\nfahrenheit = int(celsius * 9 / 5 + 32)\nprint(fahrenheit)\n",
+            "why": "converts the result instead of the input",
+            "misconception_id": "python.types-expressions:int-str-confusion"
+          }
+        ],
+        "hints": [
+          {
+            "level": 1,
+            "text": "Read the error message: which operation does Python say it can't do, and on which types?"
+          },
+          {
+            "level": 2,
+            "text": "What type does celsius have on line 2? Line 1 decides that."
+          },
+          {
+            "level": 3,
+            "text": "Similar: `kg = input()` then `kg * 2` with \"3\" gives \"33\", not 6, because text times a number repeats the text. `int(input())` gives a number instead. Apply that to the weather script."
+          }
+        ],
+        "misconception_ids": [
+          "python.types-expressions:int-str-confusion"
+        ]
+      }
+    ]
+  },
+  "misconception_probe": {
+    "id": "python.types-expressions.probe-1",
+    "type": "predict_output",
+    "concept_id": "python.types-expressions",
+    "leg": "probe",
+    "prompt": "What does this print?",
+    "language": "python",
+    "code": "a = \"7\"\nb = \"3\"\nprint(a + b)\n",
+    "choices": [
+      {
+        "key": "A",
+        "text": "10",
+        "misconception_id": "python.types-expressions:str-plus-adds"
+      },
+      {
+        "key": "B",
+        "text": "73"
+      },
+      {
+        "key": "C",
+        "text": "TypeError"
+      },
+      {
+        "key": "D",
+        "text": "4"
+      }
+    ],
+    "grader": {
+      "type": "choice",
+      "answer": "B"
+    },
+    "hints": [
+      {
+        "level": 1,
+        "text": "Look at the quotes on lines 1 and 2. What type are a and b?"
+      },
+      {
+        "level": 2,
+        "text": "What does + do when both sides are text?"
+      },
+      {
+        "level": 3,
+        "text": "Similar: `print(\"ab\" + \"cd\")` prints abcd. Digits inside quotes behave the same way."
+      }
+    ],
+    "misconception_ids": [
+      "python.types-expressions:str-plus-adds"
+    ]
+  }
+}

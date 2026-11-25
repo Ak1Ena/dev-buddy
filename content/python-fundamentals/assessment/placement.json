@@ -1,0 +1,501 @@
+{
+  "schema_version": "1.0",
+  "kind": "assessment",
+  "id": "assessment.python-fundamentals.placement",
+  "version": 1,
+  "status": "draft",
+  "authored_by": "ai-draft: Sage (Nexora Learning Designer bot), 2026-11-25",
+  "approved_by": null,
+  "approved_at": null,
+  "content_language": "en",
+  "notes_for_reviewer": [
+    "Placement items carry no hints: the mentor is off during placement.",
+    "Pool of 15, at most 10 asked. Items reused from the old question bank are marked with `source`.",
+    "Stop rule thresholds are assumptions to tune with pilot data."
+  ],
+  "domain_id": "python-fundamentals",
+  "purpose": "placement",
+  "policy": {
+    "max_items": 10,
+    "time_limit_minutes": 15,
+    "start_concepts": [
+      "python.conditionals",
+      "python.loops"
+    ],
+    "adaptive_rule": "Start with one item from each start concept. After a miss, next ask about a prerequisite of that concept; after a hit, ask about a concept that depends on it. Prefer a concept not asked yet, and mix item types (predict, write, fix, explain).",
+    "stop_rule": "Stop at max_items or the time limit, or earlier when every concept has a stable state: two agreeing items, or inferred from the graph (a hit implies its prerequisites are assumed known; a miss implies concepts that depend on it are assumed gaps).",
+    "mentor": "off",
+    "evidence_verified": false,
+    "output_states": [
+      "assumed_known",
+      "assumed_gap",
+      "unknown"
+    ],
+    "shows_score": false
+  },
+  "profile_questions": [
+    {
+      "id": "python-fundamentals.placement.goal",
+      "question": "What do you want Python for?",
+      "choices": [
+        "Get a job as a developer",
+        "Build my own project",
+        "Pass a course or exam",
+        "Just curious"
+      ],
+      "allow_free_text": true,
+      "scored": false
+    },
+    {
+      "id": "python-fundamentals.placement.experience",
+      "question": "How much code have you written so far?",
+      "choices": [
+        "None yet",
+        "Followed a tutorial or two",
+        "Small programs on my own",
+        "I use Python regularly"
+      ],
+      "scored": false
+    }
+  ],
+  "items": [
+    {
+      "id": "python-fundamentals.placement.pl-01",
+      "type": "predict_output",
+      "concept_id": "python.variables",
+      "leg": "placement",
+      "prompt": "What does this print?",
+      "language": "python",
+      "difficulty": "intro",
+      "code": "a = 3\nb = a + 2\na = 10\nprint(b)\n",
+      "grader": {
+        "type": "stdout",
+        "cases": [
+          {
+            "stdin": "",
+            "expected_stdout": "5\n"
+          }
+        ]
+      },
+      "misconception_ids": [
+        "python.variables:stores-formula"
+      ]
+    },
+    {
+      "id": "python-fundamentals.placement.pl-02",
+      "type": "predict_output",
+      "concept_id": "python.types-expressions",
+      "leg": "placement",
+      "prompt": "What does this print?",
+      "language": "python",
+      "difficulty": "intro",
+      "code": "print(type(3.14))\n",
+      "choices": [
+        {
+          "key": "A",
+          "text": "<class 'int'>"
+        },
+        {
+          "key": "B",
+          "text": "<class 'float'>"
+        },
+        {
+          "key": "C",
+          "text": "<class 'str'>",
+          "misconception_id": "python.types-expressions:int-str-confusion"
+        },
+        {
+          "key": "D",
+          "text": "<class 'decimal'>"
+        }
+      ],
+      "grader": {
+        "type": "choice",
+        "answer": "B"
+      },
+      "source": "adapted from backend/app/agents/assessment_agent.py PYTHON_QUESTIONS py_q1"
+    },
+    {
+      "id": "python-fundamentals.placement.pl-03",
+      "type": "predict_output",
+      "concept_id": "python.types-expressions",
+      "leg": "placement",
+      "prompt": "What does this print?",
+      "language": "python",
+      "difficulty": "intro",
+      "code": "print(\"5\" + \"5\")\n",
+      "grader": {
+        "type": "stdout",
+        "cases": [
+          {
+            "stdin": "",
+            "expected_stdout": "55\n"
+          }
+        ]
+      },
+      "misconception_ids": [
+        "python.types-expressions:str-plus-adds"
+      ]
+    },
+    {
+      "id": "python-fundamentals.placement.pl-04",
+      "type": "predict_output",
+      "concept_id": "python.conditionals",
+      "leg": "placement",
+      "prompt": "What does this print?",
+      "language": "python",
+      "difficulty": "core",
+      "code": "x = 5\nif x > 3:\n    print(\"A\")\nelif x > 1:\n    print(\"B\")\nelse:\n    print(\"C\")\n",
+      "choices": [
+        {
+          "key": "A",
+          "text": "A"
+        },
+        {
+          "key": "B",
+          "text": "B"
+        },
+        {
+          "key": "C",
+          "text": "C"
+        },
+        {
+          "key": "D",
+          "text": "A\nB",
+          "misconception_id": "python.conditionals:every-elif-runs"
+        }
+      ],
+      "grader": {
+        "type": "choice",
+        "answer": "A"
+      },
+      "source": "adapted from backend/app/agents/assessment_agent.py PYTHON_QUESTIONS py_q2 (option D changed to probe every-elif-runs)"
+    },
+    {
+      "id": "python-fundamentals.placement.pl-05",
+      "type": "predict_output",
+      "concept_id": "python.conditionals",
+      "leg": "placement",
+      "prompt": "What does this print?",
+      "language": "python",
+      "difficulty": "core",
+      "code": "score = 50\nif score > 50:\n    print(\"pass\")\nelse:\n    print(\"try again\")\n",
+      "grader": {
+        "type": "stdout",
+        "cases": [
+          {
+            "stdin": "",
+            "expected_stdout": "try again\n"
+          }
+        ]
+      }
+    },
+    {
+      "id": "python-fundamentals.placement.pl-06",
+      "type": "predict_output",
+      "concept_id": "python.loops",
+      "leg": "placement",
+      "prompt": "What does this print?",
+      "language": "python",
+      "difficulty": "core",
+      "code": "count = 0\nwhile count < 3:\n    count = count + 1\nprint(count)\n",
+      "grader": {
+        "type": "stdout",
+        "cases": [
+          {
+            "stdin": "",
+            "expected_stdout": "3\n"
+          }
+        ]
+      },
+      "source": "adapted from backend/app/agents/assessment_agent.py PYTHON_QUESTIONS py_q7"
+    },
+    {
+      "id": "python-fundamentals.placement.pl-07",
+      "type": "predict_output",
+      "concept_id": "python.loops",
+      "leg": "placement",
+      "prompt": "What does this print? One line per print.",
+      "language": "python",
+      "difficulty": "intro",
+      "code": "for i in range(3):\n    print(\"hello\")\n",
+      "grader": {
+        "type": "stdout",
+        "cases": [
+          {
+            "stdin": "",
+            "expected_stdout": "hello\nhello\nhello\n"
+          }
+        ]
+      },
+      "misconception_ids": [
+        "python.loops:range-off-by-one"
+      ],
+      "source": "adapted from backend/app/agents/assessment_agent.py PYTHON_QUESTIONS py_q3 (asked as predict-output instead of 'how many times')"
+    },
+    {
+      "id": "python-fundamentals.placement.pl-08",
+      "type": "write_code",
+      "concept_id": "python.loops",
+      "leg": "placement",
+      "prompt": "Read a whole number n and print every even number from 2 up to n, one per line. For 6 it prints 2, 4 and 6.",
+      "language": "python",
+      "difficulty": "core",
+      "starter_code": "n = int(input())\n# print the even numbers from 2 to n\n",
+      "grader": {
+        "type": "stdout",
+        "cases": [
+          {
+            "stdin": "6\n",
+            "expected_stdout": "2\n4\n6\n"
+          },
+          {
+            "stdin": "1\n",
+            "expected_stdout": ""
+          },
+          {
+            "stdin": "7\n",
+            "expected_stdout": "2\n4\n6\n"
+          },
+          {
+            "stdin": "10\n",
+            "expected_stdout": "2\n4\n6\n8\n10\n"
+          }
+        ]
+      },
+      "reference_solution": "n = int(input())\nfor k in range(1, n + 1):\n    if k % 2 == 0:\n        print(k)\n",
+      "must_fail": [
+        {
+          "code": "n = int(input())\nfor k in range(2, n, 2):\n    print(k)\n",
+          "why": "stops before n",
+          "misconception_id": "python.loops:range-off-by-one"
+        }
+      ],
+      "misconception_ids": [
+        "python.loops:range-off-by-one"
+      ]
+    },
+    {
+      "id": "python-fundamentals.placement.pl-09",
+      "type": "predict_output",
+      "concept_id": "python.lists",
+      "leg": "placement",
+      "prompt": "What does this print?",
+      "language": "python",
+      "difficulty": "intro",
+      "code": "my_list = [1, 2]\nmy_list.append(3)\nprint(my_list[2])\n",
+      "grader": {
+        "type": "stdout",
+        "cases": [
+          {
+            "stdin": "",
+            "expected_stdout": "3\n"
+          }
+        ]
+      },
+      "misconception_ids": [
+        "python.lists:index-starts-at-one"
+      ],
+      "source": "adapted from backend/app/agents/assessment_agent.py PYTHON_QUESTIONS py_q6"
+    },
+    {
+      "id": "python-fundamentals.placement.pl-10",
+      "type": "predict_output",
+      "concept_id": "python.lists",
+      "leg": "placement",
+      "prompt": "What does this print?",
+      "language": "python",
+      "difficulty": "core",
+      "code": "a = [1, 2]\nb = a\nb.append(3)\nprint(len(a))\n",
+      "grader": {
+        "type": "stdout",
+        "cases": [
+          {
+            "stdin": "",
+            "expected_stdout": "3\n"
+          }
+        ]
+      },
+      "misconception_ids": [
+        "python.lists:assign-copies"
+      ]
+    },
+    {
+      "id": "python-fundamentals.placement.pl-11",
+      "type": "predict_output",
+      "concept_id": "python.functions",
+      "leg": "placement",
+      "prompt": "What does this print?",
+      "language": "python",
+      "difficulty": "intro",
+      "code": "def process(n):\n    return n * 2\n\nprint(process(3))\n",
+      "grader": {
+        "type": "stdout",
+        "cases": [
+          {
+            "stdin": "",
+            "expected_stdout": "6\n"
+          }
+        ]
+      },
+      "source": "adapted from backend/app/agents/assessment_agent.py PYTHON_QUESTIONS py_q10"
+    },
+    {
+      "id": "python-fundamentals.placement.pl-12",
+      "type": "write_code",
+      "concept_id": "python.functions",
+      "leg": "placement",
+      "prompt": "Write bigger(a, b) so it gives back the larger of two numbers (either one if they are equal).",
+      "language": "python",
+      "difficulty": "core",
+      "starter_code": "def bigger(a, b):\n    pass\n",
+      "grader": {
+        "type": "function_tests",
+        "function": "bigger",
+        "cases": [
+          {
+            "args": [
+              3,
+              5
+            ],
+            "expected": 5
+          },
+          {
+            "args": [
+              9,
+              2
+            ],
+            "expected": 9
+          },
+          {
+            "args": [
+              4,
+              4
+            ],
+            "expected": 4
+          },
+          {
+            "args": [
+              -1,
+              -7
+            ],
+            "expected": -1
+          }
+        ]
+      },
+      "reference_solution": "def bigger(a, b):\n    if a > b:\n        return a\n    return b\n",
+      "must_fail": [
+        {
+          "code": "def bigger(a, b):\n    if a > b:\n        print(a)\n    else:\n        print(b)\n",
+          "why": "prints instead of returning",
+          "misconception_id": "python.functions:print-vs-return"
+        },
+        {
+          "code": "def bigger(a, b):\n    return a\n",
+          "why": "ignores b"
+        }
+      ],
+      "misconception_ids": [
+        "python.functions:print-vs-return"
+      ]
+    },
+    {
+      "id": "python-fundamentals.placement.pl-13",
+      "type": "predict_output",
+      "concept_id": "python.dictionaries",
+      "leg": "placement",
+      "prompt": "What does this print?",
+      "language": "python",
+      "difficulty": "core",
+      "code": "stock = {\"pen\": 5, \"ink\": 2}\nstock[\"ink\"] = stock[\"ink\"] + 3\nprint(stock[\"ink\"])\n",
+      "grader": {
+        "type": "stdout",
+        "cases": [
+          {
+            "stdin": "",
+            "expected_stdout": "5\n"
+          }
+        ]
+      }
+    },
+    {
+      "id": "python-fundamentals.placement.pl-14",
+      "type": "fix_bug",
+      "concept_id": "python.debugging",
+      "leg": "placement",
+      "prompt": "last_item(items) should give back the last item of a non-empty list, but it crashes. Fix it.",
+      "language": "python",
+      "difficulty": "core",
+      "code": "def last_item(items):\n    return items[len(items)]\n",
+      "grader": {
+        "type": "function_tests",
+        "function": "last_item",
+        "cases": [
+          {
+            "args": [
+              [
+                1,
+                2,
+                3
+              ]
+            ],
+            "expected": 3
+          },
+          {
+            "args": [
+              [
+                "a"
+              ]
+            ],
+            "expected": "a"
+          },
+          {
+            "args": [
+              [
+                7,
+                8
+              ]
+            ],
+            "expected": 8
+          }
+        ]
+      },
+      "reference_solution": "def last_item(items):\n    return items[-1]\n",
+      "must_fail": [
+        {
+          "code": "def last_item(items):\n    return items[0]\n",
+          "why": "returns the first item"
+        }
+      ],
+      "misconception_ids": [
+        "python.lists:index-starts-at-one"
+      ]
+    },
+    {
+      "id": "python-fundamentals.placement.pl-15",
+      "type": "explain",
+      "concept_id": "python.functions",
+      "leg": "placement",
+      "prompt": "In one or two sentences: what is the difference between print and return inside a function?",
+      "difficulty": "core",
+      "grader": {
+        "type": "rubric",
+        "criteria": [
+          {
+            "id": "c1",
+            "text": "Says print shows a value on screen only."
+          },
+          {
+            "id": "c2",
+            "text": "Says return hands a value back to the caller so it can be stored or used."
+          }
+        ],
+        "pass_rule": "all",
+        "reference_answer": "print displays a value for a person to read; return gives the value back to the code that called the function, so it can be saved in a variable or used in a calculation."
+      },
+      "misconception_ids": [
+        "python.functions:print-vs-return"
+      ]
+    }
+  ]
+}

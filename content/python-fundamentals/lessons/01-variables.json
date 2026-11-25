@@ -1,0 +1,324 @@
+{
+  "schema_version": "1.0",
+  "kind": "lesson",
+  "id": "lesson.python.variables",
+  "version": 1,
+  "status": "draft",
+  "authored_by": "ai-draft: Sage (Nexora Learning Designer bot), 2026-11-25",
+  "approved_by": null,
+  "approved_at": null,
+  "content_language": "en",
+  "notes_for_reviewer": [
+    "Tiny concept: 6-step story-trace (pattern allows 4-5 for tiny concepts; 6 keeps one case step).",
+    "apply-1 has one fixed input, so printing 80 and 160 directly would pass the stdout check. Reviewer/mentor sees the code; a hidden variant needs input() which this lesson does not teach yet."
+  ],
+  "concept_id": "python.variables",
+  "title": "Dao's bus card: names that hold values",
+  "shape": "story-trace",
+  "estimated_minutes": 10,
+  "story": {
+    "person": "Dao",
+    "place": "a bus stop in Bangkok",
+    "text": "Dao tops up her bus card and pays fares every day. Her little script keeps the balance, but when the fare went up, her balance didn't do what she expected. She wants to know what a variable really keeps."
+  },
+  "video": null,
+  "program": {
+    "language": "python",
+    "code": "balance = 50\nfare = 15\nbalance = balance - fare\nprint(balance)\nbalance = balance + 100\nprint(balance)\nfare = 20\nprint(balance)\n",
+    "expected_stdout": "35\n135\n135\n"
+  },
+  "steps": [
+    {
+      "id": "s1",
+      "name": "Dao's bus card",
+      "kind": "story",
+      "text": "Dao's card starts with 50 baht. A ride costs 15. She tops up 100 later. The script on the right keeps track; we will run it one line at a time."
+    },
+    {
+      "id": "s2",
+      "name": "Two names, two values",
+      "kind": "trace",
+      "text": "Line 1 stores 50 under the name balance. Line 2 stores 15 under the name fare. Line 3 looks different.",
+      "focus_lines": [
+        1,
+        2,
+        3
+      ],
+      "predict": {
+        "id": "python.variables.s2.p",
+        "question": "Line 3 is `balance = balance - fare`. What is that line?",
+        "answer_format": "choice",
+        "choices": [
+          {
+            "key": "A",
+            "text": "A claim that both sides are equal",
+            "misconception_id": "python.variables:assign-is-equals"
+          },
+          {
+            "key": "B",
+            "text": "An instruction: work out the right side, then store it in balance"
+          }
+        ],
+        "answer": "B",
+        "reveal": "It is an instruction. Python works out the right side with the values it has now (50 - 15), then stores the result under balance. The old 50 is gone.",
+        "misconception_ids": [
+          "python.variables:assign-is-equals"
+        ],
+        "verify_note": "Conceptual question; step 3 checks the same idea against the real run."
+      }
+    },
+    {
+      "id": "s3",
+      "name": "Pay a fare",
+      "kind": "trace",
+      "text": "Line 3 runs, then line 4 prints balance.",
+      "focus_lines": [
+        3,
+        4
+      ],
+      "predict": {
+        "id": "python.variables.s3.p",
+        "question": "What does line 4 print?",
+        "answer_format": "number",
+        "answer": "35",
+        "reveal": "35. Python read balance (50) and fare (15), worked out 35, and stored it in balance.",
+        "verify": {
+          "code": "balance = 50\nfare = 15\nbalance = balance - fare\nprint(balance)\n",
+          "expected_stdout": "35\n"
+        }
+      }
+    },
+    {
+      "id": "s4",
+      "name": "Top up",
+      "kind": "trace",
+      "text": "Dao adds 100 baht. Line 5 uses the same pattern as line 3.",
+      "focus_lines": [
+        5,
+        6
+      ],
+      "predict": {
+        "id": "python.variables.s4.p",
+        "question": "What does line 6 print?",
+        "answer_format": "number",
+        "answer": "135",
+        "reveal": "135. The right side used the current balance, 35, not the 50 it started with.",
+        "verify": {
+          "code": "balance = 50\nfare = 15\nbalance = balance - fare\nbalance = balance + 100\nprint(balance)\n",
+          "expected_stdout": "135\n"
+        }
+      }
+    },
+    {
+      "id": "s5",
+      "name": "The fare goes up",
+      "kind": "case",
+      "text": "The bus company raises the fare. Line 7 stores a new value in fare. Nothing else changes.",
+      "focus_lines": [
+        7,
+        8
+      ],
+      "predict": {
+        "id": "python.variables.s5.p",
+        "question": "Line 7 sets fare to 20. What does line 8 print?",
+        "answer_format": "number",
+        "answer": "135",
+        "reveal": "Still 135. Line 3 stored a number in balance when it ran. It did not store the rule `balance - fare`, so changing fare later changes nothing.",
+        "misconception_ids": [
+          "python.variables:stores-formula"
+        ],
+        "verify": {
+          "code": "balance = 50\nfare = 15\nbalance = balance - fare\nbalance = balance + 100\nfare = 20\nprint(balance)\n",
+          "expected_stdout": "135\n"
+        }
+      },
+      "what_changed": "fare 15 -> 20; balance stays 135, because line 3 stored a number, not a formula."
+    },
+    {
+      "id": "s6",
+      "name": "Recap",
+      "kind": "recap",
+      "text": "What a variable keeps, in three sentences."
+    }
+  ],
+  "recap": [
+    "`name = value` is an instruction: work out the right side first, then store the result under the name.",
+    "A variable keeps one value at a time; storing a new value replaces the old one.",
+    "A variable keeps the number it was given, not the formula that made it, so later changes to other variables do not reach back."
+  ],
+  "checks": {
+    "apply": [
+      {
+        "id": "python.variables.apply-1",
+        "type": "fix_bug",
+        "concept_id": "python.variables",
+        "leg": "apply",
+        "prompt": "Ton's quiz app should add the bonus to the score, then print the new score and double the new score. Right now it prints 70 and 140. Fix the program so it prints 80 and then 160. Change one line.",
+        "language": "python",
+        "difficulty": "intro",
+        "code": "score = 70\nbonus = 10\nscore + bonus\nprint(score)\nprint(score * 2)\n",
+        "grader": {
+          "type": "stdout",
+          "cases": [
+            {
+              "stdin": "",
+              "expected_stdout": "80\n160\n"
+            }
+          ]
+        },
+        "reference_solution": "score = 70\nbonus = 10\nscore = score + bonus\nprint(score)\nprint(score * 2)\n",
+        "must_fail": [
+          {
+            "code": "score = 70\nbonus = 10\nscore + bonus\nprint(score + bonus)\nprint(score * 2)\n",
+            "why": "fixes what is printed, not the stored value"
+          }
+        ],
+        "hints": [
+          {
+            "level": 1,
+            "text": "Line 3 works out a number. After Python works it out, where does that number go?"
+          },
+          {
+            "level": 2,
+            "text": "Look at how lines 1 and 2 give a name its value. Line 3 is missing that part, so score never changes."
+          },
+          {
+            "level": 3,
+            "text": "A similar case with a thermostat: `temp = 20`, then `temp - 5` on its own line, then `print(temp)` shows 20, because the result was thrown away. Writing `temp = temp - 5` stores it, and `print(temp)` then shows 15. Now look at line 3 of your program: what would make it store its result?"
+          }
+        ],
+        "misconception_ids": [
+          "python.variables:assign-is-equals"
+        ]
+      }
+    ],
+    "explain": [
+      {
+        "id": "python.variables.explain-1",
+        "type": "explain",
+        "concept_id": "python.variables",
+        "leg": "explain",
+        "prompt": "Dao's friend reads `balance = balance - fare` and says: \"That's impossible, a number can't equal itself minus 15.\" In two or three sentences, explain to them what that line really does.",
+        "grader": {
+          "type": "rubric",
+          "criteria": [
+            {
+              "id": "c1",
+              "text": "Says the right side is worked out first, using the current values of balance and fare."
+            },
+            {
+              "id": "c2",
+              "text": "Says the result is stored in balance, replacing the old value."
+            },
+            {
+              "id": "c3",
+              "text": "Says `=` here is an instruction to store, not a statement that both sides are equal."
+            }
+          ],
+          "pass_rule": "all",
+          "reference_answer": "It isn't an equation. Python first works out balance - fare with the values right now, 50 - 15 = 35, then puts 35 into balance, so the old 50 is replaced. `=` means 'store this', not 'is equal to'."
+        },
+        "hints": [
+          {
+            "level": 1,
+            "text": "Which side of the `=` does Python work out first?"
+          },
+          {
+            "level": 2,
+            "text": "Think about the moment just before line 3 runs: what is in balance then, and what is in it right after?"
+          },
+          {
+            "level": 3,
+            "text": "A guided example in another setting, a step counter: with steps at 99, `steps = steps + 1` reads 99, adds 1, then stores 100 in steps. Use the same three parts (read, compute, store) to explain Dao's line."
+          }
+        ],
+        "misconception_ids": [
+          "python.variables:assign-is-equals"
+        ]
+      }
+    ],
+    "transfer": [
+      {
+        "id": "python.variables.transfer-1",
+        "type": "predict_output",
+        "concept_id": "python.variables",
+        "leg": "transfer",
+        "prompt": "A café's order screen tries to swap two cups. What does this program print? Type the output exactly, one line per print.",
+        "language": "python",
+        "code": "left = \"tea\"\nright = \"coffee\"\nleft = right\nright = left\nprint(left)\nprint(right)\n",
+        "grader": {
+          "type": "stdout",
+          "cases": [
+            {
+              "stdin": "",
+              "expected_stdout": "coffee\ncoffee\n"
+            }
+          ]
+        },
+        "hints": [
+          {
+            "level": 1,
+            "text": "Lines run one at a time, top to bottom. After line 3, what is stored in left?"
+          },
+          {
+            "level": 2,
+            "text": "When line 4 runs, left no longer holds what it held at the start. Which value does line 4 store in right?"
+          },
+          {
+            "level": 3,
+            "text": "Similar case: `a = 1`, `b = 2`, `a = b`, `b = a`. After `a = b`, a is 2. Then `b = a` stores a's current value, 2, so both are 2. Walk the café program the same way, line by line."
+          }
+        ]
+      }
+    ]
+  },
+  "misconception_probe": {
+    "id": "python.variables.probe-1",
+    "type": "predict_output",
+    "concept_id": "python.variables",
+    "leg": "probe",
+    "prompt": "What does this print?",
+    "language": "python",
+    "code": "price = 100\ndiscount = 20\nfinal = price - discount\ndiscount = 50\nprint(final)\n",
+    "choices": [
+      {
+        "key": "A",
+        "text": "80"
+      },
+      {
+        "key": "B",
+        "text": "50",
+        "misconception_id": "python.variables:stores-formula"
+      },
+      {
+        "key": "C",
+        "text": "20"
+      },
+      {
+        "key": "D",
+        "text": "An error"
+      }
+    ],
+    "grader": {
+      "type": "choice",
+      "answer": "A"
+    },
+    "hints": [
+      {
+        "level": 1,
+        "text": "When line 3 runs, which numbers does Python use?"
+      },
+      {
+        "level": 2,
+        "text": "Line 4 changes discount. Does anything make line 3 run again?"
+      },
+      {
+        "level": 3,
+        "text": "Similar: `width = 4`, `area = width * 2`, `width = 10`, `print(area)` prints 8, because area got a number when its line ran. Apply that to final."
+      }
+    ],
+    "misconception_ids": [
+      "python.variables:stores-formula"
+    ]
+  }
+}

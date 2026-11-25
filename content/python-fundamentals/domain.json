@@ -1,0 +1,193 @@
+{
+  "schema_version": "1.0",
+  "kind": "domain",
+  "id": "domain.python-fundamentals",
+  "version": 1,
+  "status": "draft",
+  "authored_by": "ai-draft: Sage (Nexora Learning Designer bot), 2026-11-25",
+  "approved_by": null,
+  "approved_at": null,
+  "content_language": "en",
+  "notes_for_reviewer": [
+    "Concepts, prerequisites and misconceptions follow docs/product/first-domain.md (D4).",
+    "Added beyond first-domain.md: python.lists:index-starts-at-one, python.functions:local-visible-outside."
+  ],
+  "domain_id": "python-fundamentals",
+  "title": "Python fundamentals: tracing, writing and fixing small programs",
+  "summary": "Eight concepts from variables to debugging, for beginners. One language, no libraries. Most evidence is checked by running code.",
+  "source_doc": "docs/product/first-domain.md",
+  "concepts": [
+    {
+      "id": "python.variables",
+      "title": "Variables and assignment",
+      "summary": "Names that hold one value at a time; `=` stores.",
+      "prerequisites": [],
+      "misconceptions": [
+        {
+          "id": "python.variables:assign-is-equals",
+          "text": "Reads `=` as 'is equal to' instead of 'store the right side here'."
+        },
+        {
+          "id": "python.variables:stores-formula",
+          "text": "Thinks a variable keeps the formula that made it and updates when other variables change."
+        }
+      ],
+      "lesson_file": "lessons/01-variables.json"
+    },
+    {
+      "id": "python.types-expressions",
+      "title": "Types, operators, expressions",
+      "summary": "int, float, str and bool; what an operator does depends on the types.",
+      "prerequisites": [
+        "python.variables"
+      ],
+      "misconceptions": [
+        {
+          "id": "python.types-expressions:str-plus-adds",
+          "text": "Expects \"5\" + \"5\" to give 10."
+        },
+        {
+          "id": "python.types-expressions:int-str-confusion",
+          "text": "Treats digits in a string as a number (or mixes str and int freely)."
+        }
+      ],
+      "lesson_file": "lessons/02-types-expressions.json"
+    },
+    {
+      "id": "python.conditionals",
+      "title": "if / elif / else, boolean logic",
+      "summary": "Python runs only the first branch whose condition is True.",
+      "prerequisites": [
+        "python.types-expressions"
+      ],
+      "misconceptions": [
+        {
+          "id": "python.conditionals:every-elif-runs",
+          "text": "Thinks every true elif runs, not just the first true branch."
+        },
+        {
+          "id": "python.conditionals:else-after-if",
+          "text": "Thinks else runs after the if branch as well."
+        }
+      ],
+      "lesson_file": "lessons/03-conditionals.json"
+    },
+    {
+      "id": "python.loops",
+      "title": "for and while, termination, accumulators",
+      "summary": "Repeating work, how much work nested loops do, and making loops end.",
+      "prerequisites": [
+        "python.variables",
+        "python.conditionals"
+      ],
+      "misconceptions": [
+        {
+          "id": "python.loops:range-off-by-one",
+          "text": "Expects range(a, b) to include b, or to start at 1."
+        },
+        {
+          "id": "python.loops:never-ends",
+          "text": "Doesn't see that nothing in the loop changes its condition."
+        }
+      ],
+      "lesson_file": "lessons/04-loops.json"
+    },
+    {
+      "id": "python.lists",
+      "title": "Indexing, slicing, mutation, iteration",
+      "summary": "Ordered items by position from 0; one list can have two names.",
+      "prerequisites": [
+        "python.variables",
+        "python.types-expressions"
+      ],
+      "misconceptions": [
+        {
+          "id": "python.lists:index-vs-value",
+          "text": "Confuses an item's position with the item itself."
+        },
+        {
+          "id": "python.lists:index-starts-at-one",
+          "text": "Counts list positions from 1."
+        },
+        {
+          "id": "python.lists:assign-copies",
+          "text": "Thinks `b = a` makes a separate copy of the list."
+        }
+      ],
+      "lesson_file": "lessons/05-lists.json"
+    },
+    {
+      "id": "python.functions",
+      "title": "Parameters, return, scope",
+      "summary": "A named rule: arguments in, a returned value out.",
+      "prerequisites": [
+        "python.variables",
+        "python.types-expressions"
+      ],
+      "misconceptions": [
+        {
+          "id": "python.functions:print-vs-return",
+          "text": "Thinks print hands a value back to the caller."
+        },
+        {
+          "id": "python.functions:param-vs-arg",
+          "text": "Mixes up the parameter inside the function with the value passed in."
+        },
+        {
+          "id": "python.functions:local-visible-outside",
+          "text": "Expects a variable made inside a function to exist outside it."
+        }
+      ],
+      "lesson_file": "lessons/06-functions.json"
+    },
+    {
+      "id": "python.dictionaries",
+      "title": "Key lookup, insert, iterate",
+      "summary": "Values found by key, not by position.",
+      "prerequisites": [
+        "python.lists"
+      ],
+      "misconceptions": [
+        {
+          "id": "python.dictionaries:lookup-by-value",
+          "text": "Tries to look up by value or by position instead of by key."
+        },
+        {
+          "id": "python.dictionaries:missing-key",
+          "text": "Doesn't expect a KeyError for a missing key (or thinks .get raises)."
+        }
+      ],
+      "lesson_file": "lessons/07-dictionaries.json"
+    },
+    {
+      "id": "python.debugging",
+      "title": "Read an error, locate and fix a bug",
+      "summary": "Reproduce, inspect, name the cause, change one thing, recheck.",
+      "prerequisites": [
+        "python.loops",
+        "python.lists",
+        "python.functions"
+      ],
+      "misconceptions": [
+        {
+          "id": "python.debugging:random-changes",
+          "text": "Changes code at random until the output looks right."
+        }
+      ],
+      "lesson_file": "lessons/08-debugging.json"
+    }
+  ],
+  "assessment_file": "assessment/placement.json",
+  "out_of_scope": [
+    "JavaScript or any second language",
+    "classes / OOP",
+    "recursion",
+    "closures",
+    "comprehensions",
+    "modules",
+    "try/except (learner-facing)",
+    "DSA and complexity",
+    "learner-pasted code as the lesson source",
+    "content languages other than English (open question)"
+  ]
+}

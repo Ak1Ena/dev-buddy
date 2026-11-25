@@ -1,0 +1,449 @@
+{
+  "schema_version": "1.0",
+  "kind": "lesson",
+  "id": "lesson.python.lists",
+  "version": 1,
+  "status": "draft",
+  "authored_by": "ai-draft: Sage (Nexora Learning Designer bot), 2026-11-25",
+  "approved_by": null,
+  "approved_at": null,
+  "content_language": "en",
+  "notes_for_reviewer": [
+    "`python.lists:index-starts-at-one` is a misconception added beyond first-domain.md (which lists index-vs-value and assign-copies). Reviewer: keep or drop.",
+    "`input().split()` appears only in given starter/buggy code; string methods are not taught as such."
+  ],
+  "concept_id": "python.lists",
+  "title": "Nok and Pat's grocery list: positions, slices and shared lists",
+  "shape": "story-trace",
+  "estimated_minutes": 12,
+  "story": {
+    "person": "Nok",
+    "place": "a shared flat in Khon Kaen",
+    "text": "Nok keeps the flat's grocery list in a small script, and her flatmate Pat wanted his own copy to plan a dinner. Pat added to his list, and something odd happened to Nok's list. Nok wants to know what a list name really points at."
+  },
+  "video": null,
+  "program": {
+    "language": "python",
+    "code": "groceries = [\"rice\", \"eggs\", \"milk\", \"tofu\"]\nprint(groceries[1])\nprint(len(groceries))\nprint(groceries[-1])\nprint(groceries[1:3])\nshared = groceries\nshared.append(\"bread\")\nprint(len(groceries))\n",
+    "expected_stdout": "eggs\n4\ntofu\n['eggs', 'milk']\n5\n"
+  },
+  "steps": [
+    {
+      "id": "s1",
+      "name": "Nok's grocery list",
+      "kind": "story",
+      "text": "The list holds four things in order. Each has a position, counted by Python."
+    },
+    {
+      "id": "s2",
+      "name": "Pick by position",
+      "kind": "trace",
+      "text": "Line 2 asks for the item at position 1.",
+      "focus_lines": [
+        1,
+        2
+      ],
+      "predict": {
+        "id": "python.lists.s2.p",
+        "question": "What does line 2 print?",
+        "answer_format": "choice",
+        "choices": [
+          {
+            "key": "A",
+            "text": "rice",
+            "misconception_id": "python.lists:index-starts-at-one"
+          },
+          {
+            "key": "B",
+            "text": "eggs"
+          },
+          {
+            "key": "C",
+            "text": "1",
+            "misconception_id": "python.lists:index-vs-value"
+          }
+        ],
+        "answer": "B",
+        "reveal": "eggs. Python counts positions from 0, so rice is at 0 and eggs is at 1.",
+        "misconception_ids": [
+          "python.lists:index-starts-at-one"
+        ],
+        "verify": {
+          "code": "groceries = [\"rice\", \"eggs\", \"milk\", \"tofu\"]\nprint(groceries[1])\n",
+          "expected_stdout": "eggs\n"
+        }
+      }
+    },
+    {
+      "id": "s3",
+      "name": "How long is it?",
+      "kind": "trace",
+      "text": "len() counts the items.",
+      "focus_lines": [
+        3
+      ],
+      "predict": {
+        "id": "python.lists.s3.p",
+        "question": "What does line 3 print?",
+        "answer_format": "number",
+        "answer": "4",
+        "reveal": "4. Four items, at positions 0 to 3: the last position is always one less than the length.",
+        "verify": {
+          "code": "groceries = [\"rice\", \"eggs\", \"milk\", \"tofu\"]\nprint(len(groceries))\n",
+          "expected_stdout": "4\n"
+        }
+      }
+    },
+    {
+      "id": "s4",
+      "name": "Count from the end",
+      "kind": "trace",
+      "text": "A negative position counts from the end.",
+      "focus_lines": [
+        4
+      ],
+      "predict": {
+        "id": "python.lists.s4.p",
+        "question": "What does line 4 print?",
+        "answer_format": "short_text",
+        "answer": "tofu",
+        "reveal": "tofu. Position -1 is the last item, -2 the one before it.",
+        "verify": {
+          "code": "groceries = [\"rice\", \"eggs\", \"milk\", \"tofu\"]\nprint(groceries[-1])\n",
+          "expected_stdout": "tofu\n"
+        }
+      }
+    },
+    {
+      "id": "s5",
+      "name": "A slice",
+      "kind": "trace",
+      "text": "Line 5 takes a slice: from position 1 up to, but not including, position 3.",
+      "focus_lines": [
+        5
+      ],
+      "predict": {
+        "id": "python.lists.s5.p",
+        "question": "What does line 5 print?",
+        "answer_format": "choice",
+        "choices": [
+          {
+            "key": "A",
+            "text": "['rice', 'eggs', 'milk']",
+            "misconception_id": "python.lists:index-starts-at-one"
+          },
+          {
+            "key": "B",
+            "text": "['eggs', 'milk']"
+          },
+          {
+            "key": "C",
+            "text": "['eggs', 'milk', 'tofu']"
+          }
+        ],
+        "answer": "B",
+        "reveal": "['eggs', 'milk']. A slice includes the start position and stops before the end position.",
+        "verify": {
+          "code": "groceries = [\"rice\", \"eggs\", \"milk\", \"tofu\"]\nprint(groceries[1:3])\n",
+          "expected_stdout": "['eggs', 'milk']\n"
+        }
+      }
+    },
+    {
+      "id": "s6",
+      "name": "Pat's copy",
+      "kind": "case",
+      "text": "Pat writes `shared = groceries` to get his own list, then adds bread to shared.",
+      "focus_lines": [
+        6,
+        7,
+        8
+      ],
+      "predict": {
+        "id": "python.lists.s6.p",
+        "question": "Line 8 prints the length of Nok's list, groceries. What is it?",
+        "answer_format": "number",
+        "answer": "5",
+        "reveal": "5. `shared = groceries` does not copy anything: both names point at the same list, so bread went onto Nok's list.",
+        "misconception_ids": [
+          "python.lists:assign-copies"
+        ],
+        "verify": {
+          "code": "groceries = [\"rice\", \"eggs\", \"milk\", \"tofu\"]\nshared = groceries\nshared.append(\"bread\")\nprint(len(groceries))\n",
+          "expected_stdout": "5\n"
+        }
+      },
+      "what_changed": "Pat appended to shared: Nok's list went from 4 items to 5, because both names are one list."
+    },
+    {
+      "id": "s7",
+      "name": "A real copy",
+      "kind": "case",
+      "text": "Pat tries again with .copy().",
+      "code": "groceries = [\"rice\", \"eggs\", \"milk\", \"tofu\"]\nshared = groceries.copy()\nshared.append(\"bread\")\nprint(len(groceries))\n",
+      "predict": {
+        "id": "python.lists.s7.p",
+        "question": "With .copy(), what is the length of Nok's list now?",
+        "answer_format": "number",
+        "answer": "4",
+        "reveal": "4. .copy() makes a second, separate list, so Pat's bread stays on his list only.",
+        "verify": {
+          "code": "groceries = [\"rice\", \"eggs\", \"milk\", \"tofu\"]\nshared = groceries.copy()\nshared.append(\"bread\")\nprint(len(groceries))\n",
+          "expected_stdout": "4\n"
+        }
+      },
+      "what_changed": "`shared = groceries` -> `shared = groceries.copy()`: Nok's list stays at 4."
+    },
+    {
+      "id": "s8",
+      "name": "Walk the list",
+      "kind": "trace",
+      "text": "A for loop over a list hands you the items themselves, in order.",
+      "code": "groceries = [\"rice\", \"eggs\", \"milk\", \"tofu\"]\nfor item in groceries:\n    print(item)\n",
+      "predict": {
+        "id": "python.lists.s8.p",
+        "question": "What is the first line this loop prints?",
+        "answer_format": "choice",
+        "choices": [
+          {
+            "key": "A",
+            "text": "0",
+            "misconception_id": "python.lists:index-vs-value"
+          },
+          {
+            "key": "B",
+            "text": "rice"
+          }
+        ],
+        "answer": "B",
+        "reveal": "rice. The loop variable gets each item, not its position.",
+        "misconception_ids": [
+          "python.lists:index-vs-value"
+        ],
+        "verify": {
+          "code": "groceries = [\"rice\", \"eggs\", \"milk\", \"tofu\"]\nfor item in groceries:\n    print(item)\n    break\n",
+          "expected_stdout": "rice\n"
+        }
+      }
+    },
+    {
+      "id": "s9",
+      "name": "Recap",
+      "kind": "recap",
+      "text": "What a list name holds, in three sentences."
+    }
+  ],
+  "recap": [
+    "List positions start at 0, so the last position is len - 1, and -1 also means the last item.",
+    "A slice [a:b] starts at position a and stops just before b.",
+    "`b = a` gives the same list a second name; use .copy() when you need a separate list."
+  ],
+  "checks": {
+    "apply": [
+      {
+        "id": "python.lists.apply-1",
+        "type": "write_code",
+        "concept_id": "python.lists",
+        "leg": "apply",
+        "prompt": "At a clinic, the person at the front of the queue stepped out to fill in a form and goes to the back. The program reads the queue (names on one line). Finish it so the first name moves to the end, then the queue is printed.",
+        "language": "python",
+        "difficulty": "core",
+        "starter_code": "queue = input().split()\n# move the first name to the end of the queue\nprint(queue)\n",
+        "grader": {
+          "type": "stdout",
+          "cases": [
+            {
+              "stdin": "Ann Bo Chai\n",
+              "expected_stdout": "['Bo', 'Chai', 'Ann']\n"
+            },
+            {
+              "stdin": "Dee\n",
+              "expected_stdout": "['Dee']\n"
+            },
+            {
+              "stdin": "X Y\n",
+              "expected_stdout": "['Y', 'X']\n"
+            }
+          ]
+        },
+        "reference_solution": "queue = input().split()\nfirst = queue[0]\nqueue = queue[1:]\nqueue.append(first)\nprint(queue)\n",
+        "must_fail": [
+          {
+            "code": "queue = input().split()\nfirst = queue[1]\nqueue = queue[1:]\nqueue.append(first)\nprint(queue)\n",
+            "why": "takes position 1 as the first person",
+            "misconception_id": "python.lists:index-starts-at-one"
+          },
+          {
+            "code": "queue = input().split()\nqueue.append(queue[0])\nprint(queue)\n",
+            "why": "adds to the back but never removes from the front"
+          }
+        ],
+        "hints": [
+          {
+            "level": 1,
+            "text": "Which position holds the first person in a Python list?"
+          },
+          {
+            "level": 2,
+            "text": "Two things must happen: remember the first name, then make the queue without it and add the name at the back. Which slice leaves out only the front item?"
+          },
+          {
+            "level": 3,
+            "text": "A mirrored example with a playlist, moving the last song to the front: `last = songs[-1]` then `songs = [last] + songs[:-1]`. You need the opposite move: front to back."
+          }
+        ],
+        "misconception_ids": [
+          "python.lists:index-starts-at-one"
+        ]
+      }
+    ],
+    "explain": [
+      {
+        "id": "python.lists.explain-1",
+        "type": "explain",
+        "concept_id": "python.lists",
+        "leg": "explain",
+        "prompt": "Pat wrote `shared = groceries`, added bread to shared, and bread appeared on Nok's list too. Explain to Pat why, and what he should write instead.",
+        "grader": {
+          "type": "rubric",
+          "criteria": [
+            {
+              "id": "c1",
+              "text": "Says `shared = groceries` makes a second name for the same list, not a new list."
+            },
+            {
+              "id": "c2",
+              "text": "Says changing the list through one name shows up through the other, because there is only one list."
+            },
+            {
+              "id": "c3",
+              "text": "Gives a fix that makes a separate list, such as groceries.copy()."
+            }
+          ],
+          "pass_rule": "all",
+          "reference_answer": "Assigning a list to a new name doesn't copy it; shared and groceries are two names for one list. Appending through shared changes that one list, so Nok sees bread. groceries.copy() makes a separate list Pat can change on his own."
+        },
+        "hints": [
+          {
+            "level": 1,
+            "text": "After `shared = groceries`, how many lists exist?"
+          },
+          {
+            "level": 2,
+            "text": "Append changes a list in place. Which list did Pat's append change, and which names point at it?"
+          },
+          {
+            "level": 3,
+            "text": "Guided example in another setting: two people with keys to the same locker. If one puts a bag in, the other finds it there. A copy is a second locker. Use that idea for Pat's list."
+          }
+        ],
+        "misconception_ids": [
+          "python.lists:assign-copies"
+        ]
+      }
+    ],
+    "transfer": [
+      {
+        "id": "python.lists.transfer-1",
+        "type": "fix_bug",
+        "concept_id": "python.lists",
+        "leg": "transfer",
+        "prompt": "A running club's leaderboard gives the runners' names best first, on one line. The program should print the top three, but for `Ann Bo Chai Dee Ek` it prints `['Bo', 'Chai']`. Fix it.",
+        "language": "python",
+        "difficulty": "core",
+        "code": "names = input().split()\nprint(names[1:3])\n",
+        "grader": {
+          "type": "stdout",
+          "cases": [
+            {
+              "stdin": "Ann Bo Chai Dee Ek\n",
+              "expected_stdout": "['Ann', 'Bo', 'Chai']\n"
+            },
+            {
+              "stdin": "Fah Gun Hong\n",
+              "expected_stdout": "['Fah', 'Gun', 'Hong']\n"
+            },
+            {
+              "stdin": "Ink Jo\n",
+              "expected_stdout": "['Ink', 'Jo']\n"
+            }
+          ]
+        },
+        "reference_solution": "names = input().split()\nprint(names[0:3])\n",
+        "must_fail": [
+          {
+            "code": "names = input().split()\nprint(names[1:4])\n",
+            "why": "still starts at position 1",
+            "misconception_id": "python.lists:index-starts-at-one"
+          }
+        ],
+        "hints": [
+          {
+            "level": 1,
+            "text": "Who is first on the board, and which position does Python give the first name?"
+          },
+          {
+            "level": 2,
+            "text": "A slice starts at its first number and stops before its second. Which numbers cover exactly three names from the very front?"
+          },
+          {
+            "level": 3,
+            "text": "Similar case with a menu list: `dishes[2:4]` gives the third and fourth dishes; to get the first two you start at the front position and stop two later. Apply that to the top three."
+          }
+        ],
+        "misconception_ids": [
+          "python.lists:index-starts-at-one"
+        ]
+      }
+    ]
+  },
+  "misconception_probe": {
+    "id": "python.lists.probe-1",
+    "type": "predict_output",
+    "concept_id": "python.lists",
+    "leg": "probe",
+    "prompt": "What does this print?",
+    "language": "python",
+    "code": "a = [1, 2, 3]\nb = a\nb.append(4)\nprint(a)\n",
+    "choices": [
+      {
+        "key": "A",
+        "text": "[1, 2, 3]",
+        "misconception_id": "python.lists:assign-copies"
+      },
+      {
+        "key": "B",
+        "text": "[1, 2, 3, 4]"
+      },
+      {
+        "key": "C",
+        "text": "[4]"
+      },
+      {
+        "key": "D",
+        "text": "An error"
+      }
+    ],
+    "grader": {
+      "type": "choice",
+      "answer": "B"
+    },
+    "hints": [
+      {
+        "level": 1,
+        "text": "After `b = a`, how many lists are there?"
+      },
+      {
+        "level": 2,
+        "text": "append changes the list it is called on. Which names point at that list?"
+      },
+      {
+        "level": 3,
+        "text": "Similar: `x = ['tea']`, `y = x`, `y.append('cake')`, `print(x)` shows both items, because x and y are one list."
+      }
+    ],
+    "misconception_ids": [
+      "python.lists:assign-copies"
+    ]
+  }
+}

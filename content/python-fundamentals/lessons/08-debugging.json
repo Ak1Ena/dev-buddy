@@ -1,0 +1,483 @@
+{
+  "schema_version": "1.0",
+  "kind": "lesson",
+  "id": "lesson.python.debugging",
+  "version": 1,
+  "status": "draft",
+  "authored_by": "ai-draft: Sage (Nexora Learning Designer bot), 2026-11-25",
+  "approved_by": null,
+  "approved_at": null,
+  "content_language": "en",
+  "notes_for_reviewer": [
+    "Shape: debugging-hunt (D22). Steps use kind `hunt` for reproduce / compare / inspect / name-the-cause.",
+    "Uses `%` (explained in step 1). Error handling (try/except) stays out of scope; the replays use it only in checker-only verify code.",
+    "The probe is multiple choice, so it is recognition evidence only (assumed), never verified."
+  ],
+  "concept_id": "python.debugging",
+  "title": "Krit's missing free drink: hunt the bug, don't guess",
+  "shape": "debugging-hunt",
+  "estimated_minutes": 15,
+  "story": {
+    "person": "Krit",
+    "place": "his small café in Chiang Rai",
+    "text": "Krit's loyalty card gives a free drink on every 5th visit. A regular came in for her 5th coffee and the script said she had earned nothing. Krit's first idea was to change numbers until it looked right; we'll hunt it properly instead."
+  },
+  "video": null,
+  "program": {
+    "language": "python",
+    "code": "def free_drinks(visits):\n    count = 0\n    for v in range(1, visits):\n        if v % 5 == 0:\n            count = count + 1\n    return count\n\nprint(free_drinks(5))\nprint(free_drinks(10))\n",
+    "expected_stdout": "0\n1\n"
+  },
+  "steps": [
+    {
+      "id": "s1",
+      "name": "A missing free drink",
+      "kind": "story",
+      "text": "free_drinks counts how many visits were a 5th, 10th, 15th... visit. `v % 5` is the remainder after dividing v by 5, so `v % 5 == 0` means v is a multiple of 5."
+    },
+    {
+      "id": "s2",
+      "name": "Reproduce it",
+      "kind": "hunt",
+      "text": "First, make the bug happen on purpose with the customer's data: 5 visits.",
+      "focus_lines": [
+        8
+      ],
+      "predict": {
+        "id": "python.debugging.s2.p",
+        "question": "What does `print(free_drinks(5))` show?",
+        "answer_format": "number",
+        "answer": "0",
+        "reveal": "0. The bug is real and we can trigger it whenever we like. That is step one.",
+        "verify": {
+          "code": "def free_drinks(visits):\n    count = 0\n    for v in range(1, visits):\n        if v % 5 == 0:\n            count = count + 1\n    return count\nprint(free_drinks(5))\n",
+          "expected_stdout": "0\n"
+        }
+      }
+    },
+    {
+      "id": "s3",
+      "name": "Expected vs actual",
+      "kind": "hunt",
+      "text": "Write down what should happen: 10 visits should give 2 free drinks. Now check what does happen.",
+      "focus_lines": [
+        9
+      ],
+      "predict": {
+        "id": "python.debugging.s3.p",
+        "question": "What does `print(free_drinks(10))` show?",
+        "answer_format": "number",
+        "answer": "1",
+        "reveal": "1, expected 2. One short every time: a strong clue that the last visit is being missed.",
+        "verify": {
+          "code": "def free_drinks(visits):\n    count = 0\n    for v in range(1, visits):\n        if v % 5 == 0:\n            count = count + 1\n    return count\nprint(free_drinks(10))\n",
+          "expected_stdout": "1\n"
+        }
+      }
+    },
+    {
+      "id": "s4",
+      "name": "Look inside the loop",
+      "kind": "hunt",
+      "text": "Instead of guessing, look at the values. Imagine `print(v)` inside the loop for 5 visits.",
+      "focus_lines": [
+        3
+      ],
+      "predict": {
+        "id": "python.debugging.s4.p",
+        "question": "For 5 visits, what is the last value of v the loop visits?",
+        "answer_format": "number",
+        "answer": "4",
+        "reveal": "4. range(1, visits) stops before visits, so visit 5 is never checked.",
+        "misconception_ids": [
+          "python.loops:range-off-by-one"
+        ],
+        "verify": {
+          "code": "visits = 5\nlast = None\nfor v in range(1, visits):\n    last = v\nprint(last)\n",
+          "expected_stdout": "4\n"
+        }
+      }
+    },
+    {
+      "id": "s5",
+      "name": "Name the cause",
+      "kind": "hunt",
+      "text": "Say the cause in one sentence before touching the code.",
+      "predict": {
+        "id": "python.debugging.s5.p",
+        "question": "Which sentence names the cause?",
+        "answer_format": "choice",
+        "choices": [
+          {
+            "key": "A",
+            "text": "range(1, visits) stops before the last visit, so it is never checked"
+          },
+          {
+            "key": "B",
+            "text": "% 5 is the wrong test",
+            "misconception_id": "python.debugging:random-changes"
+          },
+          {
+            "key": "C",
+            "text": "count should start at 1",
+            "misconception_id": "python.debugging:random-changes"
+          }
+        ],
+        "answer": "A",
+        "reveal": "A. Everything we saw points at range stopping one visit short. B and C would change the code without evidence.",
+        "misconception_ids": [
+          "python.debugging:random-changes"
+        ],
+        "verify_note": "Conceptual question; steps 4 and 6 check it against real runs."
+      }
+    },
+    {
+      "id": "s6",
+      "name": "Fix and rerun",
+      "kind": "case",
+      "text": "Change one thing: the end of range becomes visits + 1. Rerun the 10-visit case.",
+      "code": "def free_drinks(visits):\n    count = 0\n    for v in range(1, visits + 1):\n        if v % 5 == 0:\n            count = count + 1\n    return count\n\nprint(free_drinks(10))\n",
+      "predict": {
+        "id": "python.debugging.s6.p",
+        "question": "After the fix, what does free_drinks(10) give?",
+        "answer_format": "number",
+        "answer": "2",
+        "reveal": "2, which is what we expected. One change, checked against the case we wrote down.",
+        "verify": {
+          "code": "def free_drinks(visits):\n    count = 0\n    for v in range(1, visits + 1):\n        if v % 5 == 0:\n            count = count + 1\n    return count\nprint(free_drinks(10))\n",
+          "expected_stdout": "2\n"
+        }
+      },
+      "what_changed": "range(1, visits) -> range(1, visits + 1): 10 visits gives 2 instead of 1."
+    },
+    {
+      "id": "s7",
+      "name": "Check an edge",
+      "kind": "case",
+      "text": "A fix can break something else. Try a customer who is one visit short of a free drink.",
+      "code": "def free_drinks(visits):\n    count = 0\n    for v in range(1, visits + 1):\n        if v % 5 == 0:\n            count = count + 1\n    return count\n\nprint(free_drinks(4))\n",
+      "predict": {
+        "id": "python.debugging.s7.p",
+        "question": "What does free_drinks(4) give with the fix?",
+        "answer_format": "number",
+        "answer": "0",
+        "reveal": "0, as it should: 4 visits earn nothing. The fix didn't overshoot.",
+        "verify": {
+          "code": "def free_drinks(visits):\n    count = 0\n    for v in range(1, visits + 1):\n        if v % 5 == 0:\n            count = count + 1\n    return count\nprint(free_drinks(4))\n",
+          "expected_stdout": "0\n"
+        }
+      },
+      "what_changed": "visits 10 -> 4: the fixed code gives 0, which is correct."
+    },
+    {
+      "id": "s8",
+      "name": "Read the error message",
+      "kind": "case",
+      "text": "A different day, a different bug. Daily visits came from a form and one slipped in as text.",
+      "code": "daily = [1, 2, \"3\"]\ntotal = 0\nfor d in daily:\n    total = total + d\nprint(total)\n",
+      "predict": {
+        "id": "python.debugging.s8.p",
+        "question": "What kind of error stops this program?",
+        "answer_format": "choice",
+        "choices": [
+          {
+            "key": "A",
+            "text": "TypeError"
+          },
+          {
+            "key": "B",
+            "text": "NameError"
+          },
+          {
+            "key": "C",
+            "text": "6",
+            "misconception_id": "python.types-expressions:int-str-confusion"
+          }
+        ],
+        "answer": "A",
+        "reveal": "TypeError, on the line `total = total + d`, on the third round: 3 + \"3\" mixes int and str. The message names the line and the problem; read it before changing anything.",
+        "verify": {
+          "code": "daily = [1, 2, \"3\"]\ntotal = 0\ntry:\n    for d in daily:\n        total = total + d\n    print(total)\nexcept Exception as e:\n    print(type(e).__name__)\n",
+          "expected_stdout": "TypeError\n"
+        }
+      },
+      "what_changed": "the data changed, not the code: a \"3\" from the form turns a sum into a TypeError."
+    },
+    {
+      "id": "s9",
+      "name": "Recap",
+      "kind": "recap",
+      "text": "How to hunt a bug, in three sentences."
+    }
+  ],
+  "recap": [
+    "Reproduce the bug with real data and write down expected vs actual before changing anything.",
+    "Look at the values (print them or step through) and read the error message until you can name the cause in one sentence.",
+    "Change one thing, rerun the case that failed, then try an edge case to make sure the fix didn't break something else."
+  ],
+  "checks": {
+    "apply": [
+      {
+        "id": "python.debugging.apply-1",
+        "type": "fix_bug",
+        "concept_id": "python.debugging",
+        "leg": "apply",
+        "prompt": "Ms. Lek's count_passing(scores) should give back how many scores are 50 or more. For [50, 40, 70] it gives 1 instead of 2. Find and fix the bug.",
+        "language": "python",
+        "difficulty": "core",
+        "code": "def count_passing(scores):\n    count = 0\n    for i in range(len(scores) - 1):\n        if scores[i] >= 50:\n            count = count + 1\n    return count\n",
+        "grader": {
+          "type": "function_tests",
+          "function": "count_passing",
+          "cases": [
+            {
+              "args": [
+                [
+                  50,
+                  40,
+                  70
+                ]
+              ],
+              "expected": 2
+            },
+            {
+              "args": [
+                []
+              ],
+              "expected": 0
+            },
+            {
+              "args": [
+                [
+                  90
+                ]
+              ],
+              "expected": 1
+            },
+            {
+              "args": [
+                [
+                  10,
+                  20
+                ]
+              ],
+              "expected": 0
+            },
+            {
+              "args": [
+                [
+                  49,
+                  50
+                ]
+              ],
+              "expected": 1
+            }
+          ]
+        },
+        "reference_solution": "def count_passing(scores):\n    count = 0\n    for i in range(len(scores)):\n        if scores[i] >= 50:\n            count = count + 1\n    return count\n",
+        "must_fail": [
+          {
+            "code": "def count_passing(scores):\n    count = 0\n    for i in range(len(scores) - 1):\n        if scores[i] > 50:\n            count = count + 1\n    return count\n",
+            "why": "changes the comparison instead of the cause",
+            "misconception_id": "python.debugging:random-changes"
+          }
+        ],
+        "hints": [
+          {
+            "level": 1,
+            "text": "Reproduce it with a small list such as [90]. What should come back, and what does?"
+          },
+          {
+            "level": 2,
+            "text": "Imagine print(i) inside the loop for [50, 40, 70]. Which positions does it visit, and which one is missing?"
+          },
+          {
+            "level": 3,
+            "text": "Similar case: `for i in range(len(names) - 1)` over [\"a\", \"b\", \"c\"] visits 0 and 1 only, but a list of 3 has positions 0, 1 and 2. Check how your loop's range is built."
+          }
+        ],
+        "misconception_ids": [
+          "python.loops:range-off-by-one"
+        ]
+      }
+    ],
+    "explain": [
+      {
+        "id": "python.debugging.explain-1",
+        "type": "explain",
+        "concept_id": "python.debugging",
+        "leg": "explain",
+        "prompt": "Krit's nephew says: \"When code is wrong I just change things until the number looks right.\" Using the free-drink bug, explain the process you would follow instead.",
+        "grader": {
+          "type": "rubric",
+          "criteria": [
+            {
+              "id": "c1",
+              "text": "Reproduce the bug with a known input and state expected vs actual (5 visits: expected 1, got 0)."
+            },
+            {
+              "id": "c2",
+              "text": "Inspect values or read the error to locate where it goes wrong (v never reaches 5)."
+            },
+            {
+              "id": "c3",
+              "text": "Name the cause before changing code (range stops before visits)."
+            },
+            {
+              "id": "c4",
+              "text": "After one change, rerun the failing case and an edge case (10 visits, 4 visits)."
+            }
+          ],
+          "pass_rule": "all",
+          "reference_answer": "First make it fail on purpose: 5 visits should give 1 but gives 0. Then look at the values: printing v shows it stops at 4. So the cause is range(1, visits) stopping one short. Change only that, then rerun 5 and 10 visits and an edge like 4 to be sure nothing else broke."
+        },
+        "hints": [
+          {
+            "level": 1,
+            "text": "What was the very first thing we did before looking at the code?"
+          },
+          {
+            "level": 2,
+            "text": "Between seeing the wrong number and changing the code, what did we look at, and what did we say out loud?"
+          },
+          {
+            "level": 3,
+            "text": "Guided example in another setting: a mechanic first hears the noise, then checks which part makes it, names the worn part, replaces it, and test-drives. Map those steps onto the free-drink bug."
+          }
+        ],
+        "misconception_ids": [
+          "python.debugging:random-changes"
+        ]
+      }
+    ],
+    "transfer": [
+      {
+        "id": "python.debugging.transfer-1",
+        "type": "fix_bug",
+        "concept_id": "python.debugging",
+        "leg": "transfer",
+        "prompt": "A photo app's add_tag(tags, new_tag) should give back a new list with the tag added and leave the photo's original tags alone. Users report their original photos gaining tags. Fix it.",
+        "language": "python",
+        "difficulty": "stretch",
+        "code": "def add_tag(tags, new_tag):\n    result = tags\n    result.append(new_tag)\n    return result\n",
+        "grader": {
+          "type": "function_tests",
+          "function": "add_tag",
+          "cases": [
+            {
+              "args": [
+                [
+                  "beach",
+                  "sun"
+                ],
+                "family"
+              ],
+              "expected": [
+                "beach",
+                "sun",
+                "family"
+              ],
+              "check_args_unchanged": true
+            },
+            {
+              "args": [
+                [],
+                "cat"
+              ],
+              "expected": [
+                "cat"
+              ],
+              "check_args_unchanged": true
+            },
+            {
+              "args": [
+                [
+                  "x"
+                ],
+                "y"
+              ],
+              "expected": [
+                "x",
+                "y"
+              ],
+              "check_args_unchanged": true
+            }
+          ]
+        },
+        "reference_solution": "def add_tag(tags, new_tag):\n    result = tags.copy()\n    result.append(new_tag)\n    return result\n",
+        "must_fail": [
+          {
+            "code": "def add_tag(tags, new_tag):\n    tags.append(new_tag)\n    return tags.copy()\n",
+            "why": "copies after changing the original",
+            "misconception_id": "python.lists:assign-copies"
+          }
+        ],
+        "hints": [
+          {
+            "level": 1,
+            "text": "Reproduce it: call add_tag on a list, then print the original list. Did it change?"
+          },
+          {
+            "level": 2,
+            "text": "After `result = tags`, how many lists exist? Which list does append change?"
+          },
+          {
+            "level": 3,
+            "text": "Similar: `backup = playlist` then `backup.append(song)` changes playlist too, while `backup = playlist.copy()` makes a separate list first. Find where your function should make its own list."
+          }
+        ],
+        "misconception_ids": [
+          "python.lists:assign-copies"
+        ]
+      }
+    ]
+  },
+  "misconception_probe": {
+    "id": "python.debugging.probe-1",
+    "type": "multiple_choice",
+    "concept_id": "python.debugging",
+    "leg": "probe",
+    "prompt": "Krit's sales script prints the wrong total for Tuesday only. What is the best first move?",
+    "choices": [
+      {
+        "key": "A",
+        "text": "Change a few lines and rerun until Tuesday's number looks right",
+        "misconception_id": "python.debugging:random-changes"
+      },
+      {
+        "key": "B",
+        "text": "Run it with Tuesday's data, write down expected vs actual, then look at the values inside"
+      },
+      {
+        "key": "C",
+        "text": "Rewrite the whole script from scratch",
+        "misconception_id": "python.debugging:random-changes"
+      },
+      {
+        "key": "D",
+        "text": "Delete Tuesday's data"
+      }
+    ],
+    "grader": {
+      "type": "choice",
+      "answer": "B"
+    },
+    "hints": [
+      {
+        "level": 1,
+        "text": "Before you can fix a bug, what do you need to be able to do with it?"
+      },
+      {
+        "level": 2,
+        "text": "Which option gives you evidence about the cause before any code changes?"
+      },
+      {
+        "level": 3,
+        "text": "Similar: when a lamp won't turn on, you first try it again and check the bulb and the plug before rewiring the house."
+      }
+    ],
+    "misconception_ids": [
+      "python.debugging:random-changes"
+    ]
+  }
+}

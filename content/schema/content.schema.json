@@ -1,0 +1,468 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nexora.local/schema/content/1.0/content.schema.json",
+  "title": "Nexora curated content file (domain, lesson or assessment)",
+  "description": "One schema for every content file. The `kind` field picks the shape. Domain-neutral: nothing here is Python-specific except the allowed runner languages. Spec: docs/product/content-format.md.",
+  "type": "object",
+  "required": ["schema_version", "kind"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "kind": { "enum": ["domain", "lesson", "assessment"] }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/domain" },
+    { "$ref": "#/$defs/lesson" },
+    { "$ref": "#/$defs/assessment" }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "maxLength": 120
+    },
+    "concept_id": {
+      "description": "<domain>.<concept>, e.g. python.loops",
+      "type": "string",
+      "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$"
+    },
+    "misconception_id": {
+      "description": "<concept_id>:<slug>, e.g. python.loops:range-off-by-one",
+      "type": "string",
+      "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+:[a-z0-9-]+$"
+    },
+    "text": { "type": "string", "minLength": 1 },
+    "language": {
+      "description": "Runner language for code. Add a value here when a new domain needs another runner.",
+      "enum": ["python"]
+    },
+
+    "header": {
+      "description": "Versioning and approval (D23). Every file starts as draft with approved_by null. A file is shown to learners only when status is approved.",
+      "type": "object",
+      "required": ["schema_version", "kind", "id", "version", "status", "authored_by", "approved_by", "approved_at", "content_language"],
+      "properties": {
+        "schema_version": { "const": "1.0" },
+        "kind": { "enum": ["domain", "lesson", "assessment"] },
+        "id": { "$ref": "#/$defs/id" },
+        "version": { "type": "integer", "minimum": 1 },
+        "status": { "enum": ["draft", "in_review", "approved", "retired"] },
+        "authored_by": { "$ref": "#/$defs/text" },
+        "approved_by": { "type": ["string", "null"] },
+        "approved_at": { "type": ["string", "null"], "format": "date-time" },
+        "content_language": { "type": "string", "pattern": "^[a-z]{2}(-[A-Z]{2})?$" },
+        "notes_for_reviewer": { "type": "array", "items": { "$ref": "#/$defs/text" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "approved" } }, "required": ["status"] },
+          "then": { "properties": { "approved_by": { "type": "string", "minLength": 1 }, "approved_at": { "type": "string" } } }
+        },
+        {
+          "if": { "properties": { "status": { "enum": ["draft", "in_review"] } }, "required": ["status"] },
+          "then": { "properties": { "approved_by": { "type": "null" }, "approved_at": { "type": "null" } } }
+        }
+      ]
+    },
+
+    "stdout_case": {
+      "type": "object",
+      "required": ["stdin", "expected_stdout"],
+      "additionalProperties": false,
+      "properties": {
+        "stdin": { "type": "string" },
+        "expected_stdout": { "type": "string" }
+      }
+    },
+    "function_case": {
+      "type": "object",
+      "required": ["args", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "args": { "type": "array" },
+        "expected": {},
+        "check_args_unchanged": { "type": "boolean", "default": false },
+        "note": { "type": "string" }
+      }
+    },
+    "rubric_criterion": {
+      "type": "object",
+      "required": ["id", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "text": { "$ref": "#/$defs/text" }
+      }
+    },
+    "grader": {
+      "description": "How an answer is checked. stdout and function_tests are deterministic (run the code); choice compares a key; rubric is LLM-graded and is never the only record for a concept.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "cases"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "stdout" },
+            "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/stdout_case" } },
+            "compare": { "enum": ["exact", "strip_trailing_whitespace"], "default": "strip_trailing_whitespace" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "function", "cases"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "function_tests" },
+            "function": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+            "cases": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/function_case" } }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "answer"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "choice" },
+            "answer": { "type": "string", "pattern": "^[A-Z]$" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "criteria", "pass_rule"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "rubric" },
+            "criteria": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/rubric_criterion" } },
+            "pass_rule": { "enum": ["all"] },
+            "reference_answer": { "$ref": "#/$defs/text" }
+          }
+        }
+      ]
+    },
+    "choice": {
+      "type": "object",
+      "required": ["key", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string", "pattern": "^[A-Z]$" },
+        "text": { "type": "string" },
+        "misconception_id": { "$ref": "#/$defs/misconception_id" }
+      }
+    },
+    "hint": {
+      "type": "object",
+      "required": ["level", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "level": { "enum": [1, 2, 3] },
+        "text": { "$ref": "#/$defs/text" }
+      }
+    },
+    "hints": {
+      "description": "Exactly levels 1, 2, 3 in order. Level 0 is the mentor's own open question and is not stored. Levels 1-2 never contain the answer; level 3 is a guided example in a different context (no credit).",
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        { "allOf": [{ "$ref": "#/$defs/hint" }, { "properties": { "level": { "const": 1 } } }] },
+        { "allOf": [{ "$ref": "#/$defs/hint" }, { "properties": { "level": { "const": 2 } } }] },
+        { "allOf": [{ "$ref": "#/$defs/hint" }, { "properties": { "level": { "const": 3 } } }] }
+      ]
+    },
+    "must_fail": {
+      "description": "Wrong answers the tests must reject. Proves the tests catch the misconception. Never shown to learners.",
+      "type": "object",
+      "required": ["code", "why"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "$ref": "#/$defs/text" },
+        "why": { "$ref": "#/$defs/text" },
+        "misconception_id": { "$ref": "#/$defs/misconception_id" }
+      }
+    },
+
+    "item": {
+      "description": "One check or assessment item. reference_solution and must_fail are server-only: never sent to the client or the mentor prompt.",
+      "type": "object",
+      "required": ["id", "type", "concept_id", "leg", "prompt", "grader"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "enum": ["predict_output", "write_code", "fix_bug", "explain", "multiple_choice"] },
+        "concept_id": { "$ref": "#/$defs/concept_id" },
+        "leg": { "enum": ["apply", "explain", "transfer", "probe", "placement"] },
+        "difficulty": { "enum": ["intro", "core", "stretch"] },
+        "prompt": { "$ref": "#/$defs/text" },
+        "language": { "$ref": "#/$defs/language" },
+        "code": { "type": "string", "description": "Code the learner reads: the program to predict, or the buggy program to fix." },
+        "starter_code": { "type": "string" },
+        "choices": { "type": "array", "minItems": 2, "maxItems": 6, "items": { "$ref": "#/$defs/choice" } },
+        "grader": { "$ref": "#/$defs/grader" },
+        "reference_solution": { "type": "string" },
+        "must_fail": { "type": "array", "items": { "$ref": "#/$defs/must_fail" } },
+        "hints": { "$ref": "#/$defs/hints" },
+        "misconception_ids": { "type": "array", "items": { "$ref": "#/$defs/misconception_id" } },
+        "source": { "type": "string", "description": "Where the item came from if reused or adapted." },
+        "scored": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "predict_output" } } },
+          "then": {
+            "required": ["code", "language"],
+            "properties": { "grader": { "properties": { "type": { "enum": ["stdout", "choice"] } } } }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "enum": ["write_code", "fix_bug"] } } },
+          "then": {
+            "required": ["reference_solution", "language"],
+            "properties": { "grader": { "properties": { "type": { "enum": ["stdout", "function_tests"] } } } }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "fix_bug" } } },
+          "then": { "required": ["code"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "explain" } } },
+          "then": { "properties": { "grader": { "properties": { "type": { "const": "rubric" } } } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "multiple_choice" } } },
+          "then": { "required": ["choices"], "properties": { "grader": { "properties": { "type": { "const": "choice" } } } } }
+        },
+        {
+          "if": { "properties": { "grader": { "properties": { "type": { "const": "choice" } } } } },
+          "then": { "required": ["choices"] }
+        },
+        {
+          "if": { "properties": { "leg": { "not": { "const": "placement" } } } },
+          "then": { "required": ["hints"] }
+        },
+        {
+          "if": { "properties": { "leg": { "const": "explain" } } },
+          "then": { "properties": { "type": { "const": "explain" } } }
+        }
+      ]
+    },
+
+    "verify": {
+      "description": "A program whose output proves a predict answer. The checker runs it; its stripped stdout must equal the answer text.",
+      "type": "object",
+      "required": ["code", "expected_stdout"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "$ref": "#/$defs/text" },
+        "expected_stdout": { "type": "string" }
+      }
+    },
+    "predict": {
+      "type": "object",
+      "required": ["id", "question", "answer_format", "answer", "reveal"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "question": { "$ref": "#/$defs/text" },
+        "answer_format": { "enum": ["choice", "short_text", "number"] },
+        "choices": { "type": "array", "minItems": 2, "maxItems": 5, "items": { "$ref": "#/$defs/choice" } },
+        "answer": { "type": "string", "description": "For choice: the key. Otherwise the exact expected text." },
+        "accept": { "type": "array", "items": { "type": "string" }, "description": "Other spellings accepted as the same answer." },
+        "reveal": { "$ref": "#/$defs/text" },
+        "misconception_ids": { "type": "array", "items": { "$ref": "#/$defs/misconception_id" } },
+        "verify": { "$ref": "#/$defs/verify" },
+        "verify_note": { "type": "string", "description": "Why there is no verify program (a conceptual question)." }
+      },
+      "allOf": [
+        { "if": { "properties": { "answer_format": { "const": "choice" } } }, "then": { "required": ["choices"] } },
+        { "oneOf": [ { "required": ["verify"] }, { "required": ["verify_note"] } ] }
+      ]
+    },
+    "step": {
+      "type": "object",
+      "required": ["id", "name", "kind", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 40, "description": "Shown on the Next button. Never contains a value waiting to be predicted." },
+        "kind": { "enum": ["story", "trace", "case", "hunt", "recap"] },
+        "text": { "$ref": "#/$defs/text" },
+        "code": { "type": "string", "description": "Code shown at this step if it differs from the lesson program (case steps)." },
+        "focus_lines": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+        "predict": { "$ref": "#/$defs/predict" },
+        "what_changed": { "type": "string", "description": "Case steps: one line, before -> after." },
+        "metrics": { "type": "object", "additionalProperties": { "type": ["integer", "number", "string", "null"] } }
+      },
+      "allOf": [
+        { "if": { "properties": { "kind": { "const": "case" } } }, "then": { "required": ["predict", "what_changed"] } }
+      ]
+    },
+    "video_slot": {
+      "description": "D25: a person attaches the video. AI never fills this. null = no video.",
+      "type": ["object", "null"],
+      "required": ["url", "attached_by", "transcript", "captions_url", "duration_seconds"],
+      "additionalProperties": false,
+      "properties": {
+        "url": { "type": "string" },
+        "attached_by": { "type": "string", "minLength": 1 },
+        "transcript": { "type": "string", "minLength": 1 },
+        "captions_url": { "type": ["string", "null"] },
+        "duration_seconds": { "type": "integer", "minimum": 1 },
+        "step_id": { "$ref": "#/$defs/id" }
+      }
+    },
+
+    "domain": {
+      "allOf": [
+        { "$ref": "#/$defs/header" },
+        {
+          "type": "object",
+          "required": ["kind", "domain_id", "title", "summary", "concepts", "assessment_file"],
+          "properties": {
+            "kind": { "const": "domain" },
+            "domain_id": { "$ref": "#/$defs/id" },
+            "title": { "$ref": "#/$defs/text" },
+            "summary": { "$ref": "#/$defs/text" },
+            "source_doc": { "type": "string" },
+            "concepts": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["id", "title", "prerequisites", "misconceptions", "lesson_file"],
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "$ref": "#/$defs/concept_id" },
+                  "title": { "$ref": "#/$defs/text" },
+                  "summary": { "type": "string" },
+                  "prerequisites": { "type": "array", "items": { "$ref": "#/$defs/concept_id" } },
+                  "misconceptions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["id", "text"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": { "$ref": "#/$defs/misconception_id" },
+                        "text": { "$ref": "#/$defs/text" }
+                      }
+                    }
+                  },
+                  "lesson_file": { "type": "string", "pattern": "^[A-Za-z0-9_./-]+\\.json$" }
+                }
+              }
+            },
+            "assessment_file": { "type": "string", "pattern": "^[A-Za-z0-9_./-]+\\.json$" },
+            "out_of_scope": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      ]
+    },
+
+    "lesson": {
+      "allOf": [
+        { "$ref": "#/$defs/header" },
+        {
+          "type": "object",
+          "required": ["kind", "concept_id", "title", "shape", "story", "video", "program", "steps", "recap", "checks", "misconception_probe"],
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": true, "kind": { "const": "lesson" }, "id": true, "version": true, "status": true,
+            "authored_by": true, "approved_by": true, "approved_at": true, "content_language": true, "notes_for_reviewer": true,
+            "concept_id": { "$ref": "#/$defs/concept_id" },
+            "title": { "$ref": "#/$defs/text" },
+            "shape": { "enum": ["story-trace", "syntax-drill", "debugging-hunt", "design-exercise", "video-led"] },
+            "estimated_minutes": { "type": "integer", "minimum": 1, "maximum": 60 },
+            "story": {
+              "type": "object",
+              "required": ["person", "place", "text"],
+              "additionalProperties": false,
+              "properties": {
+                "person": { "$ref": "#/$defs/text" },
+                "place": { "$ref": "#/$defs/text" },
+                "text": { "$ref": "#/$defs/text" }
+              }
+            },
+            "video": { "$ref": "#/$defs/video_slot" },
+            "program": {
+              "description": "The stored run the steps and visualization replay. The checker runs it and compares stdout.",
+              "type": "object",
+              "required": ["language", "code", "expected_stdout"],
+              "additionalProperties": false,
+              "properties": {
+                "language": { "$ref": "#/$defs/language" },
+                "code": { "$ref": "#/$defs/text" },
+                "stdin": { "type": "string" },
+                "expected_stdout": { "type": "string" }
+              }
+            },
+            "metric_labels": { "type": "array", "items": { "type": "string" } },
+            "steps": { "type": "array", "minItems": 4, "maxItems": 10, "items": { "$ref": "#/$defs/step" } },
+            "recap": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "$ref": "#/$defs/text" } },
+            "checks": {
+              "type": "object",
+              "required": ["apply", "explain", "transfer"],
+              "additionalProperties": false,
+              "properties": {
+                "apply": { "type": "array", "minItems": 1, "items": { "allOf": [{ "$ref": "#/$defs/item" }, { "properties": { "leg": { "const": "apply" } } }] } },
+                "explain": { "type": "array", "minItems": 1, "items": { "allOf": [{ "$ref": "#/$defs/item" }, { "properties": { "leg": { "const": "explain" } } }] } },
+                "transfer": { "type": "array", "minItems": 1, "items": { "allOf": [{ "$ref": "#/$defs/item" }, { "properties": { "leg": { "const": "transfer" } } }] } }
+              }
+            },
+            "misconception_probe": { "allOf": [{ "$ref": "#/$defs/item" }, { "properties": { "leg": { "const": "probe" } } }] }
+          }
+        }
+      ]
+    },
+
+    "assessment": {
+      "allOf": [
+        { "$ref": "#/$defs/header" },
+        {
+          "type": "object",
+          "required": ["kind", "domain_id", "purpose", "policy", "profile_questions", "items"],
+          "properties": {
+            "kind": { "const": "assessment" },
+            "domain_id": { "$ref": "#/$defs/id" },
+            "purpose": { "const": "placement" },
+            "policy": {
+              "type": "object",
+              "required": ["max_items", "time_limit_minutes", "start_concepts", "adaptive_rule", "stop_rule", "mentor", "evidence_verified", "output_states"],
+              "additionalProperties": false,
+              "properties": {
+                "max_items": { "type": "integer", "minimum": 1 },
+                "time_limit_minutes": { "type": "integer", "minimum": 1 },
+                "start_concepts": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/concept_id" } },
+                "adaptive_rule": { "$ref": "#/$defs/text" },
+                "stop_rule": { "$ref": "#/$defs/text" },
+                "mentor": { "const": "off" },
+                "evidence_verified": { "const": false },
+                "output_states": { "type": "array", "items": { "enum": ["assumed_known", "assumed_gap", "unknown"] } },
+                "shows_score": { "const": false }
+              }
+            },
+            "profile_questions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "question", "choices", "scored"],
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "$ref": "#/$defs/id" },
+                  "question": { "$ref": "#/$defs/text" },
+                  "choices": { "type": "array", "minItems": 2, "items": { "type": "string" } },
+                  "allow_free_text": { "type": "boolean" },
+                  "scored": { "const": false }
+                }
+              }
+            },
+            "items": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "allOf": [{ "$ref": "#/$defs/item" }, { "properties": { "leg": { "const": "placement" } } }] }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
