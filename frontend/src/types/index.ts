@@ -325,6 +325,7 @@ export type AIErrorCode =
   | "not_found"
   | "rate_limited"
   | "unreachable"
+  | "timeout"
   | "bad_request"
   | "provider_error";
 

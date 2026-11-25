@@ -6,6 +6,7 @@ const CODE_TEXT: Record<string, string> = {
   not_found: "The provider couldn't find that model or endpoint. Check the endpoint URL or pick another model.",
   rate_limited: "The provider says too many requests right now. Wait a minute and try again.",
   unreachable: "Nexora couldn't reach the provider. Check the endpoint URL and that the server is running.",
+  timeout: "The AI took too long to answer. Try again, or pick a faster model.",
   bad_request: "The provider didn't accept the request. Check the endpoint URL and model.",
   provider_error: "The provider had a problem on its side. Try again in a moment.",
 };

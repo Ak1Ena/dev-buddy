@@ -86,3 +86,27 @@ CHECK mob 34.2s no console errors PASS []
 Gateway usage row for the mentor reply (backend/devbuddy.db ai_usage):
 started_at|slot|provider|model|agent|source|ok|latency_ms
 2026-11-25 05:31:31.289200|text|openai_compatible|qwen2.5:0.5b|socratic_mentor|user|1|2614
+
+=== Rerun 2026-11-25T17:11:38+07:00 for c213db55 follow-up (timeout code, scenes auth) ===
+$ npx tsc --noEmit -p .
+tsc exit=0
+$ npm run build
+
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.93 kB │ gzip:   0.51 kB
+dist/assets/index-DnGZxjW7.css   64.90 kB │ gzip:  11.11 kB
+dist/assets/index-BzpQfTzT.js   713.70 kB │ gzip: 219.88 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 6.03s
+build exit=0
+
+Scenes auth (backend c213db55 on :8011 via :5183 proxy):
+curl POST /api/v1/scenes/analyze, no token -> 403 {"detail":"Not authenticated"}; with token -> 200 {session_id}
+Browser (playwright, logged in as kit-video): sceneApi.analyze from src/lib/api.ts:
+{"result":{"status":200,"data":{"session_id":"6e5f44a3-8fbb-480e-8f99-c3fbf8597b85"}},"requests":[{"url":"http://localhost:5183/api/v1/scenes/analyze","auth":true}]}
+Note: no page imports sceneApi today (grep src/ finds only lib/api.ts), so no page to open.
